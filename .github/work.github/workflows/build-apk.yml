@@ -13,7 +13,6 @@ jobs:
       - name: Unzip project
         run: |
           unzip -o fakelag-yanz-licensed.zip
-          # vào đúng thư mục project
           if [ -d fakelag-beta ]; then
             cp -a fakelag-beta/. .
             rm -rf fakelag-beta
