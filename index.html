@@ -2,214 +2,365 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>DT-Studio — TikTok Live Overlay</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>⚡ VượtLink Pro</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;500;600;700;900&display=swap');
 :root{
-  --bg:#0b0f14;--card:#12181f;--border:#1e2a36;--primary:#7c3aed;--text:#e8eef5;
-  --muted:#8b9cb3;--gold:#f0c030;--success:#22c55e;--danger:#ef4444;
+  --bg:#07080c;--panel:#0d1018;--card:#111620;--border:#1a2232;
+  --gold:#f5c542;--gold2:#c9971a;--cyan:#00d4ff;--cyan2:#007fa8;
+  --green:#00e676;--green2:#00a152;--red:#ff3b5c;--red2:#b71c3a;
+  --purple:#9c27b0;--purple2:#6a0080;--text:#dde6f0;--sub:#4e6378;
+  --glow-gold:0 0 16px #f5c54244;--glow-cyan:0 0 16px #00d4ff33;--glow-green:0 0 16px #00e67633;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-button{cursor:pointer;font-family:inherit}
-.inp{width:100%;padding:12px 14px;background:#0b0f14;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;margin-bottom:12px;outline:none}
-.inp:focus{border-color:var(--primary)}
-.btn{padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:700;width:100%;margin-bottom:8px;transition:.2s}
-.btn-primary{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff}
-.btn-primary:hover{filter:brightness(1.1)}
-.btn-secondary{background:#1e2a36;color:var(--text)}
-.btn-danger{background:var(--danger);color:#fff}
-.btn-sm{width:auto;padding:8px 14px;font-size:13px}
-.btn-gold{background:linear-gradient(135deg,#f0c030,#e0a820);color:#1a0a00}
-.err{background:#2a1215;color:#f87171;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
-.badge{background:#1e2a36;border:1px solid var(--border);padding:4px 10px;border-radius:20px;font-size:12px;color:var(--gold)}
-.badge.admin{border-color:#f59e0b;color:#fbbf24}
-.toast{position:fixed;top:20px;right:20px;background:#1a1030;border:1px solid var(--gold);border-radius:10px;padding:12px 18px;z-index:9999;font-size:13px;color:var(--gold);transform:translateX(120%);transition:.3s;max-width:300px}
-.toast.show{transform:none}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;overflow-x:hidden}
+body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text)}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,212,255,.012) 3px,rgba(0,212,255,.012) 4px);pointer-events:none;z-index:9990}
 
-/* AUTH */
-#authView{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at top,#1a1030 0%,#0b0f14 60%)}
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 20px 50px #0006}
-.logo{font-size:28px;font-weight:800;text-align:center;background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
-.logo-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:24px}
-.tabs{display:flex;gap:8px;margin-bottom:18px}
-.tab{flex:1;padding:10px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:10px;font-weight:600}
-.tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
-.hint{text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
-.hint code{background:#1e2a36;padding:2px 6px;border-radius:4px;color:var(--gold)}
+.page{display:none;min-height:100vh;flex-direction:column}
+.page.active{display:flex}
 
-/* APP */
-#appView{display:none;min-height:100vh;flex-direction:column}
-.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:18px;background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.user-info{display:flex;align-items:center;gap:10px;font-size:14px;flex-wrap:wrap}
-.container{max-width:1100px;margin:0 auto;padding:20px;width:100%}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
-.card h3{font-size:15px;color:var(--gold);margin-bottom:12px}
-.status-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
-.status-dot.online{background:var(--success);box-shadow:0 0 8px #22c55e88}
-.status-dot.offline{background:#64748b}
-.status-dot.connecting{background:var(--gold);animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.log-box{background:#0b0f14;border:1px solid var(--border);border-radius:10px;height:280px;overflow-y:auto;padding:12px;font-size:12px;font-family:ui-monospace,monospace}
-.log-item{padding:4px 0;border-bottom:1px solid #1a222c;color:var(--muted)}
-.log-item.chat{color:#93c5fd}
-.log-item.gift{color:#fcd34d}
-.log-item.follow{color:#86efac}
-.log-item.system{color:#a78bfa}
-.overlay-url{background:#0b0f14;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;word-break:break-all;color:#93c5fd;margin:8px 0 10px}
-.row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-.row .inp{margin-bottom:0;flex:1;min-width:120px}
-#quotaBox{border-color:#3b2a6b;background:linear-gradient(135deg,#1a1030,#12181f);margin-bottom:16px;padding:14px 18px}
-.admin-user-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#0b0f14;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;flex-wrap:wrap}
-.modal{display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:center;justify-content:center;padding:16px}
-.modal.show{display:flex}
-.modal .card{width:min(520px,100%);max-height:80vh;overflow:auto}
+.topnav{background:#0d1018ee;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px);position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:8px;text-decoration:none}
+.brand-icon{font-size:20px;filter:drop-shadow(0 0 6px #00d4ff)}
+.brand-name{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+.nav-right{display:flex;gap:8px;align-items:center}
 
-/* OVERLAY MODE */
-#overlayView{display:none;position:fixed;inset:0;background:transparent;overflow:hidden}
-#alerts{position:absolute;top:40px;right:40px;width:min(380px,90vw);display:flex;flex-direction:column;gap:12px;pointer-events:none}
-.alert{background:linear-gradient(135deg,#1e1b4bcc,#312e81cc);border:1px solid #7c3aed88;border-radius:14px;padding:14px 18px;color:#fff;box-shadow:0 8px 32px #0006;animation:slideIn .4s ease,fadeOut .5s ease 4.5s forwards;backdrop-filter:blur(8px)}
-.alert.gift{border-color:#f0c03088;background:linear-gradient(135deg,#422006cc,#78350fcc)}
-.alert.follow{border-color:#22c55e88;background:linear-gradient(135deg,#052e16cc,#14532dcc)}
-.alert .name{font-weight:800;font-size:16px;color:#f0c030}
-.alert .msg{font-size:14px;margin-top:4px;opacity:.95}
-@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
-@keyframes fadeOut{to{opacity:0;transform:translateY(-10px)}}
-#goal{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:min(420px,90vw);background:#0f172acc;border:1px solid #334155;border-radius:12px;padding:12px 16px;backdrop-filter:blur(6px)}
-#goal .label{display:flex;justify-content:space-between;font-size:13px;color:#94a3b8;margin-bottom:6px}
-#goal .bar{height:12px;background:#1e293b;border-radius:6px;overflow:hidden}
-#goal .fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:6px;transition:width .5s;width:0%}
-#goal.done .fill{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.admin-topbar{background:#0d1018;border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200}
+.admin-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid var(--gold);box-shadow:var(--glow-gold);position:relative;flex-shrink:0}
+.admin-tick{position:absolute;bottom:-2px;right:-2px;background:#1d9bf0;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-size:8px;border:1.5px solid var(--panel);color:#fff;font-weight:900}
+.admin-info{flex:1}
+.admin-dname{font-weight:700;font-size:14px;color:var(--gold)}
+.admin-sub{font-size:10px;color:var(--sub)}
+.admin-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--sub);padding:5px 10px;font-size:12px;cursor:pointer;font-family:'Exo 2',sans-serif}
+
+.btn{padding:10px 16px;border:none;border-radius:10px;font-family:'Exo 2',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:.18s;letter-spacing:.4px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn-cyan{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#040810;box-shadow:var(--glow-cyan)}
+.btn-cyan:hover:not(:disabled){filter:brightness(1.1)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0600;box-shadow:var(--glow-gold)}
+.btn-gold:hover:not(:disabled){filter:brightness(1.1)}
+.btn-green{background:linear-gradient(135deg,var(--green),var(--green2));color:#010e05;box-shadow:var(--glow-green)}
+.btn-green:hover:not(:disabled){filter:brightness(1.1)}
+.btn-red{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--sub)}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:8px}
+.btn-xs{padding:5px 9px;font-size:11px;border-radius:7px}
+.btn-full{width:100%}
+
+.inp{width:100%;padding:11px 13px;background:#080b11;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:14px;outline:none;transition:.18s}
+.inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #00d4ff12}
+.inp::placeholder{color:#2a3a4a}
+.inp-label{font-size:11px;color:var(--sub);margin-bottom:5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.inp-group{margin-bottom:13px}
+textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
+
+#authPage{background:radial-gradient(ellipse at 40% 10%,#0b1e36 0%,#07080c 55%);align-items:center;justify-content:center;padding:18px}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-icon{font-size:52px;display:block;filter:drop-shadow(0 0 18px #00d4ff);margin-bottom:6px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.auth-title{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}
+.auth-sub{font-size:11px;color:var(--sub);margin-top:3px;letter-spacing:1px}
+.auth-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:390px;box-shadow:0 16px 50px #00000060,0 0 30px #00d4ff08}
+.auth-tabs{display:flex;gap:4px;margin-bottom:20px;background:#080b11;border-radius:10px;padding:4px}
+.auth-tab{flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:.18s}
+.auth-tab.active{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#040810}
+.remember-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.remember-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--cyan);cursor:pointer}
+.remember-row label{font-size:13px;color:var(--sub);cursor:pointer;user-select:none}
+
+.alert{border-radius:9px;padding:9px 12px;font-size:12px;margin-bottom:10px;display:none}
+.alert.show{display:block}
+.alert-err{background:#160508;border:1px solid var(--red);color:var(--red)}
+.alert-ok{background:#05130a;border:1px solid var(--green);color:var(--green)}
+.alert-info{background:#050d18;border:1px solid var(--cyan);color:var(--cyan)}
+
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--cyan);border-radius:11px;padding:10px 18px;z-index:9999;font-size:13px;color:var(--cyan);transition:.28s;white-space:nowrap;box-shadow:var(--glow-cyan);max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.t-ok{border-color:var(--green);color:var(--green);box-shadow:var(--glow-green)}
+.toast.t-err{border-color:var(--red);color:var(--red)}
+
+.modal-bg{display:none;position:fixed;inset:0;background:#000000aa;z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #00000080}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--gold)}
+.modal-close{background:none;border:none;color:var(--sub);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px}
+.modal-close:hover{color:var(--red)}
+
+#mainPage{flex-direction:column}
+.user-bar{background:#0d1018;border-bottom:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+.user-chip{display:flex;align-items:center;gap:8px}
+.user-ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:14px;border:1.5px solid var(--cyan);flex-shrink:0}
+.user-dname{font-size:13px;font-weight:700;color:var(--cyan)}
+.user-join{font-size:10px;color:var(--sub)}
+.role-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
+.rb-admin{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#0a0600}
+.rb-user{background:linear-gradient(90deg,var(--cyan),var(--cyan2));color:#040810}
+
+.content-area{flex:1;padding:12px;max-width:620px;margin:0 auto;width:100%}
+.sec-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.sec-title::before{content:'';display:block;width:3px;height:16px;background:var(--cyan);border-radius:2px;flex-shrink:0}
+.item-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.18s}
+.item-card:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+.item-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background:linear-gradient(135deg,#0f1e30,#0a1220)}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-desc{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.item-meta{display:flex;align-items:center;gap:8px}
+.rounds-badge{font-size:10px;background:#00d4ff18;border:1px solid var(--cyan);color:var(--cyan);padding:2px 8px;border-radius:6px;font-weight:700}
+.empty-state{text-align:center;padding:50px 20px;color:var(--sub)}
+.empty-icon{font-size:44px;margin-bottom:10px;opacity:.4}
+
+.bypass-steps{margin-bottom:16px}
+.step-item{background:#080b11;border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px}
+.step-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sub);flex-shrink:0;transition:.3s}
+.step-num.done{background:var(--green);color:#010e05}
+.step-num.active{background:var(--cyan);color:#040810}
+.step-label{font-size:13px;font-weight:700;color:var(--text)}
+.step-body{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.code-inp{flex:1;min-width:120px;padding:9px 11px;background:#040608;border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;transition:.18s;-webkit-user-select:text;user-select:text}
+.code-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #00d4ff22}
+.code-inp.verified{border-color:var(--green);background:#051209;color:var(--green)}
+.code-inp:disabled{opacity:.7;cursor:not-allowed;background:#051209}
+.progress-area{margin:12px 0}
+.prog-bar{height:5px;background:#1a2232;border-radius:5px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--gold));border-radius:5px;transition:width .4s ease}
+.prog-text{font-size:11px;color:var(--sub);margin-top:5px;text-align:center}
+.result-area{background:#040e08;border:1px solid var(--green);border-radius:12px;padding:14px;display:none}
+.result-area.show{display:block}
+.result-label{font-size:12px;color:var(--green);font-weight:700;margin-bottom:8px}
+.result-content{font-size:13px;color:var(--text);word-break:break-all;background:#080b11;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.6;white-space:pre-wrap}
+.copy-row{display:flex;gap:8px}
+
+#adminPage{flex-direction:column}
+.admin-tabs-row{display:flex;background:#080b11;border-bottom:1px solid var(--border)}
+.atab{flex:1;padding:11px 4px;border:none;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s}
+.atab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.admin-body{flex:1;padding:12px;overflow-y:auto}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px;text-align:center}
+.stat-n{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--cyan);line-height:1}
+.stat-l{font-size:10px;color:var(--sub);margin-top:3px;font-weight:600}
+.stat-card.s-gold .stat-n{color:var(--gold)}
+.stat-card.s-green .stat-n{color:var(--green)}
+.stat-card.s-red .stat-n{color:var(--red)}
+.tbl-wrap{border-radius:11px;border:1px solid var(--border);overflow:hidden;overflow-x:auto;margin-bottom:14px}
+.dtbl{width:100%;border-collapse:collapse;font-size:12px}
+.dtbl th{background:#0d1018;color:var(--sub);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+.dtbl td{padding:8px 10px;border-bottom:1px solid #0d1018;color:var(--text);vertical-align:middle}
+.dtbl tr:last-child td{border:none}
+.dtbl tr:hover td{background:#0d1018}
+.bdg{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700}
+.bdg-ok{background:#00e67620;color:var(--green);border:1px solid var(--green)}
+.bdg-no{background:#ff3b5c20;color:var(--red);border:1px solid var(--red)}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.fbtn{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;font-weight:600;transition:.15s}
+.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
+.item-manage-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.imr-info{flex:1;min-width:0}
+.imr-name{font-weight:700;font-size:13px;color:var(--text)}
+.imr-sub{font-size:10px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imr-acts{display:flex;gap:5px;flex-shrink:0}
+.srch-inp{background:#080b11;border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;width:100%;margin-bottom:11px}
+.srch-inp:focus{border-color:var(--cyan)}
+.settings-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:10px}
+.settings-label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600}
+
+#connOverlay{position:fixed;inset:0;background:#07080cee;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#connOverlay.hidden{display:none}
+.conn-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.conn-text{font-size:14px;color:var(--cyan);font-weight:600}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#080b11}
+::-webkit-scrollbar-thumb{background:#1a2232;border-radius:4px}
 </style>
 </head>
 <body>
 
+<div id="connOverlay">
+  <div class="conn-spin"></div>
+  <div class="conn-text" id="connMsg">Đang kết nối máy chủ...</div>
+</div>
+
+<!-- AUTH -->
+<div class="page active" id="authPage">
+  <div class="auth-logo">
+    <span class="auth-icon">⚡</span>
+    <div class="auth-title">VƯỢT LINK PRO</div>
+    <div class="auth-sub">🎮 ONLINE · POWERED BY FIREBASE + LINK4M</div>
+  </div>
+  <div class="auth-box">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Đăng Nhập</button>
+      <button class="auth-tab" id="tabReg" onclick="switchTab('reg')">Đăng Ký</button>
+    </div>
+    <div id="formLogin">
+      <div class="alert alert-err" id="loginErr"></div>
+      <div class="inp-group">
+        <div class="inp-label">Tên đăng nhập</div>
+        <input class="inp" id="liUser" placeholder="username..." autocomplete="username"/>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">Mật khẩu</div>
+        <input class="inp" id="liPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div class="remember-row">
+        <input type="checkbox" id="cbRemember" checked/>
+        <label for="cbRemember">Ghi nhớ đăng nhập</label>
+      </div>
+      <button class="btn btn-cyan btn-full" onclick="doLogin()">⚡ ĐĂNG NHẬP</button>
+    </div>
+    <div id="formReg" style="display:none">
+      <div class="alert alert-err" id="regErr"></div>
+      <div class="alert alert-ok" id="regOk"></div>
+      <div class="inp-group">
+        <div class="inp-label">Tên hiển thị</div>
+        <input class="inp" id="riName" placeholder="Tên của bạn..."/>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">Tên đăng nhập</div>
+        <input class="inp" id="riUser" placeholder="chỉ chữ/số/gạch dưới..."/>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">Mật khẩu</div>
+        <input class="inp" id="riPass" type="password" placeholder="ít nhất 6 ký tự"/>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">Xác nhận mật khẩu</div>
+        <input class="inp" id="riPass2" type="password" placeholder="nhập lại mật khẩu"/>
+      </div>
+      <button class="btn btn-green btn-full" onclick="doRegister()">🚀 TẠO TÀI KHOẢN</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="page" id="mainPage">
+  <div class="topnav">
+    <div class="brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">VƯỢT LINK PRO</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-ghost btn-sm" id="btnAdmin" style="display:none" onclick="goAdmin()">🛡️ Admin</button>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">🚪</button>
+    </div>
+  </div>
+  <div class="user-bar">
+    <div class="user-chip">
+      <div class="user-ava" id="uAva">👤</div>
+      <div>
+        <div class="user-dname" id="uName">—</div>
+        <div class="user-join" id="uJoin">—</div>
+      </div>
+    </div>
+    <span class="role-badge" id="uRoleBadge"></span>
+  </div>
+  <div class="content-area">
+    <div class="sec-title">🎮 CHỌN NỘI DUNG ĐỂ VƯỢT LINK</div>
+    <div id="itemGrid"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="adminPage">
+  <div class="admin-topbar">
+    <div class="admin-ava">
+      <span id="adminAvaIcon">👑</span>
+      <div class="admin-tick">✓</div>
+    </div>
+    <div class="admin-info">
+      <div class="admin-dname" id="adminDName">Admin</div>
+      <div class="admin-sub">🛡️ Quản trị viên • <span style="color:#1d9bf0">✓ Online</span></div>
+    </div>
+    <button class="admin-back" onclick="goMain()">← Quay lại</button>
+  </div>
+  <div class="admin-tabs-row">
+    <button class="atab active" onclick="aTab('dash')">📊 Tổng quan</button>
+    <button class="atab" onclick="aTab('items')">📦 Nội dung</button>
+    <button class="atab" onclick="aTab('users')">👥 Khách</button>
+    <button class="atab" onclick="aTab('orders')">📋 Lịch sử</button>
+    <button class="atab" onclick="aTab('settings')">⚙️ Cài đặt</button>
+  </div>
+  <div class="admin-body" id="adminBody"></div>
+</div>
+
+<!-- BYPASS MODAL -->
+<div class="modal-bg" id="bypassModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title" id="bmTitle">⚡ Vượt Link</div>
+      <button class="modal-close" onclick="closeBypass()">✕</button>
+    </div>
+    <div class="alert alert-info" id="bmInfo"></div>
+    <div class="bypass-steps" id="bmSteps"></div>
+    <div class="progress-area">
+      <div class="prog-bar"><div class="prog-fill" id="bmProgFill" style="width:0%"></div></div>
+      <div class="prog-text" id="bmProgText">0 / 0 lượt hoàn thành</div>
+    </div>
+    <div class="result-area" id="bmResult">
+      <div class="result-label">✅ Hoàn thành! Đây là nội dung của bạn:</div>
+      <div class="result-content" id="bmResultContent"></div>
+      <div class="copy-row">
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="copyResult()">📋 Sao chép</button>
+        <button class="btn btn-cyan btn-sm" style="flex:1" onclick="openResult()">🔗 Mở link</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-full" style="margin-top:10px;font-size:12px" onclick="closeBypass()">Đóng</button>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-bg" id="itemModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title" id="imTitle">➕ Thêm nội dung</div>
+      <button class="modal-close" onclick="closeItemModal()">✕</button>
+    </div>
+    <div class="alert alert-err" id="imErr"></div>
+    <div class="inp-group">
+      <div class="inp-label">Tên hiển thị</div>
+      <input class="inp" id="imName" placeholder="VD: Acc TikTok VIP"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Mô tả ngắn</div>
+      <input class="inp" id="imDesc" placeholder="Mô tả nội dung..."/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Icon (emoji)</div>
+      <input class="inp" id="imIcon" placeholder="🎵" maxlength="4" style="width:100px"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Số lượt vượt link (Admin tùy chỉnh)</div>
+      <input class="inp" id="imRounds" type="number" min="1" max="20" placeholder="2" style="width:120px" onchange="syncLinkRows()"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
+      <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt..."></textarea>
+    </div>
+    <div class="inp-label" style="margin-bottom:8px">Link vượt từng lượt (Link4M short link)</div>
+    <div id="imLinksWrap"></div>
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:12px;width:100%" onclick="addLinkRow()">➕ Thêm link vượt</button>
+    <button class="btn btn-gold btn-full" onclick="saveItem()">💾 LƯU</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<!-- ========== AUTH ========== -->
-<div id="authView">
-  <div class="auth-card">
-    <div class="logo">DT-Studio</div>
-    <div class="logo-sub">TikTok Live Overlay · Đọc comment · Alert quà</div>
-    <div class="tabs">
-      <button class="tab active" data-tab="login">Đăng nhập</button>
-      <button class="tab" data-tab="register">Đăng ký</button>
-    </div>
-    <div id="authErr" class="err"></div>
-    <div id="loginForm">
-      <input class="inp" id="loginUser" placeholder="Tên đăng nhập" autocomplete="username"/>
-      <input class="inp" id="loginPass" type="password" placeholder="Mật khẩu" autocomplete="current-password"/>
-      <button class="btn btn-primary" onclick="doLogin()">Đăng nhập</button>
-    </div>
-    <div id="registerForm" style="display:none">
-      <input class="inp" id="regName" placeholder="Tên hiển thị"/>
-      <input class="inp" id="regUser" placeholder="Tên đăng nhập (a-z, 0-9, _)"/>
-      <input class="inp" id="regPass" type="password" placeholder="Mật khẩu (tối thiểu 4 ký tự)"/>
-      <button class="btn btn-primary" onclick="doRegister()">Tạo tài khoản Free</button>
-    </div>
-    <p class="hint">Gói Free: đọc comment + follow <b>30 phút/ngày</b><br/>Muốn dùng không giới hạn → liên hệ Admin</p>
-  </div>
-</div>
-
-<!-- ========== DASHBOARD ========== -->
-<div id="appView">
-  <div class="topbar">
-    <div class="brand">DT-Studio</div>
-    <div class="user-info">
-      <span id="userName">—</span>
-      <span class="badge" id="planBadge">FREE</span>
-      <span class="badge admin" id="adminBadge" style="display:none">Admin</span>
-      <button class="btn btn-sm btn-secondary" id="adminBtn" style="display:none" onclick="openAdmin()">⚙️ Admin</button>
-      <button class="btn btn-sm btn-secondary" onclick="logout()">Đăng xuất</button>
-    </div>
-  </div>
-  <div class="container">
-    <div class="card" id="quotaBox">Đang tải hạn mức...</div>
-    <div class="grid">
-      <div class="card">
-        <h3>🎮 Điều khiển Live</h3>
-        <div class="row">
-          <span class="status-dot offline" id="statusDot"></span>
-          <span id="statusText">Chưa kết nối backend</span>
-        </div>
-        <label style="font-size:13px;color:var(--muted);display:block;margin:12px 0 6px">Backend URL (Socket)</label>
-        <div class="row">
-          <input class="inp" id="backendUrl" placeholder="http://localhost:3001" value="http://localhost:3001"/>
-        </div>
-        <label style="font-size:13px;color:var(--muted);display:block;margin:8px 0 6px">TikTok Username (không có @)</label>
-        <div class="row">
-          <input class="inp" id="tiktokId" placeholder="your_tiktok_id"/>
-          <button class="btn btn-sm btn-primary" id="btnConnect" onclick="toggleConnect()">Kết nối</button>
-        </div>
-        <label style="font-size:13px;color:var(--muted);display:block;margin:12px 0 6px">Room ID</label>
-        <div class="overlay-url" id="roomIdDisp">—</div>
-        <label style="font-size:13px;color:var(--muted);display:block;margin:8px 0 6px">Link Overlay (OBS Browser Source)</label>
-        <div class="overlay-url" id="overlayUrl">—</div>
-        <div class="row">
-          <button class="btn btn-sm btn-secondary" onclick="copyOverlay()">📋 Copy link Overlay</button>
-          <button class="btn btn-sm btn-gold" onclick="openOverlayTab()">🗔 Mở Overlay</button>
-        </div>
-        <hr style="border-color:var(--border);margin:16px 0"/>
-        <h3>⚙️ TTS</h3>
-        <div class="row">
-          <label style="font-size:13px;display:flex;align-items:center;gap:6px">
-            <input type="checkbox" id="ttsEnabled" checked onchange="saveSettings()"/> Bật đọc comment
-          </label>
-        </div>
-        <div class="row">
-          <select class="inp" id="ttsGender" onchange="saveSettings()">
-            <option value="female">Giọng nữ (trình duyệt)</option>
-            <option value="male">Giọng nam (trình duyệt)</option>
-          </select>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:6px">
-          • Có backend Node → dùng Edge TTS chất lượng cao<br/>
-          • Không có backend → dùng giọng đọc trình duyệt (miễn phí)
-        </p>
-      </div>
-      <div class="card">
-        <h3>📡 Sự kiện Live</h3>
-        <div class="log-box" id="logBox"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ADMIN MODAL -->
-<div class="modal" id="adminModal">
-  <div class="card">
-    <h3 style="margin-bottom:10px">⚙️ Admin — Nâng cấp gói</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
-      Free = 30 phút TTS+Follow / ngày<br/>
-      Plus / Pro = không giới hạn
-    </p>
-    <div id="adminUserList"></div>
-    <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="closeAdmin()">Đóng</button>
-  </div>
-</div>
-
-<!-- OVERLAY MODE (?overlay=1&room=xxx) -->
-<div id="overlayView">
-  <div id="alerts"></div>
-  <div id="goal">
-    <div class="label">
-      <span>🎯 Mục tiêu Diamond</span>
-      <span id="goalText">0 / 10000</span>
-    </div>
-    <div class="bar"><div class="fill" id="goalFill"></div></div>
-  </div>
-</div>
-
 <script>
-/* ============================================================
-   FIREBASE — lấy từ gamebai.html (namespace riêng /dtstudio)
-   ============================================================ */
+// ======================================================
+// FIREBASE — cùng project với Game Bài Online
+// Path prefix: vlp/ để không đụng data game
+// ======================================================
 const firebaseConfig = {
   apiKey: "AIzaSyCyapf8zLqz31Jc7gMUweXrZk1ReP07dv0",
   databaseURL: "https://nhantin-4ee06-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -217,530 +368,885 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const ROOT = 'dtstudio';
-const userRef = u => db.ref(`${ROOT}/users/${u}`);
-const roomRef = id => db.ref(`${ROOT}/rooms/${id}`);
-const usersRef = () => db.ref(`${ROOT}/users`);
-const usageRef = (u, day) => db.ref(`${ROOT}/usage/${u}/${day}`);
 
-/* ============================================================
-   CONST + STATE
-   ============================================================ */
+const SESSION_K = 'vlp_session_v3';
+const REMEMBER_K = 'vlp_remember_v3';
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
-const FREE_DAILY_MS = 30 * 60 * 1000;
 
+// Local cache (null = chưa load)
+let localUsers = null;   // { username: userObj }
+let localItems = null;   // { id: itemObj }
+let localOrders = null;  // { id: orderObj }
+let localSettings = null;
+let firebaseReady = false;
 let me = null;
-let room = null;
-let socket = null;
-let connected = false;
-let sessionStart = 0;
-let quotaTimer = null;
-let goalCurrent = 0;
-let goalTarget = 10000;
+let currentItem = null;
+let verifiedSteps = [];
+let editItemId = null;
+let curAdminTab = 'dash';
+let linkRows = [];
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
-function toast(msg, ms=2800){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), ms);
+// ===== STORE HELPERS (giữ shape quen thuộc cho UI) =====
+function getUsersArr() {
+  return Object.values(localUsers || {});
 }
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function todayKey(){
-  const d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function getItemsArr() {
+  return Object.values(localItems || {});
 }
-function isPaid(u){
-  if(!u) return false;
-  if(u.isAdmin) return true;
-  const p=(u.plan||'free').toLowerCase();
-  return p==='plus'||p==='pro'||p==='vip';
+function getOrdersArr() {
+  const arr = Object.values(localOrders || {});
+  arr.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  return arr;
 }
-async function hashPassword(pass, salt){
-  const data=new TextEncoder().encode(String(salt||'')+'::'+String(pass||''));
-  const buf=await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+function getSettings() {
+  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2 };
 }
-function genSalt(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
-async function verifyPassword(u, plain){
-  if(!u) return false;
-  if(!u.passHash) return u.password===plain;
-  return (await hashPassword(plain, u.passSalt||'')) === u.passHash;
-}
-function genRoomId(){return Math.random().toString(16).slice(2,8)}
 
-/* ============================================================
-   QUOTA (Free 30 phút/ngày)
-   ============================================================ */
-async function getUsage(username){
-  const snap=await usageRef(username, todayKey()).once('value');
-  const v=snap.val();
-  return { usedMs: Number(v&&v.usedMs)||0 };
+function saveUsers(obj) {
+  localUsers = obj;
+  db.ref('vlp/users').set(obj).catch(e => console.error('saveUsers', e));
 }
-async function addUsage(username, ms){
-  if(ms<=0) return;
-  await usageRef(username, todayKey()).transaction(cur=>{
-    const used=Number(cur&&cur.usedMs)||0;
-    return { usedMs: used+ms, updatedAt: Date.now() };
+function saveItems(obj) {
+  localItems = obj;
+  db.ref('vlp/items').set(obj).catch(e => console.error('saveItems', e));
+}
+function saveOrders(obj) {
+  localOrders = obj;
+  db.ref('vlp/orders').set(obj).catch(e => console.error('saveOrders', e));
+}
+function saveSettings(obj) {
+  localSettings = obj;
+  db.ref('vlp/settings').set(obj).catch(e => console.error('saveSettings', e));
+}
+
+function updateUser(username, data) {
+  if (!localUsers) localUsers = {};
+  localUsers[username] = data;
+  db.ref('vlp/users/' + username).set(data).catch(e => console.error(e));
+}
+function updateItem(id, data) {
+  if (!localItems) localItems = {};
+  localItems[id] = data;
+  db.ref('vlp/items/' + id).set(data).catch(e => console.error(e));
+}
+function removeItem(id) {
+  if (localItems) delete localItems[id];
+  db.ref('vlp/items/' + id).remove().catch(e => console.error(e));
+}
+function addOrder(order) {
+  if (!localOrders) localOrders = {};
+  localOrders[order.id] = order;
+  db.ref('vlp/orders/' + order.id).set(order).catch(e => console.error(e));
+  // giữ tối đa ~300 order gần nhất
+  const keys = Object.keys(localOrders).sort((a, b) => {
+    return (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || '');
   });
-}
-async function checkQuota(user){
-  if(isPaid(user)) return { allowed:true, remainMs:Infinity, usedMs:0, paid:true };
-  const u=await getUsage(user.username);
-  const remain=Math.max(0, FREE_DAILY_MS - u.usedMs);
-  return { allowed: remain>0, remainMs:remain, usedMs:u.usedMs, paid:false };
-}
-
-/* ============================================================
-   TTS — ưu tiên backend Edge, fallback trình duyệt
-   ============================================================ */
-function speakBrowser(text, gender){
-  if(!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='vi-VN';
-  u.rate=1.05;
-  u.pitch = gender==='male' ? 0.85 : 1.15;
-  u.volume=0.95;
-  // cố chọn voice Việt
-  const voices=speechSynthesis.getVoices();
-  const vi=voices.find(v=>/vi/i.test(v.lang));
-  if(vi) u.voice=vi;
-  speechSynthesis.speak(u);
-}
-function playBase64(b64){
-  try{
-    const a=new Audio('data:audio/mp3;base64,'+b64);
-    a.volume=0.95;
-    a.play().catch(()=>{});
-  }catch(e){}
-}
-
-/* ============================================================
-   AUTH UI
-   ============================================================ */
-document.querySelectorAll('.tab').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    btn.classList.add('active');
-    const tab=btn.dataset.tab;
-    document.getElementById('loginForm').style.display=tab==='login'?'block':'none';
-    document.getElementById('registerForm').style.display=tab==='register'?'block':'none';
-    hideErr();
-  };
-});
-function showErr(m){const e=document.getElementById('authErr');e.textContent=m;e.style.display='block'}
-function hideErr(){document.getElementById('authErr').style.display='none'}
-
-async function ensureAdmin(){
-  const snap=await userRef(ADMIN_USER).once('value');
-  if(snap.exists()) return;
-  const salt=genSalt();
-  const passHash=await hashPassword(ADMIN_PASS, salt);
-  await userRef(ADMIN_USER).set({
-    username:ADMIN_USER, displayName:'Admin', passHash, passSalt:salt,
-    isAdmin:true, plan:'pro', createdAt:Date.now(), roomId:null
-  });
-}
-
-async function doLogin(){
-  hideErr();
-  const user=document.getElementById('loginUser').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  if(!user||!pass) return showErr('Nhập tên đăng nhập và mật khẩu');
-  await ensureAdmin();
-  const snap=await userRef(user).once('value');
-  const u=snap.val();
-  if(!u) return showErr('Tài khoản không tồn tại');
-  if(!(await verifyPassword(u, pass))) return showErr('Sai mật khẩu');
-  me=u;
-  localStorage.setItem('dt_user', JSON.stringify({u:user,p:pass}));
-  enterApp();
-}
-
-async function doRegister(){
-  hideErr();
-  const name=document.getElementById('regName').value.trim();
-  const user=document.getElementById('regUser').value.trim().toLowerCase();
-  const pass=document.getElementById('regPass').value;
-  if(!name||!user||!pass) return showErr('Điền đầy đủ thông tin');
-  if(pass.length<4) return showErr('Mật khẩu tối thiểu 4 ký tự');
-  if(!/^[a-z0-9_]{3,20}$/.test(user)) return showErr('Tên đăng nhập: a-z, 0-9, _ (3-20 ký tự)');
-  if((await userRef(user).once('value')).exists()) return showErr('Tên đăng nhập đã tồn tại');
-
-  const salt=genSalt();
-  const passHash=await hashPassword(pass, salt);
-  const roomId=genRoomId();
-  const newUser={
-    username:user, displayName:name, passHash, passSalt:salt,
-    isAdmin:false, plan:'free', createdAt:Date.now(), roomId
-  };
-  await userRef(user).set(newUser);
-  await roomRef(roomId).set({
-    id:roomId, owner:user, name:name+"'s Room", tiktokId:'',
-    settings:{ ttsEnabled:true, ttsGender:'female', ttsMinLength:2, alertGift:true, alertFollow:true, goalTarget:10000, goalCurrent:0 },
-    createdAt:Date.now()
-  });
-  me=newUser;
-  localStorage.setItem('dt_user', JSON.stringify({u:user,p:pass}));
-  enterApp();
-}
-
-function logout(){
-  if(sessionStart && me && !isPaid(me)) addUsage(me.username, Date.now()-sessionStart);
-  me=null; room=null;
-  if(socket){ try{socket.disconnect()}catch(e){} socket=null; }
-  localStorage.removeItem('dt_user');
-  document.getElementById('appView').style.display='none';
-  document.getElementById('authView').style.display='flex';
-}
-
-async function tryAutoLogin(){
-  let saved=null;
-  try{saved=JSON.parse(localStorage.getItem('dt_user'))}catch(e){}
-  if(!saved||!saved.u) return;
-  const snap=await userRef(saved.u).once('value');
-  const u=snap.val();
-  if(!u) return;
-  if(!(await verifyPassword(u, saved.p))) return;
-  me=u;
-  enterApp();
-}
-
-/* ============================================================
-   APP / DASHBOARD
-   ============================================================ */
-async function enterApp(){
-  document.getElementById('authView').style.display='none';
-  document.getElementById('appView').style.display='flex';
-
-  document.getElementById('userName').textContent=me.displayName||me.username;
-  document.getElementById('planBadge').textContent=(me.plan||'free').toUpperCase();
-  if(me.isAdmin){
-    document.getElementById('adminBadge').style.display='inline';
-    document.getElementById('adminBtn').style.display='inline-block';
+  if (keys.length > 300) {
+    keys.slice(300).forEach(k => {
+      delete localOrders[k];
+      db.ref('vlp/orders/' + k).remove();
+    });
   }
+}
 
-  // room
-  if(me.roomId){
-    const rs=await roomRef(me.roomId).once('value');
-    room=rs.val();
+function checkFirebaseReady() {
+  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && !firebaseReady) {
+    firebaseReady = true;
+    document.getElementById('connOverlay').classList.add('hidden');
+    // Auto session
+    tryAutoLogin();
   }
-  if(!room){
-    const roomId=genRoomId();
-    room={
-      id:roomId, owner:me.username, name:(me.displayName||me.username)+"'s Room", tiktokId:'',
-      settings:{ ttsEnabled:true, ttsGender:'female', ttsMinLength:2, alertGift:true, alertFollow:true, goalTarget:10000, goalCurrent:0 },
-      createdAt:Date.now()
+}
+
+function ensureDefaults() {
+  // Admin
+  if (!localUsers[ADMIN_USER]) {
+    localUsers[ADMIN_USER] = {
+      username: ADMIN_USER,
+      password: ADMIN_PASS,
+      display: 'Admin',
+      role: 'admin',
+      avatar: '👑',
+      joined: new Date().toISOString()
     };
-    await roomRef(roomId).set(room);
-    await userRef(me.username).update({ roomId });
-    me.roomId=roomId;
+    saveUsers(localUsers);
   }
-
-  document.getElementById('roomIdDisp').textContent=room.id;
-  document.getElementById('tiktokId').value=room.tiktokId||'';
-  document.getElementById('ttsEnabled').checked=room.settings?.ttsEnabled!==false;
-  document.getElementById('ttsGender').value=room.settings?.ttsGender||'female';
-  updateOverlayUrl();
-  await refreshQuotaUI();
-  connectSocket();
-  addLog('system','Đã vào Dashboard · Room '+room.id);
-  if(!isPaid(me)) addLog('system','Gói Free: TTS + Follow tối đa 30 phút/ngày');
-}
-
-function updateOverlayUrl(){
-  const url=location.origin+location.pathname+'?overlay=1&room='+room.id;
-  document.getElementById('overlayUrl').textContent=url;
-}
-
-async function refreshQuotaUI(){
-  const el=document.getElementById('quotaBox');
-  if(isPaid(me)){
-    el.innerHTML=`<span style="color:#22c55e">✓ Gói ${(me.plan||'pro').toUpperCase()} — Không giới hạn</span>`;
-    return;
-  }
-  const q=await checkQuota(me);
-  if(q.allowed){
-    const m=Math.floor(q.remainMs/60000), s=Math.floor((q.remainMs%60000)/1000);
-    el.innerHTML=`Free · Còn lại: <b style="color:var(--gold)">${m}p ${s}s</b> / 30 phút hôm nay
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Muốn dùng vĩnh viễn → liên hệ Admin mua gói Plus/Pro</div>`;
-  } else {
-    el.innerHTML=`<span style="color:#ef4444">⏰ Đã hết 30 phút Free hôm nay</span>
-      <div style="font-size:12px;margin-top:6px">Liên hệ Admin để mua gói dùng không giới hạn</div>`;
-  }
-}
-
-function startQuotaTicker(){
-  if(quotaTimer) clearInterval(quotaTimer);
-  quotaTimer=setInterval(async()=>{
-    if(!sessionStart||isPaid(me)) return;
-    const elapsed=Date.now()-sessionStart;
-    if(elapsed>=10000){
-      await addUsage(me.username, elapsed);
-      sessionStart=Date.now();
-      await refreshQuotaUI();
-      const q=await checkQuota(me);
-      if(!q.allowed){
-        addLog('system','⏰ Hết 30 phút Free hôm nay — TTS & Follow đã tạm dừng');
-        clearInterval(quotaTimer); quotaTimer=null; sessionStart=0;
+  // Demo items nếu trống
+  if (!Object.keys(localItems || {}).length) {
+    const demo = {
+      demo1: {
+        id: 'demo1', name: 'Acc TikTok VIP', desc: 'Tài khoản TikTok cấp cao',
+        icon: '🎵', rounds: 2, content: 'https://tiktok.com/@demo_vip_acc\nPass: demo123',
+        links: [
+          { url: 'https://link4m.co/xxxaaa', label: 'Lượt 1' },
+          { url: 'https://link4m.co/xxxbbb', label: 'Lượt 2' }
+        ],
+        active: true, addedBy: 'admin', createdAt: new Date().toISOString()
+      },
+      demo2: {
+        id: 'demo2', name: 'File Chống Ban FF', desc: 'File định vị antiban cần acc 9',
+        icon: '🛡️', rounds: 3, content: 'Link tải file: https://drive.google.com/demo\nKey: DEMO-ANTI-BAN-2024',
+        links: [
+          { url: 'https://link4m.co/yyy111', label: 'Lượt 1' },
+          { url: 'https://link4m.co/yyy222', label: 'Lượt 2' },
+          { url: 'https://link4m.co/yyy333', label: 'Lượt 3' }
+        ],
+        active: true, addedBy: 'admin', createdAt: new Date().toISOString()
       }
-    }
-  },10000);
+    };
+    localItems = demo;
+    saveItems(localItems);
+  }
+  if (!localSettings || typeof localSettings !== 'object') {
+    localSettings = { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2 };
+    saveSettings(localSettings);
+  }
 }
 
-window.addEventListener('beforeunload',()=>{
-  if(sessionStart&&me&&!isPaid(me)) addUsage(me.username, Date.now()-sessionStart);
+// Listeners
+db.ref('vlp/users').on('value', snap => {
+  const first = localUsers === null;
+  localUsers = snap.val() || {};
+  if (first) {
+    ensureDefaults();
+    checkFirebaseReady();
+  }
+  // Refresh me nếu đang login
+  if (me && localUsers[me.username]) {
+    me = localUsers[me.username];
+  }
+  // Refresh UI nếu đang ở main/admin
+  if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
+  if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
+}, err => {
+  console.error(err);
+  document.getElementById('connMsg').textContent = 'Không kết nối được máy chủ. Kiểm tra mạng / Firebase.';
 });
 
-/* ============================================================
-   SOCKET + TIKTOK
-   ============================================================ */
-function connectSocket(){
-  if(socket){ try{socket.disconnect()}catch(e){} }
-  const url=(document.getElementById('backendUrl').value||'http://localhost:3001').trim();
-  try{
-    socket=io(url,{ transports:['websocket','polling'], timeout:5000 });
-    socket.on('connect',()=>{
-      addLog('system','✓ Đã kết nối backend');
-      socket.emit('join-room', room.id);
-      updateStatus({ status:'idle' });
-    });
-    socket.on('connect_error',()=>{
-      addLog('system','⚠ Không kết nối được backend — vẫn dùng TTS trình duyệt nếu có event');
-      updateStatus({ status:'offline' });
-    });
-    socket.on('tiktok-status', updateStatus);
-    socket.on('tiktok-chat', onChat);
-    socket.on('tiktok-gift', onGift);
-    socket.on('tiktok-follow', onFollow);
-    socket.on('tts-audio', d=>{ if(d&&d.audio) playBase64(d.audio); });
-    socket.on('error', e=>addLog('system','❌ '+(e.message||e)));
-  }catch(e){
-    addLog('system','Socket lỗi: '+e.message);
+db.ref('vlp/items').on('value', snap => {
+  const first = localItems === null;
+  localItems = snap.val() || {};
+  if (first) checkFirebaseReady();
+  if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
+  if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
+}, err => console.error(err));
+
+db.ref('vlp/orders').on('value', snap => {
+  const first = localOrders === null;
+  localOrders = snap.val() || {};
+  if (first) checkFirebaseReady();
+  if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
+    renderAdminBody(curAdminTab);
+  }
+}, err => console.error(err));
+
+db.ref('vlp/settings').on('value', snap => {
+  const first = localSettings === null;
+  localSettings = snap.val() || { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2 };
+  if (first) checkFirebaseReady();
+}, err => console.error(err));
+
+// Timeout fallback
+setTimeout(() => {
+  if (!firebaseReady) {
+    document.getElementById('connMsg').textContent = 'Kết nối chậm... Đang thử lại. Kiểm tra mạng.';
+  }
+}, 8000);
+
+// ===== AUTH =====
+function switchTab(t) {
+  document.getElementById('formLogin').style.display = t === 'login' ? 'block' : 'none';
+  document.getElementById('formReg').style.display = t === 'reg' ? 'block' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active', t === 'login');
+  document.getElementById('tabReg').classList.toggle('active', t === 'reg');
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'alert alert-' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function doLogin() {
+  if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
+  const u = (document.getElementById('liUser').value || '').trim();
+  const p = document.getElementById('liPass').value || '';
+  if (!u || !p) { showAlert('loginErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
+  const found = (localUsers || {})[u];
+  if (!found || found.password !== p) {
+    showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err');
+    return;
+  }
+  me = found;
+  const remember = document.getElementById('cbRemember').checked;
+  localStorage.setItem(SESSION_K, JSON.stringify({ username: u }));
+  if (remember) localStorage.setItem(REMEMBER_K, u);
+  else localStorage.removeItem(REMEMBER_K);
+  enterMain();
+}
+
+function doRegister() {
+  if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
+  const name = (document.getElementById('riName').value || '').trim();
+  const u = (document.getElementById('riUser').value || '').trim().toLowerCase();
+  const p = document.getElementById('riPass').value || '';
+  const p2 = document.getElementById('riPass2').value || '';
+  if (!name || !u || !p || !p2) { showAlert('regErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(u)) { showAlert('regErr', '⚠️ Username chỉ gồm chữ thường, số, gạch dưới (3-20 ký tự)', 'err'); return; }
+  if (p.length < 6) { showAlert('regErr', '⚠️ Mật khẩu ít nhất 6 ký tự', 'err'); return; }
+  if (p !== p2) { showAlert('regErr', '⚠️ Xác nhận mật khẩu không khớp', 'err'); return; }
+  if ((localUsers || {})[u]) { showAlert('regErr', '❌ Username đã tồn tại', 'err'); return; }
+  const nu = {
+    username: u, password: p, display: name, role: 'user',
+    avatar: '👤', joined: new Date().toISOString()
+  };
+  updateUser(u, nu);
+  showAlert('regOk', '✅ Tạo tài khoản thành công! Đang đăng nhập...', 'ok');
+  setTimeout(() => {
+    me = nu;
+    localStorage.setItem(SESSION_K, JSON.stringify({ username: u }));
+    enterMain();
+  }, 800);
+}
+
+function doLogout() {
+  localStorage.removeItem(SESSION_K);
+  me = null;
+  showPage('authPage');
+  const rem = localStorage.getItem(REMEMBER_K);
+  document.getElementById('liUser').value = rem || '';
+  document.getElementById('liPass').value = '';
+  toast('Đã đăng xuất');
+}
+
+function tryAutoLogin() {
+  const rem = localStorage.getItem(REMEMBER_K);
+  if (rem) {
+    document.getElementById('liUser').value = rem;
+    document.getElementById('cbRemember').checked = true;
+  }
+  const saved = localStorage.getItem(SESSION_K);
+  if (saved) {
+    try {
+      const { username } = JSON.parse(saved);
+      const found = (localUsers || {})[username];
+      if (found) {
+        me = found;
+        enterMain();
+        return;
+      }
+    } catch (e) {
+      localStorage.removeItem(SESSION_K);
+    }
   }
 }
 
-function updateStatus(data){
-  const dot=document.getElementById('statusDot');
-  const text=document.getElementById('statusText');
-  const btn=document.getElementById('btnConnect');
-  dot.className='status-dot';
-  if(data.status==='connected'){
-    dot.classList.add('online');
-    text.textContent='Đã kết nối · @'+(data.uniqueId||'');
-    btn.textContent='Ngắt kết nối';
-    connected=true;
-  } else if(data.status==='connecting'){
-    dot.classList.add('connecting');
-    text.textContent='Đang kết nối TikTok...';
-    btn.textContent='Đang kết nối...';
-    connected=false;
-  } else if(data.status==='error'){
-    dot.classList.add('offline');
-    text.textContent='Lỗi: '+(data.error||'');
-    btn.textContent='Kết nối';
-    connected=false;
-  } else if(data.status==='offline'){
-    dot.classList.add('offline');
-    text.textContent='Backend offline';
-    btn.textContent='Kết nối';
-    connected=false;
+// ===== NAV =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function enterMain() {
+  showPage('mainPage');
+  document.getElementById('uAva').textContent = me.avatar || '👤';
+  document.getElementById('uName').textContent = me.display;
+  document.getElementById('uJoin').textContent = 'Tham gia: ' + fmtDate(me.joined);
+  const rb = document.getElementById('uRoleBadge');
+  if (me.role === 'admin') {
+    rb.textContent = '⭐ ADMIN';
+    rb.className = 'role-badge rb-admin';
+    document.getElementById('btnAdmin').style.display = '';
   } else {
-    dot.classList.add('offline');
-    text.textContent='Chưa kết nối TikTok';
-    btn.textContent='Kết nối';
-    connected=false;
+    rb.textContent = '👤 THÀNH VIÊN';
+    rb.className = 'role-badge rb-user';
+    document.getElementById('btnAdmin').style.display = 'none';
   }
+  renderItemGrid();
 }
 
-async function toggleConnect(){
-  // reconnect socket nếu đổi URL
-  connectSocket();
-  if(connected){
-    socket&&socket.emit('disconnect-tiktok',{ roomId: room.id });
-    updateStatus({ status:'idle' });
+function goAdmin() {
+  if (!me || me.role !== 'admin') { toast('Không có quyền!', 'err'); return; }
+  document.getElementById('adminDName').textContent = me.display;
+  document.getElementById('adminAvaIcon').textContent = me.avatar || '👑';
+  showPage('adminPage');
+  aTab('dash');
+}
+
+function goMain() {
+  showPage('mainPage');
+  renderItemGrid();
+}
+
+// ===== ITEM GRID =====
+function renderItemGrid() {
+  const grid = document.getElementById('itemGrid');
+  const active = getItemsArr().filter(i => i.active);
+  if (!active.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung nào</div></div>';
     return;
   }
-  const uniqueId=document.getElementById('tiktokId').value.trim().replace(/^@/,'');
-  if(!uniqueId){ toast('Nhập TikTok username'); return; }
-  room.tiktokId=uniqueId;
-  await roomRef(room.id).update({ tiktokId: uniqueId });
-  if(!socket||!socket.connected){
-    toast('Backend chưa chạy — mở terminal chạy npm start trong folder backend');
-    addLog('system','Cần backend Node (tiktok-live-connector) để lấy comment real-time');
-    return;
-  }
-  socket.emit('connect-tiktok',{ roomId: room.id, uniqueId });
-  updateStatus({ status:'connecting', uniqueId });
-}
-
-async function onChat(data){
-  addLog('chat', `${data.nickname}: ${data.comment}`);
-  if(room.settings?.ttsEnabled===false) return;
-  const minLen=room.settings?.ttsMinLength||2;
-  if(!data.comment||data.comment.trim().length<minLen) return;
-
-  const q=await checkQuota(me);
-  if(!q.allowed){
-    addLog('system','⏰ Hết 30 phút Free — liên hệ Admin mua gói');
-    return;
-  }
-  if(!sessionStart){ sessionStart=Date.now(); startQuotaTicker(); }
-
-  // Gửi backend TTS nếu có, không thì browser
-  if(socket&&socket.connected){
-    socket.emit('tts-request',{
-      text:data.comment,
-      gender:room.settings?.ttsGender||'female',
-      roomId:room.id
-    });
-  } else {
-    speakBrowser(data.comment, room.settings?.ttsGender||'female');
-  }
-}
-
-function onGift(data){
-  addLog('gift', `🎁 ${data.nickname} tặng ${data.giftName} x${data.repeatCount} (${data.diamondCount}💎)`);
-  goalCurrent += (data.diamondCount||0)*(data.repeatCount||1);
-}
-
-async function onFollow(data){
-  addLog('follow', `➕ ${data.nickname} đã follow`);
-  const q=await checkQuota(me);
-  if(!q.allowed) return;
-  if(!sessionStart){ sessionStart=Date.now(); startQuotaTicker(); }
-}
-
-async function saveSettings(){
-  if(!room) return;
-  room.settings=room.settings||{};
-  room.settings.ttsEnabled=document.getElementById('ttsEnabled').checked;
-  room.settings.ttsGender=document.getElementById('ttsGender').value;
-  await roomRef(room.id).update({ settings: room.settings });
-  addLog('system','Đã lưu cài đặt');
-}
-
-function copyOverlay(){
-  const url=document.getElementById('overlayUrl').textContent;
-  navigator.clipboard.writeText(url).then(()=>toast('Đã copy link Overlay'));
-}
-function openOverlayTab(){
-  window.open(document.getElementById('overlayUrl').textContent,'_blank');
-}
-
-function addLog(type, msg){
-  const box=document.getElementById('logBox');
-  if(!box) return;
-  const el=document.createElement('div');
-  el.className='log-item '+type;
-  el.textContent=`[${new Date().toLocaleTimeString('vi-VN')}] ${msg}`;
-  box.appendChild(el);
-  box.scrollTop=box.scrollHeight;
-  while(box.children.length>100) box.removeChild(box.firstChild);
-}
-
-/* ============================================================
-   ADMIN
-   ============================================================ */
-async function openAdmin(){
-  if(!me?.isAdmin) return;
-  document.getElementById('adminModal').classList.add('show');
-  const snap=await usersRef().once('value');
-  const users=snap.val()||{};
-  const el=document.getElementById('adminUserList');
-  el.innerHTML='';
-  Object.values(users).forEach(u=>{
-    if(!u?.username) return;
-    const div=document.createElement('div');
-    div.className='admin-user-row';
-    const plan=(u.plan||'free').toUpperCase();
-    div.innerHTML=`
-      <div>
-        <b>${esc(u.displayName||u.username)}</b>
-        <span style="color:var(--muted);font-size:12px"> @${esc(u.username)}</span>
-        <span class="badge" style="margin-left:6px">${plan}</span>
-        ${u.isAdmin?'<span class="badge admin">Admin</span>':''}
+  grid.innerHTML = active.map(item => `
+    <div class="item-card" onclick="openBypass('${item.id}')">
+      <div class="item-icon">${item.icon || '📦'}</div>
+      <div class="item-info">
+        <div class="item-name">${esc(item.name)}</div>
+        <div class="item-desc">${esc(item.desc || '')}</div>
+        <div class="item-meta">
+          <span class="rounds-badge">⚡ ${item.rounds || 1} lượt vượt</span>
+        </div>
       </div>
-      <div class="row" style="margin:0;gap:6px">
-        <select class="inp" style="width:auto;margin:0;padding:6px 10px;font-size:12px" id="plan_${u.username}">
-          <option value="free" ${!u.plan||u.plan==='free'?'selected':''}>Free</option>
-          <option value="plus" ${u.plan==='plus'?'selected':''}>Plus</option>
-          <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
-        </select>
-        <button class="btn btn-sm btn-primary" style="width:auto" onclick="setUserPlan('${u.username}')">Lưu</button>
+      <span style="color:var(--sub);font-size:18px">›</span>
+    </div>
+  `).join('');
+}
+
+// ===== BYPASS =====
+function openBypass(id) {
+  currentItem = (localItems || {})[id];
+  if (!currentItem) return;
+  const rounds = Math.max(1, parseInt(currentItem.rounds) || 1);
+  currentItem.rounds = rounds;
+  verifiedSteps = new Array(rounds).fill(false);
+
+  document.getElementById('bmTitle').textContent = '⚡ ' + currentItem.name;
+  document.getElementById('bmInfo').textContent =
+    `Hoàn thành đủ ${rounds} lượt vượt link bên dưới để nhận nội dung miễn phí.`;
+  document.getElementById('bmInfo').className = 'alert alert-info show';
+  document.getElementById('bmResult').classList.remove('show');
+  updateProgress();
+  renderSteps();
+  document.getElementById('bypassModal').classList.add('open');
+}
+
+function renderSteps() {
+  const item = currentItem;
+  const rounds = item.rounds || 1;
+  const links = item.links || [];
+  let html = '';
+  for (let i = 0; i < rounds; i++) {
+    const link = links[i] || { url: '', label: 'Lượt ' + (i + 1) };
+    const done = !!verifiedSteps[i];
+    const firstPending = verifiedSteps.indexOf(false);
+    const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
+    html += `
+      <div class="step-item" id="step_${i}">
+        <div class="step-hd">
+          <div class="step-num ${numClass}" id="snum_${i}">${done ? '✓' : (i + 1)}</div>
+          <div class="step-label">${esc(link.label || ('Lượt ' + (i + 1)))}</div>
+        </div>
+        <div class="step-body">
+          <button class="btn btn-cyan btn-sm" onclick="openLink(${i})" ${done ? 'disabled' : ''}>🔗 Lấy Link</button>
+          <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}"
+            type="text" autocomplete="off" spellcheck="false" inputmode="text"
+            placeholder="Dán mã xác nhận..."
+            value="${done ? '✅ Đã xác nhận' : ''}"
+            ${done ? 'disabled' : ''}
+            onkeydown="if(event.key==='Enter'){event.preventDefault();verifyCode(${i});}"
+            oninput="handleCodeInput(this, ${i})"/>
+          <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}"
+            onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
+        </div>
       </div>`;
-    el.appendChild(div);
-  });
-}
-function closeAdmin(){ document.getElementById('adminModal').classList.remove('show') }
-async function setUserPlan(username){
-  const sel=document.getElementById('plan_'+username);
-  if(!sel) return;
-  const plan=sel.value;
-  await userRef(username).update({ plan });
-  toast(`Đã set @${username} → ${plan.toUpperCase()}`);
-  if(me.username===username){ me.plan=plan; document.getElementById('planBadge').textContent=plan.toUpperCase(); await refreshQuotaUI(); }
-  openAdmin();
-}
-
-/* ============================================================
-   OVERLAY MODE
-   ============================================================ */
-function runOverlay(roomId){
-  document.getElementById('authView').style.display='none';
-  document.getElementById('appView').style.display='none';
-  document.getElementById('overlayView').style.display='block';
-  document.body.style.background='transparent';
-
-  const backend=(localStorage.getItem('dt_backend')||'http://localhost:3001');
-  const s=io(backend,{ transports:['websocket','polling'] });
-  s.emit('join-room', roomId);
-
-  function showAlert(type, name, msg){
-    const box=document.getElementById('alerts');
-    const el=document.createElement('div');
-    el.className='alert '+type;
-    el.innerHTML=`<div class="name">${esc(name)}</div><div class="msg">${esc(msg)}</div>`;
-    box.appendChild(el);
-    setTimeout(()=>el.remove(),5200);
   }
-  function updateGoal(){
-    const pct=Math.min(100,(goalCurrent/goalTarget)*100);
-    document.getElementById('goalFill').style.width=pct+'%';
-    document.getElementById('goalText').textContent=goalCurrent.toLocaleString()+' / '+goalTarget.toLocaleString();
-    document.getElementById('goal').classList.toggle('done', pct>=100);
-  }
-
-  s.on('tiktok-gift', data=>{
-    showAlert('gift', data.nickname, `tặng ${data.giftName} x${data.repeatCount} · ${data.diamondCount}💎`);
-    goalCurrent+=(data.diamondCount||0)*(data.repeatCount||1);
-    updateGoal();
-  });
-  s.on('tiktok-follow', data=>{
-    showAlert('follow', data.nickname, 'đã follow!');
-  });
-  s.on('tts-audio', data=>{
-    if(data&&data.audio) playBase64(data.audio);
-  });
-  // fallback browser TTS nếu dashboard gửi text (không có trong bản này)
-  updateGoal();
+  document.getElementById('bmSteps').innerHTML = html;
 }
 
-/* ============================================================
-   BOOT
-   ============================================================ */
-(async function boot(){
-  const params=new URLSearchParams(location.search);
-  if(params.get('overlay')==='1' && params.get('room')){
-    runOverlay(params.get('room'));
+function openLink(idx) {
+  const links = (currentItem && currentItem.links) || [];
+  const link = links[idx];
+  if (!link || !link.url || !String(link.url).trim()) {
+    toast('Link chưa được cấu hình cho lượt này', 'err');
     return;
   }
-  await ensureAdmin();
-  await tryAutoLogin();
-})();
+  window.open(String(link.url).trim(), '_blank');
+  toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong lấy mã xác nhận!');
+}
+
+function handleCodeInput(el, idx) {
+  if (!el) return;
+  const btn = document.getElementById('verifyBtn_' + idx);
+  if (!btn) return;
+  if (el.value.trim()) {
+    btn.classList.remove('btn-ghost');
+    btn.classList.add('btn-cyan');
+  } else {
+    btn.classList.remove('btn-cyan');
+    btn.classList.add('btn-ghost');
+  }
+}
+
+function verifyCode(idx) {
+  const inp = document.getElementById('codeinp_' + idx);
+  if (!inp || inp.disabled) return;
+  const val = (inp.value || '').trim();
+  if (!val) {
+    toast('⚠️ Vui lòng nhập / dán mã xác nhận!', 'err');
+    inp.focus();
+    return;
+  }
+  verifiedSteps[idx] = true;
+  inp.value = '✅ Đã xác nhận';
+  inp.classList.add('verified');
+  inp.disabled = true;
+  const btn = document.getElementById('verifyBtn_' + idx);
+  if (btn) {
+    btn.disabled = true;
+    btn.className = 'btn btn-green btn-sm';
+  }
+  const snum = document.getElementById('snum_' + idx);
+  if (snum) {
+    snum.textContent = '✓';
+    snum.className = 'step-num done';
+  }
+  if (idx + 1 < currentItem.rounds) {
+    const nextNum = document.getElementById('snum_' + (idx + 1));
+    if (nextNum) nextNum.className = 'step-num active';
+  }
+  updateProgress();
+  if (verifiedSteps.every(v => v)) {
+    setTimeout(showResult, 350);
+  } else {
+    toast('✅ Lượt ' + (idx + 1) + ' xác nhận thành công!', 'ok');
+  }
+}
+
+function updateProgress() {
+  const done = verifiedSteps.filter(Boolean).length;
+  const total = currentItem ? currentItem.rounds : 0;
+  const pct = total > 0 ? (done / total) * 100 : 0;
+  const fill = document.getElementById('bmProgFill');
+  const txt = document.getElementById('bmProgText');
+  if (fill) fill.style.width = pct + '%';
+  if (txt) txt.textContent = done + ' / ' + total + ' lượt hoàn thành';
+}
+
+function showResult() {
+  const content = currentItem.content || '(Không có nội dung)';
+  document.getElementById('bmResultContent').textContent = content;
+  document.getElementById('bmResult').classList.add('show');
+  const order = {
+    id: 'ORD' + Date.now(),
+    user: me.username,
+    display: me.display,
+    itemId: currentItem.id,
+    itemName: currentItem.name,
+    status: 'success',
+    createdAt: new Date().toISOString()
+  };
+  addOrder(order);
+  toast('🎉 Hoàn thành! Nội dung đã được mở khóa!', 'ok');
+}
+
+function copyResult() {
+  const txt = document.getElementById('bmResultContent').textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => toast('📋 Đã sao chép!', 'ok')).catch(() => fallbackCopy(txt));
+  } else fallbackCopy(txt);
+}
+
+function fallbackCopy(txt) {
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('📋 Đã sao chép!', 'ok'); }
+  catch (e) { toast('Không sao chép được', 'err'); }
+  document.body.removeChild(ta);
+}
+
+function openResult() {
+  const txt = document.getElementById('bmResultContent').textContent.trim();
+  const urlMatch = txt.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) window.open(urlMatch[0], '_blank');
+  else toast('Không tìm thấy link để mở', 'err');
+}
+
+function closeBypass() {
+  document.getElementById('bypassModal').classList.remove('open');
+  currentItem = null;
+  verifiedSteps = [];
+}
+
+// ===== ADMIN =====
+function aTab(t) {
+  curAdminTab = t;
+  document.querySelectorAll('.atab').forEach((b, i) => {
+    b.classList.toggle('active', ['dash', 'items', 'users', 'orders', 'settings'][i] === t);
+  });
+  renderAdminBody(t);
+}
+
+function renderAdminBody(t) {
+  const body = document.getElementById('adminBody');
+  if (t === 'dash') renderDash(body);
+  else if (t === 'items') renderItemsAdmin(body);
+  else if (t === 'users') renderUsersAdmin(body);
+  else if (t === 'orders') renderOrdersAdmin(body);
+  else if (t === 'settings') renderSettings(body);
+}
+
+function renderDash(body) {
+  const users = getUsersArr().filter(u => u.role !== 'admin').length;
+  const items = getItemsArr().filter(i => i.active).length;
+  const orders = getOrdersArr();
+  const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
+  body.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-n">${users}</div><div class="stat-l">👥 Thành viên</div></div>
+      <div class="stat-card s-gold"><div class="stat-n">${items}</div><div class="stat-l">📦 Nội dung</div></div>
+      <div class="stat-card s-green"><div class="stat-n">${orders.length}</div><div class="stat-l">📋 Tổng lượt</div></div>
+      <div class="stat-card s-red"><div class="stat-n">${todayOrders}</div><div class="stat-l">🗓️ Hôm nay</div></div>
+    </div>
+    <div class="sec-title" style="margin-bottom:10px">📋 Lịch sử gần nhất</div>
+    ${renderOrderTable(orders.slice(0, 8))}
+  `;
+}
+
+function renderItemsAdmin(body) {
+  const items = getItemsArr();
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="sec-title" style="margin-bottom:0">📦 QUẢN LÝ NỘI DUNG</div>
+      <button class="btn btn-gold btn-sm" onclick="openItemModal()">➕ Thêm</button>
+    </div>
+    <div id="itemAdminList">
+      ${items.length ? items.map(item => `
+        <div class="item-manage-row">
+          <div style="font-size:22px;flex-shrink:0">${item.icon || '📦'}</div>
+          <div class="imr-info">
+            <div class="imr-name">${esc(item.name)}</div>
+            <div class="imr-sub">${item.rounds} lượt vượt • ${esc(item.desc || '')}</div>
+            <div style="margin-top:4px"><span class="bdg ${item.active ? 'bdg-ok' : 'bdg-no'}">${item.active ? 'Bật' : 'Tắt'}</span></div>
+          </div>
+          <div class="imr-acts">
+            <button class="btn btn-ghost btn-xs" onclick="openItemModal('${item.id}')">✏️</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active ? '⏸' : '▶'}</button>
+            <button class="btn btn-red btn-xs" onclick="deleteItem('${item.id}')">🗑</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung</div></div>'}
+    </div>
+  `;
+}
+
+function renderUsersAdmin(body) {
+  const users = getUsersArr().filter(u => u.role !== 'admin');
+  const orders = getOrdersArr();
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="sec-title" style="margin-bottom:0">👥 DANH SÁCH KHÁCH</div>
+      <span style="font-size:12px;color:var(--sub)">${users.length} thành viên</span>
+    </div>
+    <input class="srch-inp" placeholder="🔍 Tìm kiếm..." oninput="filterUserTable(this.value)"/>
+    <div class="tbl-wrap">
+      <table class="dtbl">
+        <thead><tr><th>Tên</th><th>Username</th><th>Lượt vượt</th><th>Tham gia</th></tr></thead>
+        <tbody id="userTbody">
+          ${users.length ? users.map(u => `
+            <tr>
+              <td>${u.avatar || '👤'} <strong>${esc(u.display)}</strong></td>
+              <td style="color:var(--sub)">@${esc(u.username)}</td>
+              <td>${orders.filter(o => o.user === u.username).length}</td>
+              <td style="color:var(--sub);font-size:11px">${fmtDate(u.joined)}</td>
+            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function filterUserTable(q) {
+  const tbody = document.getElementById('userTbody');
+  if (!tbody) return;
+  const lower = (q || '').toLowerCase();
+  tbody.querySelectorAll('tr').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(lower) ? '' : 'none';
+  });
+}
+
+function renderOrdersAdmin(body) {
+  const orders = getOrdersArr();
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="sec-title" style="margin-bottom:0">📋 LỊCH SỬ VƯỢT LINK</div>
+      <span style="font-size:12px;color:var(--sub)">${orders.length} lượt</span>
+    </div>
+    <div class="filter-row">
+      <button class="fbtn active" onclick="filterOrders('all',this)">Tất cả</button>
+      <button class="fbtn" onclick="filterOrders('today',this)">Hôm nay</button>
+      <button class="fbtn" onclick="filterOrders('week',this)">Tuần này</button>
+      <button class="fbtn" onclick="filterOrders('month',this)">Tháng này</button>
+    </div>
+    <div id="orderTableWrap">${renderOrderTable(orders)}</div>
+  `;
+}
+
+function renderOrderTable(orders) {
+  if (!orders.length) return '<div class="empty-state"><div class="empty-icon">📋</div><div>Chưa có dữ liệu</div></div>';
+  return `<div class="tbl-wrap"><table class="dtbl">
+    <thead><tr><th>Người dùng</th><th>Nội dung</th><th>TT</th><th>Thời gian</th></tr></thead>
+    <tbody>${orders.map(o => `
+      <tr>
+        <td><strong>${esc(o.display)}</strong><br><span style="color:var(--sub);font-size:10px">@${esc(o.user)}</span></td>
+        <td style="font-size:11px;color:var(--sub);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.itemName || '')}</td>
+        <td><span class="bdg ${o.status === 'success' ? 'bdg-ok' : 'bdg-no'}">${o.status === 'success' ? '✅' : '❌'}</span></td>
+        <td style="font-size:10px;color:var(--sub);white-space:nowrap">${fmtDT(o.createdAt)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function filterOrders(range, btn) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  let orders = getOrdersArr();
+  if (range === 'today') orders = orders.filter(o => isToday(o.createdAt));
+  else if (range === 'week') orders = orders.filter(o => isWeek(o.createdAt));
+  else if (range === 'month') orders = orders.filter(o => isMonth(o.createdAt));
+  document.getElementById('orderTableWrap').innerHTML = renderOrderTable(orders);
+}
+
+function renderSettings(body) {
+  const s = getSettings();
+  body.innerHTML = `
+    <div class="sec-title" style="margin-bottom:12px">⚙️ CÀI ĐẶT HỆ THỐNG (Online)</div>
+    <div class="settings-row">
+      <div class="settings-label">🔑 Ghi chú API Key Link4M (tuỳ chọn)</div>
+      <input class="inp" id="setKey" value="${esc(s.link4mKey || '')}" placeholder="Ghi nhớ key tạo link"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">📦 Số lượt vượt mặc định khi tạo nội dung mới</div>
+      <input class="inp" id="setRounds" type="number" min="1" max="20" value="${s.roundsDefault || 2}" style="width:100px"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('roundsDefault','setRounds',true)">💾 Lưu</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">🛡️ Đổi mật khẩu Admin</div>
+      <input class="inp" id="setOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
+      <input class="inp" id="setNewPass" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" style="margin-bottom:8px"/>
+      <input class="inp" id="setNewPass2" type="password" placeholder="Xác nhận mật khẩu mới"/>
+      <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi Mật Khẩu</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">☁️ Trạng thái server</div>
+      <div style="font-size:13px;color:var(--green)">● Firebase Online — project: nhantin-4ee06</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Path: vlp/users · vlp/items · vlp/orders · vlp/settings</div>
+    </div>
+  `;
+}
+
+function saveSetting(key, inputId, isNum) {
+  let val = document.getElementById(inputId).value;
+  if (isNum) val = parseInt(val) || 2;
+  const s = { ...getSettings() };
+  s[key] = val;
+  saveSettings(s);
+  toast('✅ Đã lưu lên server!', 'ok');
+}
+
+function changeAdminPass() {
+  const old = document.getElementById('setOldPass').value;
+  const np = document.getElementById('setNewPass').value;
+  const np2 = document.getElementById('setNewPass2').value;
+  const admin = (localUsers || {})[ADMIN_USER];
+  if (!admin) { toast('Không tìm thấy admin', 'err'); return; }
+  if (admin.password !== old) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
+  if (np.length < 6) { toast('❌ Mật khẩu mới ít nhất 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Xác nhận mật khẩu không khớp', 'err'); return; }
+  admin.password = np;
+  updateUser(ADMIN_USER, admin);
+  if (me && me.username === ADMIN_USER) me.password = np;
+  document.getElementById('setOldPass').value = '';
+  document.getElementById('setNewPass').value = '';
+  document.getElementById('setNewPass2').value = '';
+  toast('✅ Đã đổi mật khẩu (đồng bộ online)!', 'ok');
+}
+
+// ===== ITEM MODAL =====
+function openItemModal(id) {
+  editItemId = id || null;
+  linkRows = [];
+  if (id) {
+    const item = (localItems || {})[id];
+    if (!item) return;
+    document.getElementById('imTitle').textContent = '✏️ Sửa nội dung';
+    document.getElementById('imName').value = item.name || '';
+    document.getElementById('imDesc').value = item.desc || '';
+    document.getElementById('imIcon').value = item.icon || '';
+    document.getElementById('imRounds').value = item.rounds || 2;
+    document.getElementById('imContent').value = item.content || '';
+    linkRows = (item.links || []).map(l => ({ url: l.url || '', label: l.label || '' }));
+  } else {
+    document.getElementById('imTitle').textContent = '➕ Thêm nội dung';
+    document.getElementById('imName').value = '';
+    document.getElementById('imDesc').value = '';
+    document.getElementById('imIcon').value = '📦';
+    document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
+    document.getElementById('imContent').value = '';
+    linkRows = [];
+  }
+  syncLinkRows();
+  document.getElementById('imErr').classList.remove('show');
+  document.getElementById('itemModal').classList.add('open');
+}
+
+function closeItemModal() {
+  document.getElementById('itemModal').classList.remove('open');
+  editItemId = null;
+  linkRows = [];
+}
+
+function syncLinkRows() {
+  const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
+  document.getElementById('imRounds').value = rounds;
+  while (linkRows.length < rounds) linkRows.push({ url: '', label: 'Lượt ' + (linkRows.length + 1) });
+  if (linkRows.length > rounds) linkRows = linkRows.slice(0, rounds);
+  renderLinkRows();
+}
+
+function renderLinkRows() {
+  const wrap = document.getElementById('imLinksWrap');
+  if (!linkRows.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--sub);margin-bottom:8px">Chưa có link. Bấm "Thêm link vượt" hoặc đổi số lượt.</div>';
+    return;
+  }
+  wrap.innerHTML = linkRows.map((lr, i) => `
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <span style="font-size:11px;color:var(--sub);min-width:52px;font-weight:600">Lượt ${i + 1}</span>
+      <input class="inp" style="flex:1" value="${esc(lr.url || '')}" placeholder="https://link4m.co/..."
+        oninput="linkRows[${i}].url=this.value" id="lrUrl_${i}"/>
+      <button class="btn btn-red btn-xs" onclick="removeLinkRow(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function addLinkRow() {
+  const rounds = Math.max(1, parseInt(document.getElementById('imRounds').value) || 1);
+  if (linkRows.length >= rounds) {
+    toast('⚠️ Đã đủ ' + rounds + ' lượt. Tăng số lượt nếu muốn thêm.', 'err');
+    return;
+  }
+  linkRows.push({ url: '', label: 'Lượt ' + (linkRows.length + 1) });
+  renderLinkRows();
+}
+
+function removeLinkRow(i) {
+  linkRows.splice(i, 1);
+  linkRows = linkRows.map((l, idx) => ({ ...l, label: 'Lượt ' + (idx + 1) }));
+  const roundsEl = document.getElementById('imRounds');
+  if (parseInt(roundsEl.value) > linkRows.length && linkRows.length > 0) roundsEl.value = linkRows.length;
+  renderLinkRows();
+}
+
+function saveItem() {
+  const name = (document.getElementById('imName').value || '').trim();
+  const desc = (document.getElementById('imDesc').value || '').trim();
+  const icon = (document.getElementById('imIcon').value || '').trim() || '📦';
+  const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
+  const content = (document.getElementById('imContent').value || '').trim();
+
+  if (!name) { showAlert('imErr', '⚠️ Vui lòng nhập tên!', 'err'); return; }
+  if (!content) { showAlert('imErr', '⚠️ Vui lòng nhập nội dung thật!', 'err'); return; }
+
+  const finalLinks = [];
+  for (let i = 0; i < rounds; i++) {
+    const el = document.getElementById('lrUrl_' + i);
+    const url = el ? el.value.trim() : ((linkRows[i] && linkRows[i].url) || '');
+    finalLinks.push({ url, label: 'Lượt ' + (i + 1) });
+  }
+
+  if (editItemId) {
+    const old = (localItems || {})[editItemId] || {};
+    updateItem(editItemId, {
+      ...old,
+      name, desc, icon, rounds, content,
+      links: finalLinks
+    });
+  } else {
+    const id = 'itm' + Date.now();
+    updateItem(id, {
+      id, name, desc, icon, rounds, content,
+      links: finalLinks,
+      active: true,
+      addedBy: me.username,
+      createdAt: new Date().toISOString()
+    });
+  }
+  closeItemModal();
+  toast('✅ Đã lưu lên server!', 'ok');
+  aTab('items');
+}
+
+function toggleItem(id) {
+  const item = (localItems || {})[id];
+  if (!item) return;
+  item.active = !item.active;
+  updateItem(id, item);
+  aTab('items');
+  toast(item.active ? '✅ Đã bật' : '⏸ Đã tắt');
+}
+
+function deleteItem(id) {
+  if (!confirm('Xóa nội dung này?')) return;
+  removeItem(id);
+  aTab('items');
+  toast('🗑 Đã xóa');
+}
+
+// ===== UTILS =====
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleDateString('vi-VN'); } catch (e) { return '—'; }
+}
+function fmtDT(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return '—'; }
+}
+function isToday(iso) {
+  const d = new Date(iso), n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+function isWeek(iso) { return (Date.now() - new Date(iso).getTime()) < 7 * 86400000; }
+function isMonth(iso) {
+  const d = new Date(iso), n = new Date();
+  return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+
+let toastTmr = null;
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' t-' + type : '');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== INIT =====
+document.getElementById('bypassModal').addEventListener('click', function (e) {
+  if (e.target === this) closeBypass();
+});
+document.getElementById('itemModal').addEventListener('click', function (e) {
+  if (e.target === this) closeItemModal();
+});
+document.getElementById('liPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('liUser').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('liPass').focus();
+});
 </script>
 </body>
 </html>
