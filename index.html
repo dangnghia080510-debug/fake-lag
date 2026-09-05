@@ -1174,7 +1174,7 @@ function openItemModal(id) {
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
     document.getElementById('imContent').value = item.content || '';
-    linkRows = (item.links || []).map(l => ({ url: l.url || '', label: l.label || '' }));
+    linkRows = (item.links || []).map(l => ({ url: l.url || '', target: l.target || '', label: l.label || '' }));
   } else {
     document.getElementById('imTitle').textContent = '➕ Thêm nội dung';
     document.getElementById('imName').value = '';
@@ -1210,13 +1210,61 @@ function renderLinkRows() {
     return;
   }
   wrap.innerHTML = linkRows.map((lr, i) => `
-    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
-      <span style="font-size:11px;color:var(--sub);min-width:52px;font-weight:600">Lượt ${i + 1}</span>
-      <input class="inp" style="flex:1" value="${esc(lr.url || '')}" placeholder="https://link4m.co/..."
-        oninput="linkRows[${i}].url=this.value" id="lrUrl_${i}"/>
-      <button class="btn btn-red btn-xs" onclick="removeLinkRow(${i})">✕</button>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--sub);min-width:52px;font-weight:600">Lượt ${i + 1}</span>
+        <input class="inp" style="flex:1" value="${esc(lr.target || '')}" placeholder="Dán link ĐÍCH cần rút gọn (link4m sẽ tạo link từ đây)..."
+          oninput="linkRows[${i}].target=this.value" id="lrTarget_${i}"/>
+        <button class="btn btn-red btn-xs" onclick="removeLinkRow(${i})">✕</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="min-width:52px"></span>
+        <input class="inp" style="flex:1" value="${esc(lr.url || '')}" placeholder="Link4M sẽ tự điền vào đây sau khi tạo..."
+          oninput="linkRows[${i}].url=this.value" id="lrUrl_${i}"/>
+        <button class="btn btn-gold btn-xs" onclick="autoCreateLink4m(${i})" id="lrGenBtn_${i}">⚡ Tạo</button>
+      </div>
     </div>
   `).join('');
+}
+
+// ===== LINK4M API — tự động tạo link rút gọn =====
+// Lưu ý: link4m.co không công bố tài liệu API công khai chính thức, endpoint dưới đây
+// dùng theo định dạng phổ biến của các site rút gọn link kiểu này (api?api=KEY&url=...).
+// Nếu không chạy được (do link4m đổi API hoặc chặn CORS từ trình duyệt), hãy vào
+// mục "Công cụ / API" trong tài khoản Link4M của bạn để lấy đúng endpoint rồi báo lại.
+async function callLink4mApi(longUrl) {
+  const key = (getSettings().link4mKey || '').trim();
+  if (!key) throw new Error('Chưa lưu API Key Link4M trong Cài đặt');
+  if (!longUrl) throw new Error('Chưa nhập link đích');
+  const endpoint = 'https://link4m.co/api?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(longUrl);
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  const shortUrl = data.shortenedUrl || data.shortened_url || data.short || data.short_url || data.link;
+  if (!shortUrl) throw new Error((data && (data.message || data.error)) || 'API không trả về link');
+  return shortUrl;
+}
+
+async function autoCreateLink4m(i) {
+  const targetEl = document.getElementById('lrTarget_' + i);
+  const target = (targetEl.value || '').trim();
+  linkRows[i].target = target;
+  const btn = document.getElementById('lrGenBtn_' + i);
+  if (!target) { toast('⚠️ Nhập link đích cho lượt ' + (i + 1) + ' trước đã', 'err'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳...';
+  try {
+    const shortUrl = await callLink4mApi(target);
+    linkRows[i].url = shortUrl;
+    const urlEl = document.getElementById('lrUrl_' + i);
+    if (urlEl) urlEl.value = shortUrl;
+    toast('✅ Đã tạo link4m cho lượt ' + (i + 1), 'ok');
+  } catch (e) {
+    toast('❌ Lỗi tạo link: ' + (e && e.message ? e.message.slice(0, 100) : 'không rõ'), 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Tạo';
+  }
 }
 
 function addLinkRow() {
@@ -1250,8 +1298,10 @@ function saveItem() {
   const finalLinks = [];
   for (let i = 0; i < rounds; i++) {
     const el = document.getElementById('lrUrl_' + i);
+    const targetEl = document.getElementById('lrTarget_' + i);
     const url = el ? el.value.trim() : ((linkRows[i] && linkRows[i].url) || '');
-    finalLinks.push({ url, label: 'Lượt ' + (i + 1) });
+    const target = targetEl ? targetEl.value.trim() : ((linkRows[i] && linkRows[i].target) || '');
+    finalLinks.push({ url, target, label: 'Lượt ' + (i + 1) });
   }
 
   if (editItemId) {
