@@ -1256,7 +1256,7 @@ async function callLink4mApi(longUrl) {
   const key = (getSettings().link4mKey || '').trim();
   if (!key) throw new Error('Chưa lưu API Key Link4M trong Cài đặt');
   if (!longUrl) throw new Error('Chưa có link đích');
-  const apiUrl = 'https://link4m.co/api?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(longUrl);
+  const apiUrl = 'https://link4m.co/api-shorten/v2?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(longUrl);
   const res = await fetch(CORS_PROXY + encodeURIComponent(apiUrl));
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
