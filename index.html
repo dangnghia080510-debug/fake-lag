@@ -407,36 +407,45 @@ function getSettings() {
   return localSettings || { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
 }
 
+function fbErr(e, label) {
+  console.error(label, e);
+  const msg = String((e && e.message) || e || '');
+  if (msg.includes('PERMISSION') || msg.includes('permission')) {
+    toast('❌ Firebase chặn ghi (Rules). Mở write cho path vlp/', 'err');
+  } else {
+    toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
+  }
+}
 function saveUsers(obj) {
   localUsers = obj;
-  db.ref('vlp/users').set(obj).catch(e => console.error('saveUsers', e));
+  return db.ref('vlp/users').set(obj).catch(e => fbErr(e, 'saveUsers'));
 }
 function saveItems(obj) {
-  localItems = obj;
-  db.ref('vlp/items').set(obj).catch(e => console.error('saveItems', e));
+  localItems = obj || {};
+  return db.ref('vlp/items').set(localItems).catch(e => fbErr(e, 'saveItems'));
 }
 function saveOrders(obj) {
-  localOrders = obj;
-  db.ref('vlp/orders').set(obj).catch(e => console.error('saveOrders', e));
+  localOrders = obj || {};
+  return db.ref('vlp/orders').set(localOrders).catch(e => fbErr(e, 'saveOrders'));
 }
 function saveSettings(obj) {
   localSettings = obj;
-  db.ref('vlp/settings').set(obj).catch(e => console.error('saveSettings', e));
+  return db.ref('vlp/settings').set(obj).catch(e => fbErr(e, 'saveSettings'));
 }
 
 function updateUser(username, data) {
   if (!localUsers) localUsers = {};
   localUsers[username] = data;
-  db.ref('vlp/users/' + username).set(data).catch(e => console.error(e));
+  return db.ref('vlp/users/' + username).set(data).catch(e => fbErr(e, 'updateUser'));
 }
 function updateItem(id, data) {
   if (!localItems) localItems = {};
   localItems[id] = data;
-  db.ref('vlp/items/' + id).set(data).catch(e => console.error(e));
+  return db.ref('vlp/items/' + id).set(data).catch(e => fbErr(e, 'updateItem'));
 }
 function removeItem(id) {
   if (localItems) delete localItems[id];
-  db.ref('vlp/items/' + id).remove().catch(e => console.error(e));
+  return db.ref('vlp/items/' + id).remove().catch(e => fbErr(e, 'removeItem'));
 }
 function addOrder(order) {
   if (!localOrders) localOrders = {};
@@ -988,12 +997,19 @@ function renderItemsAdmin(body) {
 function clearAllItems() {
   if (!confirm('Xóa TOÀN BỘ nội dung trên server? Không thể hoàn tác.')) return;
   localItems = {};
-  saveItems({});
-  // Đánh dấu đã seed để không tự tạo demo lại
-  const s = { ...getSettings(), seededDemo: true };
-  saveSettings(s);
-  aTab('items');
-  toast('🗑 Đã xóa hết nội dung trên server', 'ok');
+  // Xóa hẳn node items trên Firebase + gắn cờ không seed lại
+  db.ref('vlp/items').remove()
+    .then(() => {
+      const s = { ...getSettings(), seededDemo: true };
+      localSettings = s;
+      return db.ref('vlp/settings').set(s);
+    })
+    .then(() => {
+      aTab('items');
+      renderItemGrid();
+      toast('🗑 Đã xóa hết trên server. Thoát vào lại sẽ không hiện demo.', 'ok');
+    })
+    .catch(e => fbErr(e, 'clearAllItems'));
 }
 
 function renderUsersAdmin(body) {
@@ -1271,9 +1287,15 @@ function toggleItem(id) {
 
 function deleteItem(id) {
   if (!confirm('Xóa nội dung này?')) return;
-  removeItem(id);
-  aTab('items');
-  toast('🗑 Đã xóa');
+  removeItem(id).then(() => {
+    // Nếu xóa hết → gắn cờ không seed lại demo
+    if (!Object.keys(localItems || {}).length) {
+      const s = { ...getSettings(), seededDemo: true };
+      saveSettings(s);
+    }
+    aTab('items');
+    toast('🗑 Đã xóa trên server', 'ok');
+  });
 }
 
 // ===== UTILS =====
