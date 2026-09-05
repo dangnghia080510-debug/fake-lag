@@ -362,7 +362,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 
 <script>
 // ======================================================
-// FIRESTORE — project shopvip-139ea
+// FIRESTORE — project shopvip-139ea + localStorage backup
 // Collection: vlp_data (documents: users, items, orders, settings)
 // ======================================================
 const firebaseConfig = {
@@ -382,7 +382,12 @@ const REMEMBER_K = 'vlp_remember_v3';
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
 
-// Local cache (null = chưa load)
+// localStorage keys backup
+const LS_USERS    = 'vlp_users_v1';
+const LS_ITEMS    = 'vlp_items_v1';
+const LS_ORDERS   = 'vlp_orders_v1';
+const LS_SETTINGS = 'vlp_settings_v1';
+
 let localUsers = null;
 let localItems = null;
 let localOrders = null;
@@ -394,6 +399,14 @@ let verifiedSteps = [];
 let editItemId = null;
 let curAdminTab = 'dash';
 let linkRows = [];
+
+// ===== localStorage helpers =====
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
 
 // ===== STORE HELPERS =====
 function getUsersArr() { return Object.values(localUsers || {}); }
@@ -411,46 +424,45 @@ function fbErr(e, label) {
   console.error(label, e);
   const msg = String((e && e.message) || e || '');
   if (msg.includes('PERMISSION') || msg.includes('permission') || msg.includes('Missing or insufficient')) {
-    toast('❌ Firestore chặn ghi. Vào Firebase Console → Firestore → Rules → cho phép read/write', 'err');
+    toast('❌ Firestore chặn ghi. Vào Firebase → Firestore → Rules → allow read, write: if true', 'err');
   } else {
     toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
   }
 }
 
-// Ghi toàn bộ object vào 1 document Firestore
-function fsSet(docName, data) {
-  return db.collection(COL).doc(docName).set(data).catch(e => fbErr(e, 'fsSet:' + docName));
-}
-
 function saveUsers(obj) {
   localUsers = obj;
-  return fsSet('users', { data: obj });
+  lsSet(LS_USERS, { data: obj });
+  return db.collection(COL).doc('users').set({ data: obj }).catch(e => fbErr(e, 'saveUsers'));
 }
 function saveItems(obj) {
   localItems = obj || {};
-  return fsSet('items', { data: localItems });
+  lsSet(LS_ITEMS, { data: localItems });
+  return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems'));
 }
 function saveOrders(obj) {
   localOrders = obj || {};
-  return fsSet('orders', { data: localOrders });
+  lsSet(LS_ORDERS, { data: localOrders });
+  return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders'));
 }
 function saveSettings(obj) {
   localSettings = obj;
-  return fsSet('settings', { data: obj });
+  lsSet(LS_SETTINGS, { data: obj });
+  return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings'));
 }
 function updateUser(username, data) {
   if (!localUsers) localUsers = {};
   localUsers[username] = data;
-  return fsSet('users', { data: localUsers });
+  return saveUsers(localUsers);
 }
 function updateItem(id, data) {
   if (!localItems) localItems = {};
   localItems[id] = data;
-  return fsSet('items', { data: localItems });
+  return saveItems(localItems);
 }
 function removeItem(id) {
   if (localItems) delete localItems[id];
-  return fsSet('items', { data: localItems || {} });
+  return saveItems(localItems || {});
 }
 function addOrder(order) {
   if (!localOrders) localOrders = {};
@@ -458,7 +470,7 @@ function addOrder(order) {
   const keys = Object.keys(localOrders).sort((a, b) =>
     (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
   if (keys.length > 300) keys.slice(300).forEach(k => delete localOrders[k]);
-  fsSet('orders', { data: localOrders }).catch(e => console.error(e));
+  saveOrders(localOrders);
 }
 
 function checkFirebaseReady() {
@@ -469,6 +481,8 @@ function checkFirebaseReady() {
   }
 }
 
+const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
+
 function ensureDefaults() {
   if (!localUsers[ADMIN_USER]) {
     localUsers[ADMIN_USER] = {
@@ -478,10 +492,9 @@ function ensureDefaults() {
     saveUsers(localUsers);
   }
   if (!localSettings || typeof localSettings !== 'object') {
-    localSettings = { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
+    localSettings = { ...DEFAULT_SETTINGS };
     saveSettings(localSettings);
   }
-  // Đánh dấu đã seed để không tự tạo demo lại
   const settings = getSettings();
   if (!settings.seededDemo) {
     localSettings = { ...settings, seededDemo: true };
@@ -489,43 +502,68 @@ function ensureDefaults() {
   }
 }
 
-// ===== REALTIME LISTENERS (Firestore onSnapshot) =====
+// ===== LISTENERS — Firestore + localStorage fallback =====
+function watchDoc(docName, lsKey, lsFallback, onData, onFirst) {
+  let responded = false;
+  const timer = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      const cached = lsGet(lsKey, { data: lsFallback });
+      onData(cached.data !== undefined ? cached.data : lsFallback, true);
+      onFirst && onFirst();
+    }
+  }, 5000);
+  db.collection(COL).doc(docName).onSnapshot(snap => {
+    if (!responded) { responded = true; clearTimeout(timer); }
+    const first = !responded || timer;
+    const val = (snap.exists && snap.data() && snap.data().data !== undefined)
+      ? snap.data().data
+      : lsGet(lsKey, { data: lsFallback }).data ?? lsFallback;
+    lsSet(lsKey, { data: val });
+    onData(val, false);
+    if (first) onFirst && onFirst();
+  }, err => {
+    if (!responded) { responded = true; clearTimeout(timer); }
+    const cached = lsGet(lsKey, { data: lsFallback });
+    onData(cached.data !== undefined ? cached.data : lsFallback, true);
+    onFirst && onFirst();
+    console.error(docName, err);
+  });
+}
+
 function startListeners() {
-  db.collection(COL).doc('users').onSnapshot(snap => {
+  watchDoc('users', LS_USERS, {}, (val, fromCache) => {
     const first = localUsers === null;
-    localUsers = (snap.exists && snap.data().data) ? snap.data().data : {};
+    localUsers = val || {};
     if (first) { ensureDefaults(); checkFirebaseReady(); }
     if (me && localUsers[me.username]) me = localUsers[me.username];
     if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
     if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
-  }, err => {
-    console.error(err);
-    document.getElementById('connMsg').textContent = 'Không kết nối được máy chủ. Kiểm tra mạng / Firestore Rules.';
   });
 
-  db.collection(COL).doc('items').onSnapshot(snap => {
+  watchDoc('items', LS_ITEMS, {}, (val) => {
     const first = localItems === null;
-    localItems = (snap.exists && snap.data().data) ? snap.data().data : {};
+    localItems = val || {};
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
     if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
-  }, err => console.error(err));
+  });
 
-  db.collection(COL).doc('orders').onSnapshot(snap => {
+  watchDoc('orders', LS_ORDERS, {}, (val) => {
     const first = localOrders === null;
-    localOrders = (snap.exists && snap.data().data) ? snap.data().data : {};
+    localOrders = val || {};
     if (first) checkFirebaseReady();
     if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
       renderAdminBody(curAdminTab);
     }
-  }, err => console.error(err));
+  });
 
-  db.collection(COL).doc('settings').onSnapshot(snap => {
+  watchDoc('settings', LS_SETTINGS, DEFAULT_SETTINGS, (val) => {
     const first = localSettings === null;
-    localSettings = (snap.exists && snap.data().data) ? snap.data().data : { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
+    localSettings = val || { ...DEFAULT_SETTINGS };
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
-  }, err => console.error(err));
+  });
 }
 startListeners();
 
@@ -1092,17 +1130,13 @@ function renderSettings(body) {
 }
 
 function saveSetting(key, inputId, isNum) {
-  const el = document.getElementById(inputId);
-  if (!el) { toast('❌ Không tìm thấy ô nhập!', 'err'); return; }
-  let val = el.value;
+  let val = document.getElementById(inputId).value;
   if (isNum) val = parseInt(val) || 2;
   else val = (val || '').trim();
-  if (!isNum && val === '') { toast('⚠️ Vui lòng nhập giá trị trước khi lưu!', 'err'); return; }
   const s = { ...getSettings() };
   s[key] = val;
-  localSettings = s; // cập nhật local ngay
   saveSettings(s).then(() => {
-    toast('✅ Đã lưu: ' + val, 'ok');
+    toast('✅ Đã lưu lên server!', 'ok');
   }).catch(e => {
     toast('❌ Lưu thất bại: ' + (e && e.message ? e.message.slice(0,80) : 'Lỗi không xác định'), 'err');
   });
