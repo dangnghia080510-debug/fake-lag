@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>⚡ VượtLink Pro</title>
+<title>⚡ VượtLink Pro v2</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
@@ -102,6 +102,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .role-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
 .rb-admin{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#0a0600}
 .rb-user{background:linear-gradient(90deg,var(--cyan),var(--cyan2));color:#040810}
+.rb-banned{background:linear-gradient(90deg,var(--red),var(--red2));color:#fff}
 
 .content-area{flex:1;padding:12px;max-width:620px;margin:0 auto;width:100%}
 .sec-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
@@ -182,6 +183,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:#080b11}
 ::-webkit-scrollbar-thumb{background:#1a2232;border-radius:4px}
+
+.sec-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px;padding:8px;background:#080b11;border-radius:8px;border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -196,7 +199,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   <div class="auth-logo">
     <span class="auth-icon">⚡</span>
     <div class="auth-title">VƯỢT LINK PRO</div>
-    <div class="auth-sub">🎮 ONLINE · POWERED BY FIREBASE + LINK4M</div>
+    <div class="auth-sub">v2 · BẢO MẬT NÂNG CẤP · FIREBASE + LINK4M</div>
   </div>
   <div class="auth-box">
     <div class="auth-tabs">
@@ -215,9 +218,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       </div>
       <div class="remember-row">
         <input type="checkbox" id="cbRemember" checked/>
-        <label for="cbRemember">Ghi nhớ đăng nhập</label>
+        <label for="cbRemember">Ghi nhớ đăng nhập (7 ngày)</label>
       </div>
-      <button class="btn btn-cyan btn-full" onclick="doLogin()">⚡ ĐĂNG NHẬP</button>
+      <button class="btn btn-cyan btn-full" id="btnLogin" onclick="doLogin()">⚡ ĐĂNG NHẬP</button>
     </div>
     <div id="formReg" style="display:none">
       <div class="alert alert-err" id="regErr"></div>
@@ -238,7 +241,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
         <div class="inp-label">Xác nhận mật khẩu</div>
         <input class="inp" id="riPass2" type="password" placeholder="nhập lại mật khẩu"/>
       </div>
-      <button class="btn btn-green btn-full" onclick="doRegister()">🚀 TẠO TÀI KHOẢN</button>
+      <button class="btn btn-green btn-full" id="btnReg" onclick="doRegister()">🚀 TẠO TÀI KHOẢN</button>
     </div>
   </div>
 </div>
@@ -344,17 +347,17 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       <input class="inp" id="imIcon" placeholder="🎵" maxlength="4" style="width:100px"/>
     </div>
     <div class="inp-group">
-      <div class="inp-label">Số lượt vượt link (Admin tùy chỉnh)</div>
+      <div class="inp-label">Số lượt vượt link (1-20)</div>
       <input class="inp" id="imRounds" type="number" min="1" max="20" placeholder="2" style="width:120px"/>
     </div>
     <div class="inp-group">
       <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
       <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt..."></textarea>
     </div>
-    <div style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.4">
-      ℹ️ Không cần cấu hình link cho từng lượt — hệ thống tự động gọi API Link4M (đã lưu ở Cài đặt) và tự sinh mã xác nhận mỗi khi người dùng bấm "Lấy Link".
+    <div class="sec-note">
+      ℹ️ Hệ thống tự gọi API Link4M và sinh mã xác nhận mỗi lần bấm "Lấy Link". Nội dung thật được tách riêng, không đồng bộ realtime cho mọi client.
     </div>
-    <button class="btn btn-gold btn-full" onclick="saveItem()">💾 LƯU</button>
+    <button class="btn btn-gold btn-full" style="margin-top:12px" onclick="saveItem()">💾 LƯU</button>
   </div>
 </div>
 
@@ -362,8 +365,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 
 <script>
 // ======================================================
-// FIRESTORE — project shopvip-139ea + localStorage backup
-// Collection: vlp_data (documents: users, items, orders, settings)
+// VƯỢT LINK PRO v2 — Nâng cấp bảo mật + sửa bug + cải thiện
 // ======================================================
 const firebaseConfig = {
   apiKey: "AIzaSyA80m1h3IMimHcRhrA8mulpMtsVGs1o3YU",
@@ -377,16 +379,18 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const COL = 'vlp_data';
 
-const SESSION_K = 'vlp_session_v3';
-const REMEMBER_K = 'vlp_remember_v3';
+const SESSION_K = 'vlp_session_v4';
+const REMEMBER_K = 'vlp_remember_v4';
 const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'admin123';
+// Mật khẩu mặc định sẽ được hash khi seed lần đầu. Không lưu plain text nữa.
+const DEFAULT_ADMIN_PASS = 'admin123';
 
-// localStorage keys backup
-const LS_USERS    = 'vlp_users_v1';
-const LS_ITEMS    = 'vlp_items_v1';
-const LS_ORDERS   = 'vlp_orders_v1';
-const LS_SETTINGS = 'vlp_settings_v1';
+const LS_USERS    = 'vlp_users_v2';
+const LS_ITEMS    = 'vlp_items_v2';
+const LS_ORDERS   = 'vlp_orders_v2';
+const LS_SETTINGS = 'vlp_settings_v2';
+const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
+const RATE_KEY = 'vlp_rate_v1';
 
 let localUsers = null;
 let localItems = null;
@@ -398,6 +402,45 @@ let currentItem = null;
 let verifiedSteps = [];
 let editItemId = null;
 let curAdminTab = 'dash';
+let isBusy = false;
+
+// ===== CRYPTO — Hash mật khẩu bằng Web Crypto (PBKDF2) =====
+async function hashPassword(password, saltBase64) {
+  const enc = new TextEncoder();
+  const salt = saltBase64
+    ? Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0))
+    : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    256
+  );
+  const hashArr = new Uint8Array(bits);
+  const hashB64 = btoa(String.fromCharCode(...hashArr));
+  const saltB64 = btoa(String.fromCharCode(...salt));
+  return { hash: hashB64, salt: saltB64 };
+}
+
+async function verifyPassword(password, storedHash, storedSalt) {
+  if (!storedHash || !storedSalt) return false;
+  const { hash } = await hashPassword(password, storedSalt);
+  return hash === storedHash;
+}
+
+// Legacy plain-text migration: nếu còn password plain thì hash lại khi login thành công
+async function migrateIfPlain(user, plainPass) {
+  if (user.passwordHash && user.passwordSalt) return user;
+  // Cũ: lưu plain
+  if (user.password && user.password === plainPass) {
+    const { hash, salt } = await hashPassword(plainPass);
+    const updated = { ...user, passwordHash: hash, passwordSalt: salt };
+    delete updated.password;
+    await updateUser(user.username, updated);
+    return updated;
+  }
+  return null;
+}
 
 // ===== localStorage helpers =====
 function lsGet(key, fallback) {
@@ -423,7 +466,7 @@ function fbErr(e, label) {
   console.error(label, e);
   const msg = String((e && e.message) || e || '');
   if (msg.includes('PERMISSION') || msg.includes('permission') || msg.includes('Missing or insufficient')) {
-    toast('❌ Firestore chặn ghi. Vào Firebase → Firestore → Rules → allow read, write: if true', 'err');
+    toast('❌ Firestore chặn ghi. Vào Firebase → Firestore → Rules → tạm thời allow read, write: if true', 'err');
   } else {
     toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
   }
@@ -449,6 +492,27 @@ function saveSettings(obj) {
   lsSet(LS_SETTINGS, { data: obj });
   return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings'));
 }
+
+// Nội dung bí mật — tách riêng, chỉ fetch khi đã vượt đủ
+function saveSecretContent(itemId, content) {
+  return db.collection(COL).doc('itemSecrets').set(
+    { data: { [itemId]: content } }, { merge: true }
+  ).catch(e => fbErr(e, 'saveSecretContent'));
+}
+function fetchSecretContent(itemId) {
+  return db.collection(COL).doc('itemSecrets').get().then(snap => {
+    const data = (snap.exists && snap.data() && snap.data().data) || {};
+    return data[itemId] !== undefined ? data[itemId] : null;
+  }).catch(e => { fbErr(e, 'fetchSecretContent'); return null; });
+}
+function deleteSecretContent(itemId) {
+  return db.collection(COL).doc('itemSecrets').get().then(snap => {
+    const data = (snap.exists && snap.data() && snap.data().data) || {};
+    delete data[itemId];
+    return db.collection(COL).doc('itemSecrets').set({ data });
+  }).catch(e => fbErr(e, 'deleteSecretContent'));
+}
+
 function updateUser(username, data) {
   if (!localUsers) localUsers = {};
   localUsers[username] = data;
@@ -468,8 +532,8 @@ function addOrder(order) {
   localOrders[order.id] = order;
   const keys = Object.keys(localOrders).sort((a, b) =>
     (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
-  if (keys.length > 300) keys.slice(300).forEach(k => delete localOrders[k]);
-  saveOrders(localOrders);
+  if (keys.length > 400) keys.slice(400).forEach(k => delete localOrders[k]);
+  return saveOrders(localOrders);
 }
 
 function checkFirebaseReady() {
@@ -482,26 +546,41 @@ function checkFirebaseReady() {
 
 const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false };
 
-function ensureDefaults() {
+async function ensureDefaults() {
+  if (!localUsers) localUsers = {};
   if (!localUsers[ADMIN_USER]) {
+    const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASS);
     localUsers[ADMIN_USER] = {
-      username: ADMIN_USER, password: ADMIN_PASS, display: 'Admin',
-      role: 'admin', avatar: '👑', joined: new Date().toISOString()
+      username: ADMIN_USER,
+      passwordHash: hash,
+      passwordSalt: salt,
+      display: 'Admin',
+      role: 'admin',
+      avatar: '👑',
+      joined: new Date().toISOString(),
+      banned: false
     };
-    saveUsers(localUsers);
+    await saveUsers(localUsers);
+  } else if (localUsers[ADMIN_USER].password && !localUsers[ADMIN_USER].passwordHash) {
+    // Migrate admin cũ
+    const { hash, salt } = await hashPassword(localUsers[ADMIN_USER].password);
+    const u = { ...localUsers[ADMIN_USER], passwordHash: hash, passwordSalt: salt };
+    delete u.password;
+    localUsers[ADMIN_USER] = u;
+    await saveUsers(localUsers);
   }
   if (!localSettings || typeof localSettings !== 'object') {
     localSettings = { ...DEFAULT_SETTINGS };
-    saveSettings(localSettings);
+    await saveSettings(localSettings);
   }
   const settings = getSettings();
   if (!settings.seededDemo) {
     localSettings = { ...settings, seededDemo: true };
-    saveSettings(localSettings);
+    await saveSettings(localSettings);
   }
 }
 
-// ===== LISTENERS — Firestore + localStorage fallback =====
+// ===== LISTENERS =====
 function watchDoc(docName, lsKey, lsFallback, onData, onFirst) {
   let responded = false;
   const timer = setTimeout(() => {
@@ -514,13 +593,12 @@ function watchDoc(docName, lsKey, lsFallback, onData, onFirst) {
   }, 5000);
   db.collection(COL).doc(docName).onSnapshot(snap => {
     if (!responded) { responded = true; clearTimeout(timer); }
-    const first = !responded || timer;
     const val = (snap.exists && snap.data() && snap.data().data !== undefined)
       ? snap.data().data
       : lsGet(lsKey, { data: lsFallback }).data ?? lsFallback;
     lsSet(lsKey, { data: val });
     onData(val, false);
-    if (first) onFirst && onFirst();
+    if (!responded || true) onFirst && onFirst();
   }, err => {
     if (!responded) { responded = true; clearTimeout(timer); }
     const cached = lsGet(lsKey, { data: lsFallback });
@@ -531,10 +609,10 @@ function watchDoc(docName, lsKey, lsFallback, onData, onFirst) {
 }
 
 function startListeners() {
-  watchDoc('users', LS_USERS, {}, (val, fromCache) => {
+  watchDoc('users', LS_USERS, {}, (val) => {
     const first = localUsers === null;
     localUsers = val || {};
-    if (first) { ensureDefaults(); checkFirebaseReady(); }
+    if (first) { ensureDefaults().then(() => checkFirebaseReady()); }
     if (me && localUsers[me.username]) me = localUsers[me.username];
     if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
     if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
@@ -566,12 +644,23 @@ function startListeners() {
 }
 startListeners();
 
-// Timeout fallback
 setTimeout(() => {
   if (!firebaseReady) {
     document.getElementById('connMsg').textContent = 'Kết nối chậm... Đang thử lại. Kiểm tra mạng.';
   }
 }, 8000);
+
+// ===== RATE LIMIT (client-side) =====
+function checkRate(action, max = 10, windowMs = 60000) {
+  const now = Date.now();
+  let data = lsGet(RATE_KEY, {});
+  if (!data[action]) data[action] = [];
+  data[action] = data[action].filter(t => now - t < windowMs);
+  if (data[action].length >= max) return false;
+  data[action].push(now);
+  lsSet(RATE_KEY, data);
+  return true;
+}
 
 // ===== AUTH =====
 function switchTab(t) {
@@ -586,49 +675,107 @@ function showAlert(id, msg, type) {
   if (!el) return;
   el.textContent = msg;
   el.className = 'alert alert-' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 3500);
+  setTimeout(() => el.classList.remove('show'), 4000);
 }
 
-function doLogin() {
+async function doLogin() {
   if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
-  const u = (document.getElementById('liUser').value || '').trim();
+  if (isBusy) return;
+  if (!checkRate('login', 8, 60000)) { showAlert('loginErr', '⚠️ Thử quá nhiều lần. Đợi 1 phút rồi thử lại.', 'err'); return; }
+
+  const u = (document.getElementById('liUser').value || '').trim().toLowerCase();
   const p = document.getElementById('liPass').value || '';
   if (!u || !p) { showAlert('loginErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
+
   const found = (localUsers || {})[u];
-  if (!found || found.password !== p) {
+  if (!found) {
     showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err');
     return;
   }
-  me = found;
-  const remember = document.getElementById('cbRemember').checked;
-  localStorage.setItem(SESSION_K, JSON.stringify({ username: u }));
-  if (remember) localStorage.setItem(REMEMBER_K, u);
-  else localStorage.removeItem(REMEMBER_K);
-  enterMain();
+  if (found.banned) {
+    showAlert('loginErr', '🚫 Tài khoản đã bị khóa. Liên hệ Admin.', 'err');
+    return;
+  }
+
+  isBusy = true;
+  document.getElementById('btnLogin').disabled = true;
+  try {
+    let ok = false;
+    let user = found;
+
+    if (found.passwordHash && found.passwordSalt) {
+      ok = await verifyPassword(p, found.passwordHash, found.passwordSalt);
+    } else if (found.password) {
+      // Legacy plain
+      const migrated = await migrateIfPlain(found, p);
+      if (migrated) {
+        ok = true;
+        user = migrated;
+      }
+    }
+
+    if (!ok) {
+      showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err');
+      return;
+    }
+
+    me = user;
+    const remember = document.getElementById('cbRemember').checked;
+    const session = {
+      username: u,
+      exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000) // 7 ngày hoặc 12 giờ
+    };
+    localStorage.setItem(SESSION_K, JSON.stringify(session));
+    if (remember) localStorage.setItem(REMEMBER_K, u);
+    else localStorage.removeItem(REMEMBER_K);
+    enterMain();
+  } finally {
+    isBusy = false;
+    document.getElementById('btnLogin').disabled = false;
+  }
 }
 
-function doRegister() {
+async function doRegister() {
   if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
+  if (isBusy) return;
+  if (!checkRate('register', 5, 300000)) { showAlert('regErr', '⚠️ Đăng ký quá nhiều. Thử lại sau.', 'err'); return; }
+
   const name = (document.getElementById('riName').value || '').trim();
   const u = (document.getElementById('riUser').value || '').trim().toLowerCase();
   const p = document.getElementById('riPass').value || '';
   const p2 = document.getElementById('riPass2').value || '';
+
   if (!name || !u || !p || !p2) { showAlert('regErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
   if (!/^[a-z0-9_]{3,20}$/.test(u)) { showAlert('regErr', '⚠️ Username chỉ gồm chữ thường, số, gạch dưới (3-20 ký tự)', 'err'); return; }
   if (p.length < 6) { showAlert('regErr', '⚠️ Mật khẩu ít nhất 6 ký tự', 'err'); return; }
   if (p !== p2) { showAlert('regErr', '⚠️ Xác nhận mật khẩu không khớp', 'err'); return; }
   if ((localUsers || {})[u]) { showAlert('regErr', '❌ Username đã tồn tại', 'err'); return; }
-  const nu = {
-    username: u, password: p, display: name, role: 'user',
-    avatar: '👤', joined: new Date().toISOString()
-  };
-  updateUser(u, nu);
-  showAlert('regOk', '✅ Tạo tài khoản thành công! Đang đăng nhập...', 'ok');
-  setTimeout(() => {
-    me = nu;
-    localStorage.setItem(SESSION_K, JSON.stringify({ username: u }));
-    enterMain();
-  }, 800);
+
+  isBusy = true;
+  document.getElementById('btnReg').disabled = true;
+  try {
+    const { hash, salt } = await hashPassword(p);
+    const nu = {
+      username: u,
+      passwordHash: hash,
+      passwordSalt: salt,
+      display: name,
+      role: 'user',
+      avatar: '👤',
+      joined: new Date().toISOString(),
+      banned: false
+    };
+    await updateUser(u, nu);
+    showAlert('regOk', '✅ Tạo tài khoản thành công! Đang đăng nhập...', 'ok');
+    setTimeout(() => {
+      me = nu;
+      localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + 7 * 86400000 }));
+      enterMain();
+    }, 700);
+  } finally {
+    isBusy = false;
+    document.getElementById('btnReg').disabled = false;
+  }
 }
 
 function doLogout() {
@@ -650,9 +797,13 @@ function tryAutoLogin() {
   const saved = localStorage.getItem(SESSION_K);
   if (saved) {
     try {
-      const { username } = JSON.parse(saved);
-      const found = (localUsers || {})[username];
-      if (found) {
+      const sess = JSON.parse(saved);
+      if (sess.exp && Date.now() > sess.exp) {
+        localStorage.removeItem(SESSION_K);
+        return;
+      }
+      const found = (localUsers || {})[sess.username];
+      if (found && !found.banned) {
         me = found;
         enterMain();
         return;
@@ -670,6 +821,11 @@ function showPage(id) {
 }
 
 function enterMain() {
+  if (me && me.banned) {
+    toast('Tài khoản bị khóa', 'err');
+    doLogout();
+    return;
+  }
   showPage('mainPage');
   document.getElementById('uAva').textContent = me.avatar || '👤';
   document.getElementById('uName').textContent = me.display;
@@ -700,19 +856,14 @@ function updateContactBtn() {
     if (hint) hint.style.display = 'none';
   } else {
     btn.style.display = 'none';
-    // Chỉ hiện hint cho user thường khi admin chưa set
-    if (hint) hint.style.display = (me && me.role === 'admin') ? 'none' : 'none';
+    if (hint) hint.style.display = 'none';
   }
 }
 
 function contactAdmin() {
   const s = getSettings();
   let zalo = String(s.zaloAdmin || '').trim();
-  if (!zalo) {
-    toast('Admin chưa cấu hình số Zalo', 'err');
-    return;
-  }
-  // Chuẩn hóa: bỏ khoảng trắng, ký tự lạ; chuyển 0xxx → 84xxx nếu cần
+  if (!zalo) { toast('Admin chưa cấu hình số Zalo', 'err'); return; }
   zalo = zalo.replace(/[\s\-\.]/g, '');
   if (zalo.startsWith('+84')) zalo = zalo.slice(1);
   else if (zalo.startsWith('0') && zalo.length >= 9) zalo = '84' + zalo.slice(1);
@@ -738,7 +889,7 @@ function goMain() {
 // ===== ITEM GRID =====
 function renderItemGrid() {
   const grid = document.getElementById('itemGrid');
-  const active = getItemsArr().filter(i => i.active);
+  const active = getItemsArr().filter(i => i.active !== false);
   if (!active.length) {
     grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung nào</div></div>';
     return;
@@ -760,15 +911,17 @@ function renderItemGrid() {
 
 // ===== BYPASS =====
 function openBypass(id) {
+  if (!me) return;
+  if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
-  if (!currentItem) return;
-  const rounds = Math.max(1, parseInt(currentItem.rounds) || 1);
+  if (!currentItem || currentItem.active === false) return;
+  const rounds = Math.max(1, Math.min(20, parseInt(currentItem.rounds) || 1));
   currentItem.rounds = rounds;
   verifiedSteps = new Array(rounds).fill(false);
 
   document.getElementById('bmTitle').textContent = '⚡ ' + currentItem.name;
   document.getElementById('bmInfo').textContent =
-    `Hoàn thành đủ ${rounds} lượt vượt link bên dưới để nhận nội dung miễn phí.`;
+    `Hoàn thành đủ ${rounds} lượt vượt link bên dưới để nhận nội dung.`;
   document.getElementById('bmInfo').className = 'alert alert-info show';
   document.getElementById('bmResult').classList.remove('show');
   updateProgress();
@@ -777,13 +930,15 @@ function openBypass(id) {
   saveActiveBypassState();
 }
 
-// ===== BẢO VỆ TIẾN ĐỘ — phòng khi link4m điều hướng NGAY TRÊN TAB GỐC =====
-// (thay vì mở tab mới) khiến trang bị tải lại. Lưu tiến độ vào localStorage,
-// tự khôi phục lại đúng modal + các lượt đã xác nhận khi tải trang lại.
-const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v1';
 function saveActiveBypassState() {
   if (!currentItem) return;
-  lsSet(ACTIVE_BYPASS_KEY, { itemId: currentItem.id, rounds: currentItem.rounds, verifiedSteps });
+  lsSet(ACTIVE_BYPASS_KEY, {
+    itemId: currentItem.id,
+    rounds: currentItem.rounds,
+    verifiedSteps,
+    username: me ? me.username : null,
+    ts: Date.now()
+  });
 }
 function clearActiveBypassState() {
   try { localStorage.removeItem(ACTIVE_BYPASS_KEY); } catch (e) {}
@@ -791,10 +946,17 @@ function clearActiveBypassState() {
 function restoreActiveBypassIfAny() {
   const saved = lsGet(ACTIVE_BYPASS_KEY, null);
   if (!saved || !saved.itemId) return;
+  if (saved.username && me && saved.username !== me.username) {
+    clearActiveBypassState();
+    return;
+  }
+  // Hết hạn sau 2 giờ
+  if (saved.ts && Date.now() - saved.ts > 2 * 3600000) {
+    clearActiveBypassState();
+    return;
+  }
   const item = (localItems || {})[saved.itemId];
   if (!item) { clearActiveBypassState(); return; }
-  // Nếu số lượt yêu cầu của item đã bị đổi (admin sửa lại) so với lúc lưu tiến trình dở dang
-  // thì tiến trình cũ không còn hợp lệ nữa → xoá, bắt vượt lại từ đầu đủ số lượt mới.
   if (saved.rounds !== undefined && saved.rounds !== item.rounds) {
     clearActiveBypassState();
     openBypass(saved.itemId);
@@ -813,10 +975,8 @@ function restoreActiveBypassIfAny() {
 function renderSteps() {
   const item = currentItem;
   const rounds = item.rounds || 1;
-  const links = item.links || [];
   let html = '';
   for (let i = 0; i < rounds; i++) {
-    const link = links[i] || { url: '', label: 'Lượt ' + (i + 1) };
     const done = !!verifiedSteps[i];
     const firstPending = verifiedSteps.indexOf(false);
     const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
@@ -824,7 +984,7 @@ function renderSteps() {
       <div class="step-item" id="step_${i}">
         <div class="step-hd">
           <div class="step-num ${numClass}" id="snum_${i}">${done ? '✓' : (i + 1)}</div>
-          <div class="step-label">${esc(link.label || ('Lượt ' + (i + 1)))}</div>
+          <div class="step-label">Lượt ${i + 1}</div>
         </div>
         <div class="step-body">
           <button class="btn btn-cyan btn-sm" onclick="openLink(${i})" ${done ? 'disabled' : ''}>🔗 Lấy Link</button>
@@ -845,15 +1005,31 @@ function renderSteps() {
 
 function openLink(idx) {
   const item = currentItem;
-  if (!item) return;
-  const code = genVerifyCode();
-  localStorage.setItem(pendingCodeKey(item.id, idx), code);
+  if (!item || !me) return;
+  if (!checkRate('openLink', 15, 60000)) {
+    toast('⚠️ Thao tác quá nhanh. Đợi một chút.', 'err');
+    return;
+  }
+  const code = genVerifyCode(8);
+  // Lưu mã + timestamp + user để khó bị spoof hơn
+  const payload = {
+    code,
+    user: me.username,
+    itemId: item.id,
+    round: idx,
+    exp: Date.now() + 30 * 60 * 1000 // 30 phút
+  };
+  localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify(payload));
+
   const revealUrl = location.origin + location.pathname +
-    '?vlpcode=' + encodeURIComponent(code) + '&vlpitem=' + encodeURIComponent(item.id) + '&vlpround=' + idx;
+    '?vlpcode=' + encodeURIComponent(code) +
+    '&vlpitem=' + encodeURIComponent(item.id) +
+    '&vlpround=' + idx;
+
   try {
     const link4mUrl = buildLink4mUrl(revealUrl);
     window.open(link4mUrl, '_blank');
-    toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong dán mã hiện ra vào ô bên dưới!');
+    toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong dán mã vào ô bên dưới!');
   } catch (e) {
     localStorage.removeItem(pendingCodeKey(item.id, idx));
     toast('❌ ' + (e && e.message ? e.message : 'Không tạo được link'), 'err');
@@ -875,7 +1051,7 @@ function handleCodeInput(el, idx) {
 
 function verifyCode(idx) {
   const inp = document.getElementById('codeinp_' + idx);
-  if (!inp || inp.disabled) return;
+  if (!inp || inp.disabled || !currentItem || !me) return;
   const val = (inp.value || '').trim().toUpperCase();
   if (!val) {
     toast('⚠️ Vui lòng nhập / dán mã xác nhận!', 'err');
@@ -883,15 +1059,34 @@ function verifyCode(idx) {
     return;
   }
   const key = pendingCodeKey(currentItem.id, idx);
-  const expected = (localStorage.getItem(key) || '').toUpperCase();
-  if (!expected) {
-    toast('⚠️ Bạn cần bấm "Lấy Link" trước rồi mới có mã để nhập!', 'err');
+  let expected = null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      toast('⚠️ Bạn cần bấm "Lấy Link" trước rồi mới có mã!', 'err');
+      return;
+    }
+    const payload = JSON.parse(raw);
+    if (payload.exp && Date.now() > payload.exp) {
+      localStorage.removeItem(key);
+      toast('⚠️ Mã đã hết hạn. Bấm Lấy Link lại.', 'err');
+      return;
+    }
+    if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) {
+      toast('❌ Mã không hợp lệ cho lượt này', 'err');
+      return;
+    }
+    expected = (payload.code || '').toUpperCase();
+  } catch (e) {
+    toast('❌ Dữ liệu mã lỗi. Bấm Lấy Link lại.', 'err');
     return;
   }
+
   if (val !== expected) {
-    toast('❌ Mã xác nhận không đúng, kiểm tra lại!', 'err');
+    toast('❌ Mã xác nhận không đúng!', 'err');
     return;
   }
+
   localStorage.removeItem(key);
   verifiedSteps[idx] = true;
   inp.value = '✅ Đã xác nhận';
@@ -932,20 +1127,31 @@ function updateProgress() {
 }
 
 function showResult() {
-  const content = currentItem.content || '(Không có nội dung)';
-  document.getElementById('bmResultContent').textContent = content;
+  const item = currentItem;
+  if (!item || !me) return;
+  // Chỉ cho phép khi đã verify đủ (double-check)
+  if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) {
+    toast('❌ Chưa hoàn thành đủ lượt', 'err');
+    return;
+  }
+  document.getElementById('bmResultContent').textContent = '⏳ Đang tải nội dung...';
   document.getElementById('bmResult').classList.add('show');
-  const order = {
-    id: 'ORD' + Date.now(),
-    user: me.username,
-    display: me.display,
-    itemId: currentItem.id,
-    itemName: currentItem.name,
-    status: 'success',
-    createdAt: new Date().toISOString()
-  };
-  addOrder(order);
-  toast('🎉 Hoàn thành! Nội dung đã được mở khóa!', 'ok');
+
+  fetchSecretContent(item.id).then(content => {
+    if (content === null) content = '(Không có nội dung hoặc đã bị xóa)';
+    document.getElementById('bmResultContent').textContent = content;
+    const order = {
+      id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
+      user: me.username,
+      display: me.display,
+      itemId: item.id,
+      itemName: item.name,
+      status: 'success',
+      createdAt: new Date().toISOString()
+    };
+    addOrder(order);
+    toast('🎉 Hoàn thành! Nội dung đã được mở khóa!', 'ok');
+  });
 }
 
 function copyResult() {
@@ -1001,7 +1207,8 @@ function renderAdminBody(t) {
 
 function renderDash(body) {
   const users = getUsersArr().filter(u => u.role !== 'admin').length;
-  const items = getItemsArr().filter(i => i.active).length;
+  const banned = getUsersArr().filter(u => u.banned).length;
+  const items = getItemsArr().filter(i => i.active !== false).length;
   const orders = getOrdersArr();
   const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
   body.innerHTML = `
@@ -1011,8 +1218,9 @@ function renderDash(body) {
       <div class="stat-card s-green"><div class="stat-n">${orders.length}</div><div class="stat-l">📋 Tổng lượt</div></div>
       <div class="stat-card s-red"><div class="stat-n">${todayOrders}</div><div class="stat-l">🗓️ Hôm nay</div></div>
     </div>
+    ${banned ? `<div class="alert alert-err show" style="margin-bottom:12px">🚫 ${banned} tài khoản đang bị khóa</div>` : ''}
     <div class="sec-title" style="margin-bottom:10px">📋 Lịch sử gần nhất</div>
-    ${renderOrderTable(orders.slice(0, 8))}
+    ${renderOrderTable(orders.slice(0, 10))}
   `;
 }
 
@@ -1032,12 +1240,12 @@ function renderItemsAdmin(body) {
           <div style="font-size:22px;flex-shrink:0">${item.icon || '📦'}</div>
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)}</div>
-            <div class="imr-sub">${item.rounds} lượt vượt • ${esc(item.desc || '')}</div>
-            <div style="margin-top:4px"><span class="bdg ${item.active ? 'bdg-ok' : 'bdg-no'}">${item.active ? 'Bật' : 'Tắt'}</span></div>
+            <div class="imr-sub">${item.rounds || 1} lượt vượt • ${esc(item.desc || '')}</div>
+            <div style="margin-top:4px"><span class="bdg ${item.active !== false ? 'bdg-ok' : 'bdg-no'}">${item.active !== false ? 'Bật' : 'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
             <button class="btn btn-ghost btn-xs" onclick="openItemModal('${item.id}')">✏️</button>
-            <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active ? '⏸' : '▶'}</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active !== false ? '⏸' : '▶'}</button>
             <button class="btn btn-red btn-xs" onclick="deleteItem('${item.id}')">🗑</button>
           </div>
         </div>
@@ -1049,17 +1257,16 @@ function renderItemsAdmin(body) {
 function clearAllItems() {
   if (!confirm('Xóa TOÀN BỘ nội dung trên server? Không thể hoàn tác.')) return;
   localItems = {};
-  // Xóa hẳn node items trên Firebase + gắn cờ không seed lại
   const s = { ...getSettings(), seededDemo: true };
-  localItems = {};
   localSettings = s;
   Promise.all([
-    fsSet('items', { data: {} }),
-    fsSet('settings', { data: s })
+    saveItems({}),
+    saveSettings(s),
+    db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(() => {})
   ]).then(() => {
     aTab('items');
     renderItemGrid();
-    toast('🗑 Đã xóa hết trên server. Thoát vào lại sẽ không hiện demo.', 'ok');
+    toast('🗑 Đã xóa hết trên server.', 'ok');
   }).catch(e => fbErr(e, 'clearAllItems'));
 }
 
@@ -1074,15 +1281,20 @@ function renderUsersAdmin(body) {
     <input class="srch-inp" placeholder="🔍 Tìm kiếm..." oninput="filterUserTable(this.value)"/>
     <div class="tbl-wrap">
       <table class="dtbl">
-        <thead><tr><th>Tên</th><th>Username</th><th>Lượt vượt</th><th>Tham gia</th></tr></thead>
+        <thead><tr><th>Tên</th><th>Username</th><th>Lượt</th><th>Trạng thái</th><th></th></tr></thead>
         <tbody id="userTbody">
           ${users.length ? users.map(u => `
             <tr>
               <td>${u.avatar || '👤'} <strong>${esc(u.display)}</strong></td>
               <td style="color:var(--sub)">@${esc(u.username)}</td>
               <td>${orders.filter(o => o.user === u.username).length}</td>
-              <td style="color:var(--sub);font-size:11px">${fmtDate(u.joined)}</td>
-            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
+              <td><span class="bdg ${u.banned ? 'bdg-no' : 'bdg-ok'}">${u.banned ? 'Khóa' : 'OK'}</span></td>
+              <td>
+                <button class="btn btn-xs ${u.banned ? 'btn-green' : 'btn-red'}" onclick="toggleBan('${u.username}')">
+                  ${u.banned ? 'Mở khóa' : 'Khóa'}
+                </button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -1095,6 +1307,16 @@ function filterUserTable(q) {
   const lower = (q || '').toLowerCase();
   tbody.querySelectorAll('tr').forEach(r => {
     r.style.display = r.textContent.toLowerCase().includes(lower) ? '' : 'none';
+  });
+}
+
+function toggleBan(username) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return;
+  u.banned = !u.banned;
+  updateUser(username, u).then(() => {
+    toast(u.banned ? '🚫 Đã khóa tài khoản' : '✅ Đã mở khóa', 'ok');
+    aTab('users');
   });
 }
 
@@ -1142,28 +1364,26 @@ function filterOrders(range, btn) {
 function renderSettings(body) {
   const s = getSettings();
   body.innerHTML = `
-    <div class="sec-title" style="margin-bottom:12px">⚙️ CÀI ĐẶT HỆ THỐNG (Online)</div>
+    <div class="sec-title" style="margin-bottom:12px">⚙️ CÀI ĐẶT HỆ THỐNG</div>
 
     <div class="settings-row">
       <div class="settings-label">💬 Số Zalo Admin (Liên hệ)</div>
-      <input class="inp" id="setZalo" value="${esc(s.zaloAdmin || '')}" placeholder="VD: 0912345678 hoặc 84912345678"/>
+      <input class="inp" id="setZalo" value="${esc(s.zaloAdmin || '')}" placeholder="VD: 0912345678"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('zaloAdmin','setZalo')">💾 Lưu số Zalo</button>
-      <div style="font-size:11px;color:var(--sub);margin-top:8px;line-height:1.4">
-        Người dùng bấm nút <b>Liên hệ Admin</b> sẽ mở thẳng chat Zalo với số này.<br>
-        Nhập SĐT Việt Nam (10 số bắt đầu bằng 0 hoặc 84…).
-      </div>
     </div>
 
     <div class="settings-row">
-      <div class="settings-label">🔑 Ghi chú API Key Link4M (tuỳ chọn)</div>
-      <input class="inp" id="setKey" value="${esc(s.link4mKey || '')}" placeholder="Ghi nhớ key tạo link"/>
+      <div class="settings-label">🔑 API Key Link4M</div>
+      <input class="inp" id="setKey" value="${esc(s.link4mKey || '')}" placeholder="API key Link4M"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu</button>
     </div>
+
     <div class="settings-row">
       <div class="settings-label">📦 Số lượt vượt mặc định khi tạo nội dung mới</div>
       <input class="inp" id="setRounds" type="number" min="1" max="20" value="${s.roundsDefault || 2}" style="width:100px"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('roundsDefault','setRounds',true)">💾 Lưu</button>
     </div>
+
     <div class="settings-row">
       <div class="settings-label">🛡️ Đổi mật khẩu Admin</div>
       <input class="inp" id="setOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
@@ -1171,13 +1391,19 @@ function renderSettings(body) {
       <input class="inp" id="setNewPass2" type="password" placeholder="Xác nhận mật khẩu mới"/>
       <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi Mật Khẩu</button>
     </div>
+
     <div class="settings-row">
       <div class="settings-label">☁️ Trạng thái server</div>
       <div style="font-size:13px;color:var(--green)">● Firestore Online — project: shopvip-139ea</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data · documents: users, items, orders, settings</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:6px;line-height:1.4">
-        • Chỉ <b>Admin</b> thêm / sửa / xóa nội dung (tab 📦 Nội dung).<br>
-        • Mọi người dùng đều thấy cùng danh sách realtime trên server.
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data</div>
+      <div class="sec-note" style="margin-top:10px">
+        <b>v2 đã nâng cấp:</b><br>
+        • Mật khẩu hash PBKDF2 (không còn plain text)<br>
+        • Session có thời hạn + rate limit<br>
+        • Khóa / mở khóa user<br>
+        • Mã xác nhận có expiry + gắn user<br>
+        • Sửa bug clearAllItems<br>
+        • Nội dung thật vẫn tách riêng itemSecrets
       </div>
     </div>
   `;
@@ -1192,27 +1418,38 @@ function saveSetting(key, inputId, isNum) {
   saveSettings(s).then(() => {
     toast('✅ Đã lưu lên server!', 'ok');
   }).catch(e => {
-    toast('❌ Lưu thất bại: ' + (e && e.message ? e.message.slice(0,80) : 'Lỗi không xác định'), 'err');
+    toast('❌ Lưu thất bại', 'err');
   });
   if (key === 'zaloAdmin') updateContactBtn();
 }
 
-function changeAdminPass() {
+async function changeAdminPass() {
   const old = document.getElementById('setOldPass').value;
   const np = document.getElementById('setNewPass').value;
   const np2 = document.getElementById('setNewPass2').value;
   const admin = (localUsers || {})[ADMIN_USER];
   if (!admin) { toast('Không tìm thấy admin', 'err'); return; }
-  if (admin.password !== old) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
+
+  let ok = false;
+  if (admin.passwordHash && admin.passwordSalt) {
+    ok = await verifyPassword(old, admin.passwordHash, admin.passwordSalt);
+  } else if (admin.password) {
+    ok = admin.password === old;
+  }
+  if (!ok) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
   if (np.length < 6) { toast('❌ Mật khẩu mới ít nhất 6 ký tự', 'err'); return; }
   if (np !== np2) { toast('❌ Xác nhận mật khẩu không khớp', 'err'); return; }
-  admin.password = np;
-  updateUser(ADMIN_USER, admin);
-  if (me && me.username === ADMIN_USER) me.password = np;
+
+  const { hash, salt } = await hashPassword(np);
+  const updated = { ...admin, passwordHash: hash, passwordSalt: salt };
+  delete updated.password;
+  await updateUser(ADMIN_USER, updated);
+  if (me && me.username === ADMIN_USER) me = updated;
+
   document.getElementById('setOldPass').value = '';
   document.getElementById('setNewPass').value = '';
   document.getElementById('setNewPass2').value = '';
-  toast('✅ Đã đổi mật khẩu (đồng bộ online)!', 'ok');
+  toast('✅ Đã đổi mật khẩu (đã hash)!', 'ok');
 }
 
 // ===== ITEM MODAL =====
@@ -1226,7 +1463,12 @@ function openItemModal(id) {
     document.getElementById('imDesc').value = item.desc || '';
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
-    document.getElementById('imContent').value = item.content || '';
+    document.getElementById('imContent').value = '⏳ Đang tải nội dung...';
+    document.getElementById('imContent').disabled = true;
+    fetchSecretContent(id).then(content => {
+      document.getElementById('imContent').value = (content !== null ? content : (item.content || ''));
+      document.getElementById('imContent').disabled = false;
+    });
   } else {
     document.getElementById('imTitle').textContent = '➕ Thêm nội dung';
     document.getElementById('imName').value = '';
@@ -1234,6 +1476,7 @@ function openItemModal(id) {
     document.getElementById('imIcon').value = '📦';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
     document.getElementById('imContent').value = '';
+    document.getElementById('imContent').disabled = false;
   }
   document.getElementById('imErr').classList.remove('show');
   document.getElementById('itemModal').classList.add('open');
@@ -1244,30 +1487,25 @@ function closeItemModal() {
   editItemId = null;
 }
 
-// ===== LINK4M — mở link vượt trực tiếp, KHÔNG cần fetch/CORS-proxy =====
-// Link4M có endpoint /st cho phép mở thẳng bằng điều hướng trình duyệt (window.open),
-// nó tự lo rút gọn + hiện quảng cáo phía server — không phải gọi API bằng JS nên
-// không hề bị CORS chặn (CORS chỉ chặn fetch/XHR đọc response, không chặn điều hướng).
 function buildLink4mUrl(destinationUrl) {
   const key = (getSettings().link4mKey || '').trim();
   if (!key) throw new Error('Chưa lưu API Key Link4M trong Cài đặt');
   return 'https://link4m.co/st?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(destinationUrl);
 }
 
-// ===== TỰ ĐỘNG SINH MÃ XÁC NHẬN NGẪU NHIÊN CHO TỪNG LƯỢT VƯỢT =====
-// Khi user bấm "Lấy Link": sinh 1 mã ngẫu nhiên, tạo link4m trỏ VỀ CHÍNH web này
-// kèm mã đó trên URL. User vượt xong link4m sẽ được đưa về lại web, thấy mã, copy
-// dán ngược lại ô xác nhận. verifyCode() sẽ so mã người dùng nhập với mã đã sinh.
 function genVerifyCode(len) {
-  len = len || 6;
+  len = len || 8;
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
-  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < len; i++) s += chars[arr[i] % chars.length];
   return s;
 }
 function pendingCodeKey(itemId, idx) {
-  return 'vlp_pending_' + itemId + '_' + idx;
+  return 'vlp_pending_v2_' + itemId + '_' + idx;
 }
+
 function checkRevealCode() {
   const params = new URLSearchParams(location.search);
   const code = params.get('vlpcode');
@@ -1300,39 +1538,41 @@ function saveItem() {
   if (!name) { showAlert('imErr', '⚠️ Vui lòng nhập tên!', 'err'); return; }
   if (!content) { showAlert('imErr', '⚠️ Vui lòng nhập nội dung thật!', 'err'); return; }
 
-  if (editItemId) {
-    const old = (localItems || {})[editItemId] || {};
-    updateItem(editItemId, {
-      ...old,
-      name, desc, icon, rounds, content
-    });
+  let itemId = editItemId;
+  if (itemId) {
+    const old = (localItems || {})[itemId] || {};
+    // Không lưu content vào items
+    const { content: _c, ...rest } = old;
+    updateItem(itemId, { ...rest, name, desc, icon, rounds });
   } else {
-    const id = 'itm' + Date.now();
-    updateItem(id, {
-      id, name, desc, icon, rounds, content,
+    itemId = 'itm' + Date.now();
+    updateItem(itemId, {
+      id: itemId, name, desc, icon, rounds,
       active: true,
       addedBy: me.username,
       createdAt: new Date().toISOString()
     });
   }
-  closeItemModal();
-  toast('✅ Đã lưu lên server!', 'ok');
-  aTab('items');
+  saveSecretContent(itemId, content).then(() => {
+    closeItemModal();
+    toast('✅ Đã lưu lên server!', 'ok');
+    aTab('items');
+  });
 }
 
 function toggleItem(id) {
   const item = (localItems || {})[id];
   if (!item) return;
-  item.active = !item.active;
+  item.active = item.active === false ? true : false;
   updateItem(id, item);
   aTab('items');
-  toast(item.active ? '✅ Đã bật' : '⏸ Đã tắt');
+  toast(item.active !== false ? '✅ Đã bật' : '⏸ Đã tắt');
 }
 
 function deleteItem(id) {
   if (!confirm('Xóa nội dung này?')) return;
+  deleteSecretContent(id);
   removeItem(id).then(() => {
-    // Nếu xóa hết → gắn cờ không seed lại demo
     if (!Object.keys(localItems || {}).length) {
       const s = { ...getSettings(), seededDemo: true };
       saveSettings(s);
