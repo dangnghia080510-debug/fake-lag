@@ -783,7 +783,7 @@ function openBypass(id) {
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v1';
 function saveActiveBypassState() {
   if (!currentItem) return;
-  lsSet(ACTIVE_BYPASS_KEY, { itemId: currentItem.id, verifiedSteps });
+  lsSet(ACTIVE_BYPASS_KEY, { itemId: currentItem.id, rounds: currentItem.rounds, verifiedSteps });
 }
 function clearActiveBypassState() {
   try { localStorage.removeItem(ACTIVE_BYPASS_KEY); } catch (e) {}
@@ -793,6 +793,13 @@ function restoreActiveBypassIfAny() {
   if (!saved || !saved.itemId) return;
   const item = (localItems || {})[saved.itemId];
   if (!item) { clearActiveBypassState(); return; }
+  // Nếu số lượt yêu cầu của item đã bị đổi (admin sửa lại) so với lúc lưu tiến trình dở dang
+  // thì tiến trình cũ không còn hợp lệ nữa → xoá, bắt vượt lại từ đầu đủ số lượt mới.
+  if (saved.rounds !== undefined && saved.rounds !== item.rounds) {
+    clearActiveBypassState();
+    openBypass(saved.itemId);
+    return;
+  }
   openBypass(saved.itemId);
   if (Array.isArray(saved.verifiedSteps) && currentItem) {
     verifiedSteps = saved.verifiedSteps.slice(0, currentItem.rounds);
