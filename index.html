@@ -810,14 +810,24 @@ function renderSteps() {
 }
 
 function openLink(idx) {
-  const links = (currentItem && currentItem.links) || [];
-  const link = links[idx];
-  if (!link || !link.url || !String(link.url).trim()) {
-    toast('Link chưa được cấu hình cho lượt này', 'err');
-    return;
-  }
-  window.open(String(link.url).trim(), '_blank');
-  toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong lấy mã xác nhận!');
+  const item = currentItem;
+  if (!item) return;
+  const btn = document.querySelector('#step_' + idx + ' .btn-cyan');
+  const code = genVerifyCode();
+  localStorage.setItem(pendingCodeKey(item.id, idx), code);
+  const revealUrl = location.origin + location.pathname +
+    '?vlpcode=' + encodeURIComponent(code) + '&vlpitem=' + encodeURIComponent(item.id) + '&vlpround=' + idx;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tạo link...'; }
+  toast('⏳ Đang gọi Link4M tạo link, chờ chút...');
+  callLink4mApi(revealUrl).then(shortUrl => {
+    window.open(shortUrl, '_blank');
+    toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong dán mã hiện ra vào ô bên dưới!');
+  }).catch(e => {
+    localStorage.removeItem(pendingCodeKey(item.id, idx));
+    toast('❌ Không tạo được link: ' + (e && e.message ? e.message.slice(0, 100) : 'lỗi không rõ'), 'err');
+  }).finally(() => {
+    if (btn) { btn.disabled = !!verifiedSteps[idx]; btn.textContent = '🔗 Lấy Link'; }
+  });
 }
 
 function handleCodeInput(el, idx) {
@@ -836,12 +846,23 @@ function handleCodeInput(el, idx) {
 function verifyCode(idx) {
   const inp = document.getElementById('codeinp_' + idx);
   if (!inp || inp.disabled) return;
-  const val = (inp.value || '').trim();
+  const val = (inp.value || '').trim().toUpperCase();
   if (!val) {
     toast('⚠️ Vui lòng nhập / dán mã xác nhận!', 'err');
     inp.focus();
     return;
   }
+  const key = pendingCodeKey(currentItem.id, idx);
+  const expected = (localStorage.getItem(key) || '').toUpperCase();
+  if (!expected) {
+    toast('⚠️ Bạn cần bấm "Lấy Link" trước rồi mới có mã để nhập!', 'err');
+    return;
+  }
+  if (val !== expected) {
+    toast('❌ Mã xác nhận không đúng, kiểm tra lại!', 'err');
+    return;
+  }
+  localStorage.removeItem(key);
   verifiedSteps[idx] = true;
   inp.value = '✅ Đã xác nhận';
   inp.classList.add('verified');
@@ -1228,16 +1249,15 @@ function renderLinkRows() {
 }
 
 // ===== LINK4M API — tự động tạo link rút gọn =====
-// Lưu ý: link4m.co không công bố tài liệu API công khai chính thức, endpoint dưới đây
-// dùng theo định dạng phổ biến của các site rút gọn link kiểu này (api?api=KEY&url=...).
-// Nếu không chạy được (do link4m đổi API hoặc chặn CORS từ trình duyệt), hãy vào
-// mục "Công cụ / API" trong tài khoản Link4M của bạn để lấy đúng endpoint rồi báo lại.
+// Link4M không cho phép gọi API thẳng từ trình duyệt (chặn CORS) nên phải đi qua
+// 1 proxy trung gian. Nếu proxy này chết, đổi CORS_PROXY sang proxy khác.
+const CORS_PROXY = 'https://corsproxy.io/?url=';
 async function callLink4mApi(longUrl) {
   const key = (getSettings().link4mKey || '').trim();
   if (!key) throw new Error('Chưa lưu API Key Link4M trong Cài đặt');
-  if (!longUrl) throw new Error('Chưa nhập link đích');
-  const endpoint = 'https://link4m.co/api?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(longUrl);
-  const res = await fetch(endpoint);
+  if (!longUrl) throw new Error('Chưa có link đích');
+  const apiUrl = 'https://link4m.co/api?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(longUrl);
+  const res = await fetch(CORS_PROXY + encodeURIComponent(apiUrl));
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
   const shortUrl = data.shortenedUrl || data.shortened_url || data.short || data.short_url || data.link;
@@ -1266,6 +1286,42 @@ async function autoCreateLink4m(i) {
     btn.textContent = '⚡ Tạo';
   }
 }
+
+// ===== TỰ ĐỘNG SINH MÃ XÁC NHẬN NGẪU NHIÊN CHO TỪNG LƯỢT VƯỢT =====
+// Khi user bấm "Lấy Link": sinh 1 mã ngẫu nhiên, tạo link4m trỏ VỀ CHÍNH web này
+// kèm mã đó trên URL. User vượt xong link4m sẽ được đưa về lại web, thấy mã, copy
+// dán ngược lại ô xác nhận. verifyCode() sẽ so mã người dùng nhập với mã đã sinh.
+function genVerifyCode(len) {
+  len = len || 6;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+function pendingCodeKey(itemId, idx) {
+  return 'vlp_pending_' + itemId + '_' + idx;
+}
+function checkRevealCode() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('vlpcode');
+  if (!code) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'vlpRevealOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#07080c;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:"Exo 2",sans-serif;color:#dde6f0';
+  overlay.innerHTML =
+    '<div style="font-size:15px;color:#00e676;margin-bottom:8px;font-weight:700">✅ Bạn đã vượt link thành công!</div>' +
+    '<div style="font-size:13px;color:#4e6378;margin-bottom:18px">Copy mã bên dưới rồi quay lại tab web ban đầu, dán vào ô xác nhận:</div>' +
+    '<div id="vlpRevealCodeTxt" style="font-size:34px;font-weight:800;letter-spacing:5px;color:#f5c542;background:#111620;border:1px solid #1a2232;border-radius:14px;padding:20px 30px;margin-bottom:20px">' + esc(code) + '</div>' +
+    '<button id="vlpRevealCopyBtn" style="padding:13px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#007fa8);color:#040810;font-weight:700;font-size:14px;cursor:pointer">📋 Copy mã</button>';
+  document.body.appendChild(overlay);
+  document.getElementById('vlpRevealCopyBtn').addEventListener('click', function () {
+    navigator.clipboard.writeText(code).then(function () {
+      const t = document.getElementById('vlpRevealCodeTxt');
+      if (t) { t.textContent = '✅ Đã copy!'; setTimeout(function () { t.textContent = code; }, 1200); }
+    }).catch(function () {});
+  });
+}
+checkRevealCode();
 
 function addLinkRow() {
   const rounds = Math.max(1, parseInt(document.getElementById('imRounds').value) || 1);
