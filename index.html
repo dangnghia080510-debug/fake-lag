@@ -4,8 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>⚡ VượtLink Pro</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;500;600;700;900&display=swap');
 :root{
@@ -362,16 +362,20 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 
 <script>
 // ======================================================
-// FIREBASE — cùng project với Game Bài Online
-// Path prefix: vlp/ để không đụng data game
+// FIRESTORE — project shopvip-139ea
+// Collection: vlp_data (documents: users, items, orders, settings)
 // ======================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyCyapf8zLqz31Jc7gMUweXrZk1ReP07dv0",
-  databaseURL: "https://nhantin-4ee06-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "nhantin-4ee06"
+  apiKey: "AIzaSyA80m1h3IMimHcRhrA8mulpMtsVGs1o3YU",
+  authDomain: "shopvip-139ea.firebaseapp.com",
+  projectId: "shopvip-139ea",
+  storageBucket: "shopvip-139ea.firebasestorage.app",
+  messagingSenderId: "294804329458",
+  appId: "1:294804329458:web:f4c0996cb51b354237516b"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db = firebase.firestore();
+const COL = 'vlp_data';
 
 const SESSION_K = 'vlp_session_v3';
 const REMEMBER_K = 'vlp_remember_v3';
@@ -379,9 +383,9 @@ const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
 
 // Local cache (null = chưa load)
-let localUsers = null;   // { username: userObj }
-let localItems = null;   // { id: itemObj }
-let localOrders = null;  // { id: orderObj }
+let localUsers = null;
+let localItems = null;
+let localOrders = null;
 let localSettings = null;
 let firebaseReady = false;
 let me = null;
@@ -391,13 +395,9 @@ let editItemId = null;
 let curAdminTab = 'dash';
 let linkRows = [];
 
-// ===== STORE HELPERS (giữ shape quen thuộc cho UI) =====
-function getUsersArr() {
-  return Object.values(localUsers || {});
-}
-function getItemsArr() {
-  return Object.values(localItems || {});
-}
+// ===== STORE HELPERS =====
+function getUsersArr() { return Object.values(localUsers || {}); }
+function getItemsArr() { return Object.values(localItems || {}); }
 function getOrdersArr() {
   const arr = Object.values(localOrders || {});
   arr.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -410,78 +410,70 @@ function getSettings() {
 function fbErr(e, label) {
   console.error(label, e);
   const msg = String((e && e.message) || e || '');
-  if (msg.includes('PERMISSION') || msg.includes('permission')) {
-    toast('❌ Firebase chặn ghi (Rules). Mở write cho path vlp/', 'err');
+  if (msg.includes('PERMISSION') || msg.includes('permission') || msg.includes('Missing or insufficient')) {
+    toast('❌ Firestore chặn ghi. Vào Firebase Console → Firestore → Rules → cho phép read/write', 'err');
   } else {
     toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
   }
 }
+
+// Ghi toàn bộ object vào 1 document Firestore
+function fsSet(docName, data) {
+  return db.collection(COL).doc(docName).set(data).catch(e => fbErr(e, 'fsSet:' + docName));
+}
+
 function saveUsers(obj) {
   localUsers = obj;
-  return db.ref('vlp/users').set(obj).catch(e => fbErr(e, 'saveUsers'));
+  return fsSet('users', { data: obj });
 }
 function saveItems(obj) {
   localItems = obj || {};
-  return db.ref('vlp/items').set(localItems).catch(e => fbErr(e, 'saveItems'));
+  return fsSet('items', { data: localItems });
 }
 function saveOrders(obj) {
   localOrders = obj || {};
-  return db.ref('vlp/orders').set(localOrders).catch(e => fbErr(e, 'saveOrders'));
+  return fsSet('orders', { data: localOrders });
 }
 function saveSettings(obj) {
   localSettings = obj;
-  return db.ref('vlp/settings').set(obj).catch(e => fbErr(e, 'saveSettings'));
+  return fsSet('settings', { data: obj });
 }
-
 function updateUser(username, data) {
   if (!localUsers) localUsers = {};
   localUsers[username] = data;
-  return db.ref('vlp/users/' + username).set(data).catch(e => fbErr(e, 'updateUser'));
+  return fsSet('users', { data: localUsers });
 }
 function updateItem(id, data) {
   if (!localItems) localItems = {};
   localItems[id] = data;
-  return db.ref('vlp/items/' + id).set(data).catch(e => fbErr(e, 'updateItem'));
+  return fsSet('items', { data: localItems });
 }
 function removeItem(id) {
   if (localItems) delete localItems[id];
-  return db.ref('vlp/items/' + id).remove().catch(e => fbErr(e, 'removeItem'));
+  return fsSet('items', { data: localItems || {} });
 }
 function addOrder(order) {
   if (!localOrders) localOrders = {};
   localOrders[order.id] = order;
-  db.ref('vlp/orders/' + order.id).set(order).catch(e => console.error(e));
-  // giữ tối đa ~300 order gần nhất
-  const keys = Object.keys(localOrders).sort((a, b) => {
-    return (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || '');
-  });
-  if (keys.length > 300) {
-    keys.slice(300).forEach(k => {
-      delete localOrders[k];
-      db.ref('vlp/orders/' + k).remove();
-    });
-  }
+  const keys = Object.keys(localOrders).sort((a, b) =>
+    (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
+  if (keys.length > 300) keys.slice(300).forEach(k => delete localOrders[k]);
+  fsSet('orders', { data: localOrders }).catch(e => console.error(e));
 }
 
 function checkFirebaseReady() {
   if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && !firebaseReady) {
     firebaseReady = true;
     document.getElementById('connOverlay').classList.add('hidden');
-    // Auto session
     tryAutoLogin();
   }
 }
 
 function ensureDefaults() {
-  // Admin
   if (!localUsers[ADMIN_USER]) {
     localUsers[ADMIN_USER] = {
-      username: ADMIN_USER,
-      password: ADMIN_PASS,
-      display: 'Admin',
-      role: 'admin',
-      avatar: '👑',
-      joined: new Date().toISOString()
+      username: ADMIN_USER, password: ADMIN_PASS, display: 'Admin',
+      role: 'admin', avatar: '👑', joined: new Date().toISOString()
     };
     saveUsers(localUsers);
   }
@@ -489,85 +481,53 @@ function ensureDefaults() {
     localSettings = { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
     saveSettings(localSettings);
   }
-  // Chỉ seed demo 1 lần duy nhất (khi chưa bao giờ seed). Xóa hết sẽ KHÔNG tự tạo lại.
+  // Đánh dấu đã seed để không tự tạo demo lại
   const settings = getSettings();
-  if (!settings.seededDemo && !Object.keys(localItems || {}).length) {
-    const demo = {
-      demo1: {
-        id: 'demo1', name: 'Acc TikTok VIP', desc: 'Tài khoản TikTok cấp cao',
-        icon: '🎵', rounds: 2, content: 'https://tiktok.com/@demo_vip_acc\nPass: demo123',
-        links: [
-          { url: 'https://link4m.co/xxxaaa', label: 'Lượt 1' },
-          { url: 'https://link4m.co/xxxbbb', label: 'Lượt 2' }
-        ],
-        active: true, addedBy: 'admin', createdAt: new Date().toISOString()
-      },
-      demo2: {
-        id: 'demo2', name: 'File Chống Ban FF', desc: 'File định vị antiban cần acc 9',
-        icon: '🛡️', rounds: 3, content: 'Link tải file: https://drive.google.com/demo\nKey: DEMO-ANTI-BAN-2024',
-        links: [
-          { url: 'https://link4m.co/yyy111', label: 'Lượt 1' },
-          { url: 'https://link4m.co/yyy222', label: 'Lượt 2' },
-          { url: 'https://link4m.co/yyy333', label: 'Lượt 3' }
-        ],
-        active: true, addedBy: 'admin', createdAt: new Date().toISOString()
-      }
-    };
-    localItems = demo;
-    saveItems(localItems);
-    localSettings = { ...settings, seededDemo: true };
-    saveSettings(localSettings);
-  } else if (!settings.seededDemo) {
-    // Đã có items (hoặc trống nhưng đánh dấu đã seed) — chỉ gắn cờ
+  if (!settings.seededDemo) {
     localSettings = { ...settings, seededDemo: true };
     saveSettings(localSettings);
   }
 }
 
-// Listeners
-db.ref('vlp/users').on('value', snap => {
-  const first = localUsers === null;
-  localUsers = snap.val() || {};
-  if (first) {
-    ensureDefaults();
-    checkFirebaseReady();
-  }
-  // Refresh me nếu đang login
-  if (me && localUsers[me.username]) {
-    me = localUsers[me.username];
-  }
-  // Refresh UI nếu đang ở main/admin
-  if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
-  if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
-}, err => {
-  console.error(err);
-  document.getElementById('connMsg').textContent = 'Không kết nối được máy chủ. Kiểm tra mạng / Firebase.';
-});
+// ===== REALTIME LISTENERS (Firestore onSnapshot) =====
+function startListeners() {
+  db.collection(COL).doc('users').onSnapshot(snap => {
+    const first = localUsers === null;
+    localUsers = (snap.exists && snap.data().data) ? snap.data().data : {};
+    if (first) { ensureDefaults(); checkFirebaseReady(); }
+    if (me && localUsers[me.username]) me = localUsers[me.username];
+    if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
+    if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
+  }, err => {
+    console.error(err);
+    document.getElementById('connMsg').textContent = 'Không kết nối được máy chủ. Kiểm tra mạng / Firestore Rules.';
+  });
 
-db.ref('vlp/items').on('value', snap => {
-  const first = localItems === null;
-  localItems = snap.val() || {};
-  if (first) checkFirebaseReady();
-  if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
-  if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
-}, err => console.error(err));
+  db.collection(COL).doc('items').onSnapshot(snap => {
+    const first = localItems === null;
+    localItems = (snap.exists && snap.data().data) ? snap.data().data : {};
+    if (first) checkFirebaseReady();
+    if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
+    if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
+  }, err => console.error(err));
 
-db.ref('vlp/orders').on('value', snap => {
-  const first = localOrders === null;
-  localOrders = snap.val() || {};
-  if (first) checkFirebaseReady();
-  if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
-    renderAdminBody(curAdminTab);
-  }
-}, err => console.error(err));
+  db.collection(COL).doc('orders').onSnapshot(snap => {
+    const first = localOrders === null;
+    localOrders = (snap.exists && snap.data().data) ? snap.data().data : {};
+    if (first) checkFirebaseReady();
+    if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
+      renderAdminBody(curAdminTab);
+    }
+  }, err => console.error(err));
 
-db.ref('vlp/settings').on('value', snap => {
-  const first = localSettings === null;
-  localSettings = snap.val() || { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
-  if (first) checkFirebaseReady();
-  // Cập nhật nút liên hệ khi settings đổi
-  if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
-}, err => console.error(err));
+  db.collection(COL).doc('settings').onSnapshot(snap => {
+    const first = localSettings === null;
+    localSettings = (snap.exists && snap.data().data) ? snap.data().data : { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
+    if (first) checkFirebaseReady();
+    if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
+  }, err => console.error(err));
+}
+startListeners();
 
 // Timeout fallback
 setTimeout(() => {
