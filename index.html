@@ -525,10 +525,6 @@ function startListeners() {
     localSettings = (snap.exists && snap.data().data) ? snap.data().data : { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
-    // Re-render settings tab nếu đang mở để cập nhật giá trị mới từ server
-    if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'settings') {
-      renderAdminBody('settings');
-    }
   }, err => console.error(err));
 }
 startListeners();
@@ -1096,13 +1092,17 @@ function renderSettings(body) {
 }
 
 function saveSetting(key, inputId, isNum) {
-  let val = document.getElementById(inputId).value;
+  const el = document.getElementById(inputId);
+  if (!el) { toast('❌ Không tìm thấy ô nhập!', 'err'); return; }
+  let val = el.value;
   if (isNum) val = parseInt(val) || 2;
   else val = (val || '').trim();
+  if (!isNum && val === '') { toast('⚠️ Vui lòng nhập giá trị trước khi lưu!', 'err'); return; }
   const s = { ...getSettings() };
   s[key] = val;
+  localSettings = s; // cập nhật local ngay
   saveSettings(s).then(() => {
-    toast('✅ Đã lưu lên server!', 'ok');
+    toast('✅ Đã lưu: ' + val, 'ok');
   }).catch(e => {
     toast('❌ Lưu thất bại: ' + (e && e.message ? e.message.slice(0,80) : 'Lỗi không xác định'), 'err');
   });
