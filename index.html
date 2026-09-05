@@ -958,18 +958,17 @@ function clearAllItems() {
   if (!confirm('Xóa TOÀN BỘ nội dung trên server? Không thể hoàn tác.')) return;
   localItems = {};
   // Xóa hẳn node items trên Firebase + gắn cờ không seed lại
-  fsSet('items', { data: {} })
-    .then(() => {
-      const s = { ...getSettings(), seededDemo: true };
-      localSettings = s;
-      return fsSet('settings', { data: s });
-    })
-    .then(() => {
-      aTab('items');
-      renderItemGrid();
-      toast('🗑 Đã xóa hết trên server. Thoát vào lại sẽ không hiện demo.', 'ok');
-    })
-    .catch(e => fbErr(e, 'clearAllItems'));
+  const s = { ...getSettings(), seededDemo: true };
+  localItems = {};
+  localSettings = s;
+  Promise.all([
+    fsSet('items', { data: {} }),
+    fsSet('settings', { data: s })
+  ]).then(() => {
+    aTab('items');
+    renderItemGrid();
+    toast('🗑 Đã xóa hết trên server. Thoát vào lại sẽ không hiện demo.', 'ok');
+  }).catch(e => fbErr(e, 'clearAllItems'));
 }
 
 function renderUsersAdmin(body) {
@@ -1082,8 +1081,8 @@ function renderSettings(body) {
     </div>
     <div class="settings-row">
       <div class="settings-label">☁️ Trạng thái server</div>
-      <div style="font-size:13px;color:var(--green)">● Firebase Online — project: nhantin-4ee06</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:4px">Path: vlp/users · vlp/items · vlp/orders · vlp/settings</div>
+      <div style="font-size:13px;color:var(--green)">● Firestore Online — project: shopvip-139ea</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data · documents: users, items, orders, settings</div>
       <div style="font-size:11px;color:var(--sub);margin-top:6px;line-height:1.4">
         • Chỉ <b>Admin</b> thêm / sửa / xóa nội dung (tab 📦 Nội dung).<br>
         • Mọi người dùng đều thấy cùng danh sách realtime trên server.
@@ -1101,7 +1100,7 @@ function saveSetting(key, inputId, isNum) {
   saveSettings(s).then(() => {
     toast('✅ Đã lưu lên server!', 'ok');
   }).catch(e => {
-    toast('❌ Lưu thất bại: ' + (e && e.message ? e.message.slice(0,60) : 'Lỗi không xác định'), 'err');
+    toast('❌ Lưu thất bại: ' + (e && e.message ? e.message.slice(0,80) : 'Lỗi không xác định'), 'err');
   });
   if (key === 'zaloAdmin') updateContactBtn();
 }
