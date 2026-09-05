@@ -525,6 +525,10 @@ function startListeners() {
     localSettings = (snap.exists && snap.data().data) ? snap.data().data : { siteName: 'VượtLink Pro', link4mKey: '', roundsDefault: 2, zaloAdmin: '', seededDemo: false };
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
+    // Re-render settings tab nếu đang mở để cập nhật giá trị mới từ server
+    if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'settings') {
+      renderAdminBody('settings');
+    }
   }, err => console.error(err));
 }
 startListeners();
