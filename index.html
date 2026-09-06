@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>⚡ hackfree Pro v3</title>
+<title>⚡ VượtLink Pro v3</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
@@ -117,13 +117,18 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 /* ===== PRODUCT GRID (Gaming style) ===== */
 .product-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:520px){.product-grid{grid-template-columns:repeat(2,1fr)}}
-.product-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:.22s;position:relative}
-.product-card:hover{border-color:var(--cyan);box-shadow:0 0 24px #00e5ff22,0 8px 24px #00000050;transform:translateY(-2px)}
-.product-card.done{opacity:.55;pointer-events:none}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s;position:relative;-webkit-tap-highlight-color:transparent}
+.product-card:active{border-color:var(--cyan);box-shadow:0 0 20px #00e5ff30;transform:scale(.98)}
+@media(hover:hover){
+  .product-card:hover{border-color:var(--cyan);box-shadow:0 0 24px #00e5ff28,0 8px 24px #00000050;transform:translateY(-2px)}
+}
+.product-card.done{opacity:.5;pointer-events:none;filter:grayscale(.25)}
 .product-card.done::after{content:'ĐÃ LẤY';position:absolute;top:10px;left:10px;background:var(--green);color:#010e05;font-size:9px;font-weight:800;padding:3px 8px;border-radius:6px;z-index:2;letter-spacing:.5px}
-.product-img-wrap{position:relative;width:100%;aspect-ratio:1;background:linear-gradient(145deg,#0c1220,#080c16);overflow:hidden}
-.product-img{width:100%;height:100%;object-fit:cover;display:block}
-.product-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:.7}
+.product-img-wrap{position:relative;width:100%;aspect-ratio:1;background:linear-gradient(160deg,#121a2e 0%,#0a101c 50%,#0d1528 100%);overflow:hidden}
+.product-img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:-webkit-optimize-contrast;image-rendering:auto;-ms-interpolation-mode:bicubic}
+.product-img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 42%,#152038 0%,#0a101c 70%)}
+.product-img-placeholder .ph-icon{font-size:40px;filter:drop-shadow(0 0 14px #00e5ff55);line-height:1}
+.product-img-placeholder .ph-text{font-size:9px;color:#4a6078;font-weight:600;letter-spacing:.4px}
 .product-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.4px;z-index:2}
 .badge-hot{background:linear-gradient(135deg,#ff3b5c,#ff6b35);color:#fff;box-shadow:0 0 10px #ff3b5c55}
 .badge-sale{background:linear-gradient(135deg,var(--gold),#ff9f1a);color:#0a0600}
@@ -132,10 +137,10 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .product-name{font-weight:700;font-size:13px;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .product-desc{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:7px}
 .product-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}
-.rounds-badge{font-size:10px;background:#00e5ff15;border:1px solid var(--cyan);color:var(--cyan);padding:2px 7px;border-radius:6px;font-weight:700}
-.cat-badge{font-size:9px;background:#f5c54215;border:1px solid var(--gold);color:var(--gold);padding:2px 6px;border-radius:5px;font-weight:700}
-.product-btn{margin-top:8px;width:100%;padding:8px;border:none;border-radius:9px;background:linear-gradient(135deg,#b14dff,#6a1fff);color:#fff;font-family:'Exo 2',sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.3px;box-shadow:0 0 14px #b14dff33}
-.product-btn:active{transform:scale(.97)}
+.rounds-badge{font-size:10px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.7);color:#5ef0ff;padding:2px 7px;border-radius:6px;font-weight:700}
+.cat-badge{font-size:9px;background:rgba(245,197,66,.12);border:1px solid rgba(245,197,66,.7);color:#ffd666;padding:2px 6px;border-radius:5px;font-weight:700}
+.product-btn{margin-top:8px;width:100%;padding:9px;border:none;border-radius:9px;background:linear-gradient(135deg,#c44dff,#7b2fff);color:#fff;font-family:'Exo 2',sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.3px;box-shadow:0 0 16px rgba(177,77,255,.4)}
+.product-btn:active{transform:scale(.97);filter:brightness(1.1)}
 
 .empty-state{text-align:center;padding:50px 20px;color:var(--sub);grid-column:1/-1}
 .empty-icon{font-size:48px;margin-bottom:10px;opacity:.4}
@@ -456,8 +461,17 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       <input class="inp" id="imCategory" placeholder="VD: TikTok, Netflix, Game..."/>
     </div>
     <div class="inp-group">
+      <div class="inp-label">Badge</div>
+      <select class="inp" id="imBadge">
+        <option value="">Không</option>
+        <option value="hot">🔥 HOT</option>
+        <option value="new">✨ NEW</option>
+        <option value="sale">💰 SALE</option>
+      </select>
+    </div>
+    <div class="inp-group">
       <div class="inp-label">Icon (emoji) — dùng khi chưa có ảnh</div>
-      <input class="inp" id="imIcon" placeholder="🎵" maxlength="4" style="width:100px"/>
+      <input class="inp" id="imIcon" placeholder="🎮" maxlength="4" style="width:100px"/>
     </div>
     <div class="inp-group">
       <div class="inp-label">Ảnh mô tả (chọn từ album)</div>
@@ -804,8 +818,8 @@ function setCooldown(itemId, round) {
   lsSet(COOLDOWN_KEY, data);
 }
 
-// ===== IMAGE COMPRESS =====
-function compressImage(file, maxWidth = 480, quality = 0.72) {
+// ===== IMAGE COMPRESS (sắc nét hơn trên màn retina) =====
+function compressImage(file, maxWidth = 720, quality = 0.88) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith('image/')) { reject(new Error('Không phải ảnh')); return; }
     const reader = new FileReader();
@@ -813,16 +827,30 @@ function compressImage(file, maxWidth = 480, quality = 0.72) {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
+        // Giữ độ phân giải cao hơn để không mờ trên màn retina
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         let w = img.width, h = img.height;
-        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-        canvas.width = w; canvas.height = h;
+        const targetMax = Math.round(maxWidth * dpr);
+        if (w > targetMax) {
+          h = Math.round(h * targetMax / w);
+          w = targetMax;
+        }
+        // Không phóng to ảnh nhỏ hơn max
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        // if still huge, reduce quality more
-        if (dataUrl.length > 700000) {
-          resolve(canvas.toDataURL('image/jpeg', 0.5));
-        } else resolve(dataUrl);
+
+        let q = quality;
+        let dataUrl = canvas.toDataURL('image/jpeg', q);
+        // Chỉ giảm quality nếu quá nặng (Firestore limit)
+        while (dataUrl.length > 900000 && q > 0.55) {
+          q -= 0.08;
+          dataUrl = canvas.toDataURL('image/jpeg', q);
+        }
+        resolve(dataUrl);
       };
       img.onerror = () => reject(new Error('Không đọc được ảnh'));
       img.src = e.target.result;
@@ -1119,22 +1147,27 @@ function setCatFilter(c) { currentCatFilter = c; renderItemGrid(); }
 function renderItemGrid() {
   const grid = document.getElementById('itemGrid');
   const q = (document.getElementById('itemSearch')?.value || '').toLowerCase().trim();
-  const hideCompleted = getSettings().hideCompleted !== false;
   let active = getItemsArr().filter(i => i.active !== false);
 
   if (currentCatFilter !== 'all') active = active.filter(i => (i.category || '').trim() === currentCatFilter);
   if (q) active = active.filter(i => (i.name||'').toLowerCase().includes(q) || (i.desc||'').toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
 
-  // mark completed / filter
+  // đánh dấu đã vượt đủ + đếm tổng lượt thành công
   active = active.map(item => {
     const times = me ? countUserCompletions(me.username, item.id) : 0;
     const maxT = item.maxTimes !== undefined ? item.maxTimes : 1;
     const done = maxT > 0 && times >= maxT;
-    return { ...item, _done: done, _times: times };
+    const totalDone = getOrdersArr().filter(o => o.itemId === item.id && o.status === 'success').length;
+    return { ...item, _done: done, _times: times, _totalDone: totalDone };
   });
 
-  if (hideCompleted) active = active.filter(i => !i._done);
-  active.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  // sortOrder nhỏ = lên trước; không có thì theo createdAt mới nhất
+  active.sort((a, b) => {
+    const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
+    const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
+    if (sa !== sb) return sa - sb;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
   renderCatFilter();
 
   if (!active.length) {
@@ -1144,9 +1177,11 @@ function renderItemGrid() {
 
   grid.innerHTML = active.map(item => {
     const badge = item._done ? '' : (item.badge === 'hot' ? '<span class="product-badge badge-hot">HOT</span>' : item.badge === 'sale' ? '<span class="product-badge badge-sale">SALE</span>' : item.badge === 'new' ? '<span class="product-badge badge-new">NEW</span>' : '');
+    const icon = item.icon || '🎮';
     const imgHtml = item.image
       ? `<img class="product-img" src="${item.image}" alt="" loading="lazy"/>`
-      : `<div class="product-img-placeholder">${item.icon || '📦'}</div>`;
+      : `<div class="product-img-placeholder"><span class="ph-icon">${icon}</span><span class="ph-text">CHƯA CÓ ẢNH</span></div>`;
+    const statText = item._totalDone > 0 ? `👥 ${item._totalDone}` : '';
     return `
       <div class="product-card ${item._done ? 'done' : ''}" onclick="${item._done ? '' : `openBypass('${item.id}')`}">
         <div class="product-img-wrap">
@@ -1159,8 +1194,9 @@ function renderItemGrid() {
           <div class="product-meta">
             <span class="rounds-badge">⚡ ${item.rounds || 1} lượt</span>
             ${item.category ? `<span class="cat-badge">${esc(item.category)}</span>` : ''}
+            ${statText ? `<span class="cat-badge" style="border-color:var(--purple);color:#d4a0ff;background:rgba(177,77,255,.12)">${statText}</span>` : ''}
           </div>
-          ${item._done ? '' : `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`}
+          ${item._done ? '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--green);font-weight:700">✅ ĐÃ LẤY</div>' : `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`}
         </div>
       </div>`;
   }).join('');
@@ -1439,6 +1475,12 @@ function renderDash(body) {
 
 function renderItemsAdmin(body) {
   const items = getAllItemsArr().filter(i => !i.deleted);
+  items.sort((a, b) => {
+    const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
+    const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
+    if (sa !== sb) return sa - sb;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
   body.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div class="sec-title" style="margin-bottom:0">📦 QUẢN LÝ NỘI DUNG</div>
@@ -1447,24 +1489,60 @@ function renderItemsAdmin(body) {
         <button class="btn btn-gold btn-sm" onclick="openItemModal()">➕ Thêm</button>
       </div>
     </div>
+    <div class="sec-note" style="margin-bottom:10px">Dùng ▲ ▼ để sắp xếp thứ tự hiện trên trang chủ</div>
     <div id="itemAdminList">
-      ${items.length ? items.map(item => `
+      ${items.length ? items.map((item, idx) => {
+        const totalDone = getOrdersArr().filter(o => o.itemId === item.id && o.status === 'success').length;
+        const badgeLabel = item.badge === 'hot' ? '🔥 HOT' : item.badge === 'new' ? '✨ NEW' : item.badge === 'sale' ? '💰 SALE' : '';
+        return `
         <div class="item-manage-row">
-          ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px">${item.icon||'📦'}</div>`}
+          ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,#121a2e,#0a101c)">${item.icon||'🎮'}</div>`}
           <div class="imr-info">
-            <div class="imr-name">${esc(item.name)}</div>
-            <div class="imr-sub">${item.rounds||1} lượt • max ${item.maxTimes!==undefined?item.maxTimes:1} lần/user • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
+            <div class="imr-name">${esc(item.name)} ${badgeLabel ? `<span style="font-size:10px;color:var(--gold)">${badgeLabel}</span>` : ''}</div>
+            <div class="imr-sub">${item.rounds||1} lượt • max ${item.maxTimes!==undefined?item.maxTimes:1} lần/user • 👥 ${totalDone} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
             <div style="margin-top:4px"><span class="bdg ${item.active!==false?'bdg-ok':'bdg-no'}">${item.active!==false?'Bật':'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
+            <button class="btn btn-ghost btn-xs" onclick="moveItem('${item.id}',-1)" title="Lên" ${idx===0?'disabled':''}>▲</button>
+            <button class="btn btn-ghost btn-xs" onclick="moveItem('${item.id}',1)" title="Xuống" ${idx===items.length-1?'disabled':''}>▼</button>
             <button class="btn btn-ghost btn-xs" onclick="openItemModal('${item.id}')">✏️</button>
             <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active!==false?'⏸':'▶'}</button>
             <button class="btn btn-red btn-xs" onclick="deleteItem('${item.id}')">🗑</button>
           </div>
-        </div>
-      `).join('') : '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung</div></div>'}
+        </div>`;
+      }).join('') : '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung</div></div>'}
     </div>
   `;
+}
+
+function moveItem(id, direction) {
+  const items = getAllItemsArr().filter(i => !i.deleted);
+  items.sort((a, b) => {
+    const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
+    const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
+    if (sa !== sb) return sa - sb;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+  // normalize sortOrder 0,1,2...
+  items.forEach((it, i) => { it.sortOrder = i; });
+  const idx = items.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= items.length) return;
+  // swap
+  const tmp = items[idx].sortOrder;
+  items[idx].sortOrder = items[newIdx].sortOrder;
+  items[newIdx].sortOrder = tmp;
+  // also swap in array for visual consistency
+  const t = items[idx];
+  items[idx] = items[newIdx];
+  items[newIdx] = t;
+  items.forEach((it, i) => { it.sortOrder = i; localItems[it.id] = it; });
+  saveItems(localItems).then(() => {
+    addLog('reorder_item', id);
+    aTab('items');
+    renderItemGrid();
+  });
 }
 
 function clearAllItems() {
@@ -1687,12 +1765,6 @@ function renderSettings(body) {
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('cooldownSec','setCooldown',true)">💾 Lưu</button>
     </div>
     <div class="settings-row">
-      <div class="toggle-row">
-        <div class="settings-label" style="margin:0">Ẩn nội dung đã vượt đủ</div>
-        <label class="toggle"><input type="checkbox" id="setHideCompleted" ${s.hideCompleted!==false?'checked':''} onchange="saveHideCompleted(this.checked)"/><span class="toggle-slider"></span></label>
-      </div>
-    </div>
-    <div class="settings-row">
       <div class="settings-label">🛡️ Đổi mật khẩu Admin</div>
       <input class="inp" id="setOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
       <input class="inp" id="setNewPass" type="password" placeholder="Mật khẩu mới" style="margin-bottom:8px"/>
@@ -1703,7 +1775,7 @@ function renderSettings(body) {
       <div class="settings-label">☁️ Server</div>
       <div style="font-size:13px;color:var(--green)">● Firestore Online — shopvip-139ea</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v3:</b> Ảnh từ album (nén tự động) · Giới hạn số lần vượt · Ẩn item đã lấy · Lý do khóa · Phân trang · UI Gaming
+        <b>v3:</b> Ảnh từ album (nén tự động) · Giới hạn số lần vượt · Lý do khóa · Phân trang · UI Gaming
       </div>
     </div>
   `;
@@ -1716,10 +1788,6 @@ function saveSetting(key, inputId, isNum) {
   const s = { ...getSettings() }; s[key] = val;
   saveSettings(s).then(() => { toast('✅ Đã lưu!', 'ok'); addLog('update_setting', key); });
   if (key === 'zaloAdmin') updateContactBtn();
-}
-function saveHideCompleted(checked) {
-  const s = { ...getSettings(), hideCompleted: checked };
-  saveSettings(s).then(() => { toast('✅ Đã lưu', 'ok'); renderItemGrid(); });
 }
 async function changeAdminPass() {
   const old = document.getElementById('setOldPass').value;
@@ -1755,6 +1823,7 @@ function openItemModal(id) {
     document.getElementById('imName').value = item.name || '';
     document.getElementById('imDesc').value = item.desc || '';
     document.getElementById('imCategory').value = item.category || '';
+    document.getElementById('imBadge').value = item.badge || '';
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
     document.getElementById('imMaxTimes').value = item.maxTimes !== undefined ? item.maxTimes : 1;
@@ -1775,7 +1844,8 @@ function openItemModal(id) {
     document.getElementById('imName').value = '';
     document.getElementById('imDesc').value = '';
     document.getElementById('imCategory').value = '';
-    document.getElementById('imIcon').value = '📦';
+    document.getElementById('imBadge').value = '';
+    document.getElementById('imIcon').value = '🎮';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
     document.getElementById('imMaxTimes').value = getSettings().maxTimesDefault !== undefined ? getSettings().maxTimesDefault : 1;
     document.getElementById('imContent').value = '';
@@ -1824,7 +1894,8 @@ function saveItem() {
   const name = (document.getElementById('imName').value || '').trim();
   const desc = (document.getElementById('imDesc').value || '').trim();
   const category = (document.getElementById('imCategory').value || '').trim();
-  const icon = (document.getElementById('imIcon').value || '').trim() || '📦';
+  const badge = (document.getElementById('imBadge').value || '').trim();
+  const icon = (document.getElementById('imIcon').value || '').trim() || '🎮';
   const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
   const maxTimes = Math.max(0, Math.min(100, parseInt(document.getElementById('imMaxTimes').value) || 0));
   const content = (document.getElementById('imContent').value || '').trim();
@@ -1838,12 +1909,16 @@ function saveItem() {
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, category, icon, rounds, maxTimes, image: imageField });
+    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, maxTimes, image: imageField });
     addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
+    // sortOrder: càng nhỏ càng lên đầu; item mới mặc định lên đầu
+    const existing = getItemsArr();
+    const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
     updateItem(itemId, {
-      id: itemId, name, desc, category, icon, rounds, maxTimes, image: imageField,
+      id: itemId, name, desc, category, badge, icon, rounds, maxTimes, image: imageField,
+      sortOrder: minSort - 1,
       active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
     });
     addLog('add_item', name);
