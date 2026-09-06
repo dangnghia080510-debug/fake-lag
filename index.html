@@ -669,6 +669,7 @@ let currentCatFilter = 'all', currentUserTab = 'items';
 let resetTargetUser = null, banTargetUser = null;
 let selectedImageData = null; // base64
 let usersPage = 1, ordersPage = 1;
+let ordersFilterRange = 'all';
 const PAGE_SIZE = 12;
 
 const EMOJIS = ['👤','😎','🔥','⚡','🎮','🎵','💎','🚀','👑','🐱','🐶','🦊','🐻','🐼','🐸','🦄','🌟','💪','🎯','🏆','💡','🛡️','📦','🔑','💰','🎁','🌈','👾','🤖','👻'];
@@ -771,11 +772,22 @@ function removeItem(id) {
   return saveItems(localItems || {});
 }
 function addOrder(order) {
-  if (!localOrders) localOrders = {};
-  localOrders[order.id] = order;
-  const keys = Object.keys(localOrders).sort((a, b) => (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
-  if (keys.length > 500) keys.slice(500).forEach(k => delete localOrders[k]);
-  return saveOrders(localOrders);
+  if (!order || !order.id) return Promise.resolve();
+  // Merge với bản server trước khi ghi — tránh mất lịch sử khi nhiều user vượt cùng lúc
+  return db.collection(COL).doc('orders').get().then(snap => {
+    const remote = (snap.exists && snap.data() && snap.data().data) || {};
+    const merged = Object.assign({}, remote, localOrders || {});
+    merged[order.id] = order;
+    const keys = Object.keys(merged).sort((a, b) => (merged[b].createdAt || '').localeCompare(merged[a].createdAt || ''));
+    if (keys.length > 800) keys.slice(800).forEach(k => delete merged[k]);
+    localOrders = merged;
+    lsSet(LS_ORDERS, { data: localOrders });
+    return db.collection(COL).doc('orders').set({ data: localOrders });
+  }).catch(e => {
+    if (!localOrders) localOrders = {};
+    localOrders[order.id] = order;
+    return saveOrders(localOrders).catch(err => fbErr(err || e, 'addOrder'));
+  });
 }
 function addLog(action, detail) {
   if (!localLogs) localLogs = {};
@@ -1750,13 +1762,17 @@ function closeBypass() {
 }
 
 // ===== ADMIN =====
-function aTab(t) {
+function aTab(t, resetPage) {
+  const prev = curAdminTab;
   curAdminTab = t;
   document.querySelectorAll('.atab').forEach((b, i) => {
     b.classList.toggle('active', ['dash','items','users','orders','keys','logs','settings'][i] === t);
   });
-  if (t === 'users') usersPage = 1;
-  if (t === 'orders') ordersPage = 1;
+  // Chỉ reset trang khi đổi tab (không reset khi bấm phân trang)
+  if (resetPage !== false && prev !== t) {
+    if (t === 'users') usersPage = 1;
+    if (t === 'orders') ordersPage = 1;
+  }
   renderAdminBody(t);
 }
 function renderAdminBody(t) {
@@ -1882,8 +1898,10 @@ function clearAllItems() {
 
 function renderUsersAdmin(body) {
   const allUsers = getUsersArr().filter(u => u.role !== 'admin');
+  allUsers.sort((a, b) => (b.createdAt || b.joinDate || '').localeCompare(a.createdAt || a.joinDate || ''));
   const totalPages = Math.max(1, Math.ceil(allUsers.length / PAGE_SIZE));
   if (usersPage > totalPages) usersPage = totalPages;
+  if (usersPage < 1) usersPage = 1;
   const pageUsers = allUsers.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE);
   const orders = getOrdersArr();
 
@@ -1917,8 +1935,28 @@ function renderUsersAdmin(body) {
 function filterUserTable(q) {
   const tbody = document.getElementById('userTbody');
   if (!tbody) return;
-  const lower = (q || '').toLowerCase();
-  tbody.querySelectorAll('tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(lower) ? '' : 'none'; });
+  const lower = (q || '').toLowerCase().trim();
+  const orders = getOrdersArr();
+  if (!lower) { aTab('users', false); return; }
+  let users = getUsersArr().filter(u => u.role !== 'admin').filter(u =>
+    (u.display || '').toLowerCase().includes(lower) ||
+    (u.username || '').toLowerCase().includes(lower)
+  );
+  users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  tbody.innerHTML = users.length ? users.map(u => `
+    <tr>
+      <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong>${u.banReason?`<br><span style="font-size:9px;color:var(--red)">${esc(u.banReason)}</span>`:''}</td>
+      <td style="color:var(--sub)">@${esc(u.username)}</td>
+      <td>${orders.filter(o => o.user === u.username).length}</td>
+      <td><span class="bdg ${u.banned?'bdg-no':'bdg-ok'}">${u.banned?'Khóa':'OK'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-xs ${u.banned?'btn-green':'btn-red'}" onclick="${u.banned?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${u.banned?'Mở':'Khóa'}</button>
+        <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
+      </td>
+    </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Không tìm thấy</td></tr>';
+  const root = document.getElementById('adminBody');
+  const pag = root && root.querySelector('.pagination');
+  if (pag) pag.style.display = 'none';
 }
 function renderPagination(page, total, type) {
   if (total <= 1) return '';
@@ -1935,8 +1973,10 @@ function renderPagination(page, total, type) {
   return html;
 }
 function goPage(type, p) {
-  if (type === 'usersPage') { usersPage = p; aTab('users'); }
-  else if (type === 'ordersPage') { ordersPage = p; aTab('orders'); }
+  p = parseInt(p, 10) || 1;
+  if (p < 1) p = 1;
+  if (type === 'usersPage') { usersPage = p; aTab('users', false); }
+  else if (type === 'ordersPage') { ordersPage = p; aTab('orders', false); }
 }
 
 function openBanModal(username) {
@@ -1995,9 +2035,15 @@ async function doResetUserPass() {
 }
 
 function renderOrdersAdmin(body) {
-  const all = getOrdersArr();
+  let all = getOrdersArr();
+  const range = (typeof ordersFilterRange !== 'undefined' && ordersFilterRange) ? ordersFilterRange : 'all';
+  if (range === 'today') all = all.filter(o => isToday(o.createdAt));
+  else if (range === 'week') all = all.filter(o => isWeek(o.createdAt));
+  else if (range === 'month') all = all.filter(o => isMonth(o.createdAt));
+
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   if (ordersPage > totalPages) ordersPage = totalPages;
+  if (ordersPage < 1) ordersPage = 1;
   const pageOrders = all.slice((ordersPage - 1) * PAGE_SIZE, ordersPage * PAGE_SIZE);
 
   body.innerHTML = `
@@ -2009,10 +2055,10 @@ function renderOrdersAdmin(body) {
       </div>
     </div>
     <div class="filter-row">
-      <button class="fbtn active" onclick="filterOrders('all',this)">Tất cả</button>
-      <button class="fbtn" onclick="filterOrders('today',this)">Hôm nay</button>
-      <button class="fbtn" onclick="filterOrders('week',this)">Tuần này</button>
-      <button class="fbtn" onclick="filterOrders('month',this)">Tháng này</button>
+      <button class="fbtn ${range==='all'?'active':''}" onclick="filterOrders('all',this)">Tất cả</button>
+      <button class="fbtn ${range==='today'?'active':''}" onclick="filterOrders('today',this)">Hôm nay</button>
+      <button class="fbtn ${range==='week'?'active':''}" onclick="filterOrders('week',this)">Tuần này</button>
+      <button class="fbtn ${range==='month'?'active':''}" onclick="filterOrders('month',this)">Tháng này</button>
     </div>
     <div id="orderTableWrap">${renderOrderTable(pageOrders)}</div>
     ${renderPagination(ordersPage, totalPages, 'ordersPage')}
@@ -2032,13 +2078,9 @@ function renderOrderTable(orders) {
     </tbody></table></div>`;
 }
 function filterOrders(range, btn) {
-  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  let orders = getOrdersArr();
-  if (range === 'today') orders = orders.filter(o => isToday(o.createdAt));
-  else if (range === 'week') orders = orders.filter(o => isWeek(o.createdAt));
-  else if (range === 'month') orders = orders.filter(o => isMonth(o.createdAt));
-  document.getElementById('orderTableWrap').innerHTML = renderOrderTable(orders.slice(0, PAGE_SIZE));
+  ordersFilterRange = range || 'all';
+  ordersPage = 1;
+  aTab('orders', false);
 }
 function exportOrdersCSV() {
   const orders = getOrdersArr();
@@ -2284,7 +2326,13 @@ function fmtDT(iso) {
   try { const d = new Date(iso); return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' }); }
   catch(e){ return '—'; }
 }
-function isToday(iso) { const d=new Date(iso),n=new Date(); return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
+function isToday(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return false;
+  const n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+}
 function isWeek(iso) { return (Date.now() - new Date(iso).getTime()) < 7*86400000; }
 function isMonth(iso) { const d=new Date(iso),n=new Date(); return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
 
