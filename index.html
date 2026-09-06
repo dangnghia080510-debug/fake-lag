@@ -256,6 +256,43 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#5a6f88;border-radius:50%;transition:.2s}
 .toggle input:checked + .toggle-slider{background:linear-gradient(90deg,var(--cyan),var(--cyan2))}
 .toggle input:checked + .toggle-slider:before{transform:translateX(20px);background:#fff}
+
+/* ===== THEMES ===== */
+body.theme-purple{--cyan:#d070ff;--cyan2:#9b40e0;--purple:#00f0ff;--purple2:#00a8d0}
+body.theme-red{--cyan:#ff5a7a;--cyan2:#d03050;--gold:#ffb020;--purple:#ff7a50;--purple2:#e04020}
+body.theme-green{--cyan:#00f0a0;--cyan2:#00b870;--gold:#b8ff40;--purple:#40e0a0;--purple2:#20b080}
+body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;--purple2:#d09010}
+
+.theme-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.theme-dot{width:28px;height:28px;border-radius:50%;border:2px solid #2a3a55;cursor:pointer;transition:.15s}
+.theme-dot.active{border-color:#fff;box-shadow:0 0 12px currentColor;transform:scale(1.1)}
+.theme-dot.t-cyan{background:linear-gradient(135deg,#00f0ff,#8b2fff)}
+.theme-dot.t-purple{background:linear-gradient(135deg,#d070ff,#00f0ff)}
+.theme-dot.t-red{background:linear-gradient(135deg,#ff5a7a,#ffb020)}
+.theme-dot.t-green{background:linear-gradient(135deg,#00f0a0,#40e0a0)}
+.theme-dot.t-gold{background:linear-gradient(135deg,#ffd04a,#00f0ff)}
+
+.coming-badge{position:absolute;top:8px;left:8px;font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;background:linear-gradient(135deg,#ffb020,#ff6b35);color:#0a0600;z-index:2;letter-spacing:.3px}
+.coming-cd{font-size:10px;color:#ffd04a;font-weight:700;margin-top:6px;text-align:center}
+.product-btn.locked{background:linear-gradient(135deg,#4a5568,#2d3748)!important;box-shadow:none;cursor:not-allowed}
+
+.rank-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px}
+.rank-pos{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.rank-pos.r1{background:linear-gradient(135deg,#ffd04a,#e0a820);color:#0a0600;box-shadow:0 0 12px #ffd04a66}
+.rank-pos.r2{background:linear-gradient(135deg,#c0c8d8,#8890a0);color:#0a0600}
+.rank-pos.r3{background:linear-gradient(135deg,#d08040,#a06030);color:#fff}
+.rank-pos.ro{background:#1a2438;color:var(--sub)}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-weight:700;font-size:13px}
+.rank-sub{font-size:11px;color:var(--sub)}
+.rank-score{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:var(--cyan)}
+
+.key-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+.key-row{display:flex;gap:8px;margin-top:8px}
+.key-row .inp{flex:1}
+
+.ban-live-modal .modal-box{border-color:var(--red);box-shadow:0 0 40px #ff4d6a44}
+
 </style>
 </head>
 <body>
@@ -343,12 +380,20 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   <div class="content-area">
     <div class="user-tabs">
       <button class="utab active" id="utabItems" onclick="switchUserTab('items')">🎮 Nội dung</button>
+      <button class="utab" id="utabRank" onclick="switchUserTab('rank')">🏆 Xếp hạng</button>
       <button class="utab" id="utabHistory" onclick="switchUserTab('history')">📋 Lịch sử</button>
       <button class="utab" id="utabProfile" onclick="switchUserTab('profile')">👤 Tài khoản</button>
     </div>
 
     <div id="userTabItems">
       <div class="sec-title">CHỌN NỘI DUNG</div>
+      <div class="key-box">
+        <div class="inp-label">🔑 Nhập key nhận nội dung (không cần vượt)</div>
+        <div class="key-row">
+          <input class="inp" id="redeemKeyInp" placeholder="Dán key tại đây..."/>
+          <button class="btn btn-gold btn-sm" onclick="redeemKey()">Nhận</button>
+        </div>
+      </div>
       <div class="search-row">
         <input class="search-inp" id="itemSearch" placeholder="🔍 Tìm nội dung..." oninput="renderItemGrid()"/>
       </div>
@@ -357,6 +402,12 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       <button class="btn btn-full" id="btnContactAdmin" onclick="contactAdmin()" style="margin-top:18px;background:linear-gradient(135deg,#0068ff,#004bb5);color:#fff;box-shadow:0 0 16px #0068ff44;display:none">
         💬 Liên hệ Admin (Zalo)
       </button>
+    </div>
+
+    <div id="userTabRank" style="display:none">
+      <div class="sec-title">🏆 XẾP HẠNG TUẦN</div>
+      <p style="font-size:11px;color:var(--sub);margin-bottom:12px">Top user vượt link nhiều nhất trong 7 ngày gần đây</p>
+      <div id="rankList"></div>
     </div>
 
     <div id="userTabHistory" style="display:none">
@@ -379,6 +430,17 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
         <div class="emoji-grid" id="emojiGrid"></div>
       </div>
       <button class="btn btn-cyan btn-full" onclick="saveProfile()">💾 Lưu thông tin</button>
+
+      <div class="settings-row" style="margin-top:16px">
+        <div class="settings-label">🎨 Theme màu</div>
+        <div class="theme-bar">
+          <div class="theme-dot t-cyan" data-theme="cyan" onclick="setTheme('cyan')" title="Cyan"></div>
+          <div class="theme-dot t-purple" data-theme="purple" onclick="setTheme('purple')" title="Purple"></div>
+          <div class="theme-dot t-red" data-theme="red" onclick="setTheme('red')" title="Red"></div>
+          <div class="theme-dot t-green" data-theme="green" onclick="setTheme('green')" title="Green"></div>
+          <div class="theme-dot t-gold" data-theme="gold" onclick="setTheme('gold')" title="Gold"></div>
+        </div>
+      </div>
 
       <div class="settings-row" style="margin-top:16px">
         <div class="settings-label">🔒 Đổi mật khẩu</div>
@@ -409,6 +471,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
     <button class="atab" onclick="aTab('items')">📦 Nội dung</button>
     <button class="atab" onclick="aTab('users')">👥 Khách</button>
     <button class="atab" onclick="aTab('orders')">📋 Lịch sử</button>
+    <button class="atab" onclick="aTab('keys')">🔑 Key</button>
     <button class="atab" onclick="aTab('logs')">📝 Log</button>
     <button class="atab" onclick="aTab('settings')">⚙️ Cài đặt</button>
   </div>
@@ -487,8 +550,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       <input class="inp" id="imRounds" type="number" min="1" max="20" placeholder="2" style="width:120px"/>
     </div>
     <div class="inp-group">
-      <div class="inp-label">Giới hạn số lần 1 user được vượt (0 = không giới hạn)</div>
-      <input class="inp" id="imMaxTimes" type="number" min="0" max="100" placeholder="1" style="width:120px"/>
+      <div class="inp-label">🕒 Sắp ra mắt — mở lúc (để trống = mở ngay)</div>
+      <input class="inp" id="imUnlockAt" type="datetime-local"/>
     </div>
     <div class="inp-group">
       <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
@@ -556,6 +619,15 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   </div>
 </div>
 
+<!-- BAN LIVE -->
+<div class="modal-bg ban-live-modal" id="banLiveModal">
+  <div class="modal-box">
+    <div class="modal-hd"><div class="modal-title" style="color:var(--red)">🚫 Tài khoản bị khóa</div></div>
+    <div class="alert alert-err show" id="banLiveReason">Bạn đã bị admin khóa tài khoản.</div>
+    <button class="btn btn-red btn-full" onclick="ackBanLive()">Đã hiểu — Đăng xuất</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -584,11 +656,13 @@ const LS_ITEMS = 'vlp_items_v2';
 const LS_ORDERS = 'vlp_orders_v2';
 const LS_SETTINGS = 'vlp_settings_v2';
 const LS_LOGS = 'vlp_logs_v1';
+const LS_KEYS = 'vlp_keys_v1';
+const THEME_K = 'vlp_theme_v1';
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
 const RATE_KEY = 'vlp_rate_v1';
 const COOLDOWN_KEY = 'vlp_cooldown_v1';
 
-let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null;
+let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null, localKeys = null;
 let firebaseReady = false, me = null, currentItem = null, verifiedSteps = [];
 let editItemId = null, curAdminTab = 'dash', isBusy = false;
 let currentCatFilter = 'all', currentUserTab = 'items';
@@ -666,6 +740,12 @@ function saveItems(obj) { localItems = obj || {}; lsSet(LS_ITEMS, { data: localI
 function saveOrders(obj) { localOrders = obj || {}; lsSet(LS_ORDERS, { data: localOrders }); return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders')); }
 function saveSettings(obj) { localSettings = obj; lsSet(LS_SETTINGS, { data: obj }); return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings')); }
 function saveLogs(obj) { localLogs = obj || {}; lsSet(LS_LOGS, { data: localLogs }); return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs')); }
+function saveKeys(obj) { localKeys = obj || {}; lsSet(LS_KEYS, { data: localKeys }); return db.collection(COL).doc('redeemKeys').set({ data: localKeys }).catch(e => fbErr(e, 'saveKeys')); }
+function getKeysArr() {
+  const arr = Object.values(localKeys || {});
+  arr.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  return arr;
+}
 
 function saveSecretContent(itemId, content) {
   return db.collection(COL).doc('itemSecrets').set({ data: { [itemId]: content } }, { merge: true }).catch(e => fbErr(e, 'saveSecretContent'));
@@ -707,7 +787,7 @@ function addLog(action, detail) {
 }
 
 function checkFirebaseReady() {
-  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && localLogs !== null && !firebaseReady) {
+  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && localLogs !== null && localKeys !== null && !firebaseReady) {
     firebaseReady = true;
     document.getElementById('connOverlay').classList.add('hidden');
     tryAutoLogin();
@@ -760,8 +840,21 @@ function startListeners() {
     const first = localUsers === null;
     localUsers = val || {};
     if (first) ensureDefaults().then(() => checkFirebaseReady());
-    if (me && localUsers[me.username]) me = localUsers[me.username];
-    if (document.getElementById('mainPage').classList.contains('active')) { renderItemGrid(); if (currentUserTab === 'history') renderUserHistory(); if (currentUserTab === 'profile') fillProfileForm(); }
+    if (me && localUsers[me.username]) {
+      const updated = localUsers[me.username];
+      if (updated.banned && !me.banned) {
+        me = updated;
+        showBanLive(updated.banReason || 'Vi phạm quy định');
+        return;
+      }
+      me = updated;
+    }
+    if (document.getElementById('mainPage').classList.contains('active')) {
+      renderItemGrid();
+      if (currentUserTab === 'history') renderUserHistory();
+      if (currentUserTab === 'profile') fillProfileForm();
+      if (currentUserTab === 'rank') renderRankList();
+    }
     if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
   });
   watchDoc('items', LS_ITEMS, {}, (val) => {
@@ -789,6 +882,13 @@ function startListeners() {
     localLogs = val || {};
     if (first) checkFirebaseReady();
     if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'logs') renderAdminBody('logs');
+  });
+
+  watchDoc('redeemKeys', LS_KEYS, {}, (val) => {
+    const first = localKeys === null;
+    localKeys = val || {};
+    if (first) checkFirebaseReady();
+    if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'keys') renderAdminBody('keys');
   });
 }
 startListeners();
@@ -1032,15 +1132,227 @@ function enterMain() {
 function switchUserTab(tab) {
   currentUserTab = tab;
   document.getElementById('userTabItems').style.display = tab === 'items' ? '' : 'none';
+  const rankEl = document.getElementById('userTabRank');
+  if (rankEl) rankEl.style.display = tab === 'rank' ? '' : 'none';
   document.getElementById('userTabHistory').style.display = tab === 'history' ? '' : 'none';
   document.getElementById('userTabProfile').style.display = tab === 'profile' ? '' : 'none';
   document.getElementById('utabItems').classList.toggle('active', tab === 'items');
+  const ur = document.getElementById('utabRank');
+  if (ur) ur.classList.toggle('active', tab === 'rank');
   document.getElementById('utabHistory').classList.toggle('active', tab === 'history');
   document.getElementById('utabProfile').classList.toggle('active', tab === 'profile');
   if (tab === 'items') renderItemGrid();
+  if (tab === 'rank') renderRankList();
   if (tab === 'history') renderUserHistory();
-  if (tab === 'profile') fillProfileForm();
+  if (tab === 'profile') { fillProfileForm(); highlightTheme(); }
 }
+
+function setTheme(name) {
+  const themes = ['cyan','purple','red','green','gold'];
+  themes.forEach(t => document.body.classList.remove('theme-' + t));
+  if (name && name !== 'cyan') document.body.classList.add('theme-' + name);
+  localStorage.setItem(THEME_K, name || 'cyan');
+  highlightTheme();
+  toast('🎨 Đã đổi theme', 'ok');
+}
+function highlightTheme() {
+  const cur = localStorage.getItem(THEME_K) || 'cyan';
+  document.querySelectorAll('.theme-dot').forEach(d => {
+    d.classList.toggle('active', d.getAttribute('data-theme') === cur);
+  });
+}
+function applySavedTheme() {
+  const cur = localStorage.getItem(THEME_K) || 'cyan';
+  setTheme(cur === 'cyan' ? 'cyan' : cur);
+  // setTheme toasts - suppress by direct apply
+  const themes = ['cyan','purple','red','green','gold'];
+  themes.forEach(t => document.body.classList.remove('theme-' + t));
+  if (cur && cur !== 'cyan') document.body.classList.add('theme-' + cur);
+  highlightTheme();
+}
+
+function showBanLive(reason) {
+  const el = document.getElementById('banLiveReason');
+  if (el) el.textContent = 'Lý do: ' + (reason || 'Vi phạm quy định');
+  document.getElementById('banLiveModal').classList.add('open');
+}
+function ackBanLive() {
+  document.getElementById('banLiveModal').classList.remove('open');
+  doLogout();
+}
+
+function isComingSoon(item) {
+  if (!item || !item.unlockAt) return false;
+  return new Date(item.unlockAt).getTime() > Date.now();
+}
+function formatCountdown(ms) {
+  if (ms <= 0) return 'Đã mở';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return d + 'n ' + h + 'g ' + m + 'p';
+  if (h > 0) return h + 'g ' + m + 'p ' + sec + 's';
+  return m + 'p ' + sec + 's';
+}
+
+function renderRankList() {
+  const list = document.getElementById('rankList');
+  if (!list) return;
+  const weekOrders = getOrdersArr().filter(o => isWeek(o.createdAt) && o.status === 'success');
+  const map = {};
+  weekOrders.forEach(o => {
+    if (!map[o.user]) map[o.user] = { user: o.user, display: o.display || o.user, count: 0 };
+    map[o.user].count++;
+    map[o.user].display = o.display || map[o.user].display;
+  });
+  const ranked = Object.values(map).sort((a,b) => b.count - a.count).slice(0, 20);
+  if (!ranked.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><div>Chưa có dữ liệu tuần này</div></div>';
+    return;
+  }
+  list.innerHTML = ranked.map((r, i) => {
+    const posClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'ro';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+    const u = (localUsers || {})[r.user];
+    const ava = (u && u.avatar) || '👤';
+    return `<div class="rank-row">
+      <div class="rank-pos ${posClass}">${medal}</div>
+      <div class="rank-info">
+        <div class="rank-name">${ava} ${esc(r.display)}</div>
+        <div class="rank-sub">@${esc(r.user)}</div>
+      </div>
+      <div class="rank-score">${r.count}</div>
+    </div>`;
+  }).join('');
+}
+
+async function redeemKey() {
+  if (!me) { toast('Cần đăng nhập', 'err'); return; }
+  if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
+  const code = (document.getElementById('redeemKeyInp').value || '').trim().toUpperCase();
+  if (!code) { toast('Nhập key', 'err'); return; }
+  if (!checkRate('redeem', 10, 60000)) { toast('Thử quá nhiều', 'err'); return; }
+
+  const keys = localKeys || {};
+  let found = null, foundId = null;
+  for (const [id, k] of Object.entries(keys)) {
+    if ((k.code || '').toUpperCase() === code) { found = k; foundId = id; break; }
+  }
+  if (!found) { toast('❌ Key không tồn tại', 'err'); return; }
+  if (found.used) { toast('❌ Key đã được sử dụng', 'err'); return; }
+  if (found.exp && Date.now() > found.exp) { toast('❌ Key đã hết hạn', 'err'); return; }
+
+  const itemId = found.itemId;
+  const item = (localItems || {})[itemId];
+  if (!item || item.deleted) { toast('❌ Nội dung gắn key không còn', 'err'); return; }
+
+  // mark used
+  found.used = true;
+  found.usedBy = me.username;
+  found.usedAt = new Date().toISOString();
+  localKeys[foundId] = found;
+  await saveKeys(localKeys);
+
+  // fetch content and show
+  const content = await fetchSecretContent(itemId);
+  document.getElementById('bmTitle').textContent = '🔑 ' + (item.name || 'Nội dung');
+  document.getElementById('bmInfo').textContent = 'Nhận bằng key thành công!';
+  document.getElementById('bmInfo').className = 'alert alert-ok show';
+  document.getElementById('bmSteps').innerHTML = '';
+  document.getElementById('bmProgFill').style.width = '100%';
+  document.getElementById('bmProgText').textContent = 'Key hợp lệ';
+  document.getElementById('bmResultContent').textContent = content !== null ? content : '(Không có nội dung)';
+  document.getElementById('bmResult').classList.add('show');
+  document.getElementById('bypassModal').classList.add('open');
+  currentItem = item;
+  verifiedSteps = [];
+
+  addOrder({
+    id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
+    user: me.username, display: me.display, itemId, itemName: item.name,
+    status: 'success', via: 'key', createdAt: new Date().toISOString()
+  });
+  addLog('redeem_key', code + ' → ' + item.name);
+  document.getElementById('redeemKeyInp').value = '';
+  toast('🎉 Nhận nội dung bằng key thành công!', 'ok');
+  renderItemGrid();
+}
+
+function genRedeemCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = 'HF-';
+  const arr = new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 12; i++) {
+    s += chars[arr[i] % chars.length];
+    if (i === 3 || i === 7) s += '-';
+  }
+  return s;
+}
+
+function renderKeysAdmin(body) {
+  const items = getItemsArr().filter(i => i.active !== false);
+  const keys = getKeysArr();
+  body.innerHTML = `
+    <div class="sec-title">🔑 TẠO KEY NHẬN NỘI DUNG</div>
+    <div class="settings-row">
+      <div class="settings-label">Gắn với nội dung</div>
+      <select class="inp" id="keyItemSelect">
+        ${items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('') || '<option value="">Chưa có item</option>'}
+      </select>
+      <div class="settings-label" style="margin-top:10px">Số lượng key</div>
+      <input class="inp" id="keyQty" type="number" min="1" max="50" value="1" style="width:100px"/>
+      <div class="settings-label" style="margin-top:10px">Hết hạn sau (giờ, 0 = không hạn)</div>
+      <input class="inp" id="keyExpHours" type="number" min="0" max="8760" value="0" style="width:100px"/>
+      <button class="btn btn-gold btn-sm" style="margin-top:10px;width:100%" onclick="createRedeemKeys()">🔑 Tạo key</button>
+    </div>
+    <div class="sec-title">Danh sách key (${keys.length})</div>
+    <div class="tbl-wrap">
+      <table class="dtbl">
+        <thead><tr><th>Key</th><th>Item</th><th>TT</th><th></th></tr></thead>
+        <tbody>
+          ${keys.length ? keys.slice(0, 100).map(k => `
+            <tr>
+              <td style="font-family:monospace;font-size:11px">${esc(k.code)}</td>
+              <td style="font-size:11px">${esc(k.itemName||'')}</td>
+              <td><span class="bdg ${k.used?'bdg-no':'bdg-ok'}">${k.used?('Dùng:@'+esc(k.usedBy||'')):'Còn'}</span></td>
+              <td><button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText('${esc(k.code)}').then(()=>toast('📋 Copied','ok'))">📋</button>
+              ${!k.used?`<button class="btn btn-red btn-xs" onclick="deleteRedeemKey('${k.id}')">🗑</button>`:''}</td>
+            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:16px">Chưa có key</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function createRedeemKeys() {
+  const itemId = document.getElementById('keyItemSelect').value;
+  const qty = Math.max(1, Math.min(50, parseInt(document.getElementById('keyQty').value) || 1));
+  const hours = Math.max(0, parseInt(document.getElementById('keyExpHours').value) || 0);
+  const item = (localItems || {})[itemId];
+  if (!item) { toast('Chọn nội dung', 'err'); return; }
+  if (!localKeys) localKeys = {};
+  for (let i = 0; i < qty; i++) {
+    const id = 'key' + Date.now() + i + Math.random().toString(36).slice(2, 5);
+    localKeys[id] = {
+      id, code: genRedeemCode(), itemId, itemName: item.name,
+      used: false, createdAt: new Date().toISOString(), createdBy: me.username,
+      exp: hours > 0 ? Date.now() + hours * 3600000 : null
+    };
+  }
+  await saveKeys(localKeys);
+  addLog('create_keys', qty + ' key cho ' + item.name);
+  toast('✅ Đã tạo ' + qty + ' key', 'ok');
+  aTab('keys');
+}
+function deleteRedeemKey(id) {
+  if (!localKeys || !localKeys[id]) return;
+  delete localKeys[id];
+  saveKeys(localKeys).then(() => { toast('Đã xóa key', 'ok'); aTab('keys'); });
+}
+
 function updateContactBtn() {
   const zalo = String(getSettings().zaloAdmin || '').replace(/\D/g, '');
   const btn = document.getElementById('btnContactAdmin');
@@ -1152,13 +1464,10 @@ function renderItemGrid() {
   if (currentCatFilter !== 'all') active = active.filter(i => (i.category || '').trim() === currentCatFilter);
   if (q) active = active.filter(i => (i.name||'').toLowerCase().includes(q) || (i.desc||'').toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
 
-  // đánh dấu đã vượt đủ + đếm tổng lượt thành công
+  // đếm tổng lượt thành công (không giới hạn số lần user vượt)
   active = active.map(item => {
-    const times = me ? countUserCompletions(me.username, item.id) : 0;
-    const maxT = item.maxTimes !== undefined ? item.maxTimes : 1;
-    const done = maxT > 0 && times >= maxT;
     const totalDone = getOrdersArr().filter(o => o.itemId === item.id && o.status === 'success').length;
-    return { ...item, _done: done, _times: times, _totalDone: totalDone };
+    return { ...item, _done: false, _totalDone: totalDone };
   });
 
   // sortOrder nhỏ = lên trước; không có thì theo createdAt mới nhất
@@ -1182,10 +1491,22 @@ function renderItemGrid() {
       ? `<img class="product-img" src="${item.image}" alt="" loading="lazy"/>`
       : `<div class="product-img-placeholder"><span class="ph-icon">${icon}</span><span class="ph-text">CHƯA CÓ ẢNH</span></div>`;
     const statText = item._totalDone > 0 ? `👥 ${item._totalDone}` : '';
+    const coming = isComingSoon(item);
+    const cdMs = coming ? (new Date(item.unlockAt).getTime() - Date.now()) : 0;
+    const comingBadge = coming ? '<span class="coming-badge">SẮP RA MẮT</span>' : '';
+    let actionHtml = '';
+    if (item._done) {
+      actionHtml = '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--green);font-weight:700">✅ ĐÃ LẤY</div>';
+    } else if (coming) {
+      actionHtml = `<div class="coming-cd" data-unlock="${item.unlockAt}">🕒 ${formatCountdown(cdMs)}</div><button class="product-btn locked" disabled>🔒 CHƯA MỞ</button>`;
+    } else {
+      actionHtml = `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`;
+    }
     return `
-      <div class="product-card ${item._done ? 'done' : ''}" onclick="${item._done ? '' : `openBypass('${item.id}')`}">
+      <div class="product-card ${item._done ? 'done' : ''}" onclick="${(item._done || coming) ? '' : `openBypass('${item.id}')`}">
         <div class="product-img-wrap">
           ${imgHtml}
+          ${comingBadge}
           ${badge}
         </div>
         <div class="product-body">
@@ -1196,10 +1517,25 @@ function renderItemGrid() {
             ${item.category ? `<span class="cat-badge">${esc(item.category)}</span>` : ''}
             ${statText ? `<span class="cat-badge" style="border-color:var(--purple);color:#d4a0ff;background:rgba(177,77,255,.12)">${statText}</span>` : ''}
           </div>
-          ${item._done ? '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--green);font-weight:700">✅ ĐÃ LẤY</div>' : `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`}
+          ${actionHtml}
         </div>
       </div>`;
   }).join('');
+  startComingSoonTimers();
+}
+
+let comingTimer = null;
+function startComingSoonTimers() {
+  if (comingTimer) clearInterval(comingTimer);
+  comingTimer = setInterval(() => {
+    let needRefresh = false;
+    document.querySelectorAll('.coming-cd[data-unlock]').forEach(el => {
+      const t = new Date(el.getAttribute('data-unlock')).getTime() - Date.now();
+      if (t <= 0) needRefresh = true;
+      else el.textContent = '🕒 ' + formatCountdown(t);
+    });
+    if (needRefresh) renderItemGrid();
+  }, 1000);
 }
 
 // ===== BYPASS =====
@@ -1208,14 +1544,9 @@ function openBypass(id) {
   if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
   if (!currentItem || currentItem.active === false || currentItem.deleted) return;
-
-  const maxT = currentItem.maxTimes !== undefined ? currentItem.maxTimes : 1;
-  if (maxT > 0) {
-    const times = countUserCompletions(me.username, id);
-    if (times >= maxT) {
-      toast('⚠️ Bạn đã vượt đủ số lần cho nội dung này', 'err');
-      return;
-    }
+  if (isComingSoon(currentItem)) {
+    toast('🔒 Nội dung chưa mở — ' + formatCountdown(new Date(currentItem.unlockAt).getTime() - Date.now()), 'err');
+    return;
   }
 
   const rounds = Math.max(1, Math.min(20, parseInt(currentItem.rounds) || 1));
@@ -1382,12 +1713,6 @@ function showResult() {
   if (!item || !me) return;
   if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) { toast('❌ Chưa đủ lượt', 'err'); return; }
 
-  const maxT = item.maxTimes !== undefined ? item.maxTimes : 1;
-  if (maxT > 0 && countUserCompletions(me.username, item.id) >= maxT) {
-    toast('⚠️ Đã vượt đủ số lần cho phép', 'err');
-    return;
-  }
-
   document.getElementById('bmResultContent').textContent = '⏳ Đang tải...';
   document.getElementById('bmResult').classList.add('show');
   fetchSecretContent(item.id).then(content => {
@@ -1428,7 +1753,7 @@ function closeBypass() {
 function aTab(t) {
   curAdminTab = t;
   document.querySelectorAll('.atab').forEach((b, i) => {
-    b.classList.toggle('active', ['dash','items','users','orders','logs','settings'][i] === t);
+    b.classList.toggle('active', ['dash','items','users','orders','keys','logs','settings'][i] === t);
   });
   if (t === 'users') usersPage = 1;
   if (t === 'orders') ordersPage = 1;
@@ -1440,6 +1765,7 @@ function renderAdminBody(t) {
   else if (t === 'items') renderItemsAdmin(body);
   else if (t === 'users') renderUsersAdmin(body);
   else if (t === 'orders') renderOrdersAdmin(body);
+  else if (t === 'keys') renderKeysAdmin(body);
   else if (t === 'logs') renderLogsAdmin(body);
   else if (t === 'settings') renderSettings(body);
 }
@@ -1499,7 +1825,7 @@ function renderItemsAdmin(body) {
           ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,#121a2e,#0a101c)">${item.icon||'🎮'}</div>`}
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)} ${badgeLabel ? `<span style="font-size:10px;color:var(--gold)">${badgeLabel}</span>` : ''}</div>
-            <div class="imr-sub">${item.rounds||1} lượt • max ${item.maxTimes!==undefined?item.maxTimes:1} lần/user • 👥 ${totalDone} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
+            <div class="imr-sub">${item.rounds||1} lượt vượt • 👥 ${totalDone} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
             <div style="margin-top:4px"><span class="bdg ${item.active!==false?'bdg-ok':'bdg-no'}">${item.active!==false?'Bật':'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
@@ -1755,11 +2081,6 @@ function renderSettings(body) {
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('roundsDefault','setRounds',true)">💾 Lưu</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">🔁 Số lần vượt tối đa mặc định / user (0 = không giới hạn)</div>
-      <input class="inp" id="setMaxTimes" type="number" min="0" max="100" value="${s.maxTimesDefault!==undefined?s.maxTimesDefault:1}" style="width:100px"/>
-      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('maxTimesDefault','setMaxTimes',true)">💾 Lưu</button>
-    </div>
-    <div class="settings-row">
       <div class="settings-label">⏳ Cooldown Lấy Link (giây)</div>
       <input class="inp" id="setCooldown" type="number" min="5" max="120" value="${s.cooldownSec||25}" style="width:100px"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('cooldownSec','setCooldown',true)">💾 Lưu</button>
@@ -1783,7 +2104,7 @@ function renderSettings(body) {
 function saveSetting(key, inputId, isNum) {
   let val = document.getElementById(inputId).value;
   if (isNum) val = parseInt(val);
-  if (isNum && isNaN(val)) val = key === 'cooldownSec' ? 25 : key === 'maxTimesDefault' ? 1 : 2;
+  if (isNum && isNaN(val)) val = key === 'cooldownSec' ? 25 : 2;
   else if (!isNum) val = (val || '').trim();
   const s = { ...getSettings() }; s[key] = val;
   saveSettings(s).then(() => { toast('✅ Đã lưu!', 'ok'); addLog('update_setting', key); });
@@ -1826,7 +2147,11 @@ function openItemModal(id) {
     document.getElementById('imBadge').value = item.badge || '';
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
-    document.getElementById('imMaxTimes').value = item.maxTimes !== undefined ? item.maxTimes : 1;
+    const ua = item.unlockAt ? new Date(item.unlockAt) : null;
+    if (ua && !isNaN(ua.getTime())) {
+      const local = new Date(ua.getTime() - ua.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      document.getElementById('imUnlockAt').value = local;
+    } else document.getElementById('imUnlockAt').value = '';
     document.getElementById('imContent').value = '⏳ Đang tải...';
     document.getElementById('imContent').disabled = true;
     if (item.image) {
@@ -1847,7 +2172,7 @@ function openItemModal(id) {
     document.getElementById('imBadge').value = '';
     document.getElementById('imIcon').value = '🎮';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
-    document.getElementById('imMaxTimes').value = getSettings().maxTimesDefault !== undefined ? getSettings().maxTimesDefault : 1;
+    document.getElementById('imUnlockAt').value = '';
     document.getElementById('imContent').value = '';
     document.getElementById('imContent').disabled = false;
   }
@@ -1897,7 +2222,8 @@ function saveItem() {
   const badge = (document.getElementById('imBadge').value || '').trim();
   const icon = (document.getElementById('imIcon').value || '').trim() || '🎮';
   const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
-  const maxTimes = Math.max(0, Math.min(100, parseInt(document.getElementById('imMaxTimes').value) || 0));
+  const unlockRaw = document.getElementById('imUnlockAt').value;
+  const unlockAt = unlockRaw ? new Date(unlockRaw).toISOString() : null;
   const content = (document.getElementById('imContent').value || '').trim();
 
   if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
@@ -1909,7 +2235,7 @@ function saveItem() {
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, maxTimes, image: imageField });
+    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField });
     addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
@@ -1917,7 +2243,7 @@ function saveItem() {
     const existing = getItemsArr();
     const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
     updateItem(itemId, {
-      id: itemId, name, desc, category, badge, icon, rounds, maxTimes, image: imageField,
+      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField,
       sortOrder: minSort - 1,
       active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
     });
