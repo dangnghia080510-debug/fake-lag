@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>⚡ VượtLink Pro v2</title>
+<title>⚡ VượtLink Pro v2.5</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
@@ -59,6 +59,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .inp-label{font-size:11px;color:var(--sub);margin-bottom:5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
 .inp-group{margin-bottom:13px}
 textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%234e6378'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
 
 #authPage{background:radial-gradient(ellipse at 40% 10%,#0b1e36 0%,#07080c 55%);align-items:center;justify-content:center;padding:18px}
 .auth-logo{text-align:center;margin-bottom:24px}
@@ -79,6 +80,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .alert-err{background:#160508;border:1px solid var(--red);color:var(--red)}
 .alert-ok{background:#05130a;border:1px solid var(--green);color:var(--green)}
 .alert-info{background:#050d18;border:1px solid var(--cyan);color:var(--cyan)}
+.alert-warn{background:#1a1505;border:1px solid var(--gold);color:var(--gold)}
 
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--cyan);border-radius:11px;padding:10px 18px;z-index:9999;font-size:13px;color:var(--cyan);transition:.28s;white-space:nowrap;box-shadow:var(--glow-cyan);max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -95,7 +97,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 
 #mainPage{flex-direction:column}
 .user-bar{background:#0d1018;border-bottom:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
-.user-chip{display:flex;align-items:center;gap:8px}
+.user-chip{display:flex;align-items:center;gap:8px;cursor:pointer}
 .user-ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:14px;border:1.5px solid var(--cyan);flex-shrink:0}
 .user-dname{font-size:13px;font-weight:700;color:var(--cyan)}
 .user-join{font-size:10px;color:var(--sub)}
@@ -113,10 +115,18 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .item-info{flex:1;min-width:0}
 .item-name{font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-desc{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
-.item-meta{display:flex;align-items:center;gap:8px}
+.item-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .rounds-badge{font-size:10px;background:#00d4ff18;border:1px solid var(--cyan);color:var(--cyan);padding:2px 8px;border-radius:6px;font-weight:700}
+.cat-badge{font-size:10px;background:#f5c54218;border:1px solid var(--gold);color:var(--gold);padding:2px 8px;border-radius:6px;font-weight:700}
 .empty-state{text-align:center;padding:50px 20px;color:var(--sub)}
 .empty-icon{font-size:44px;margin-bottom:10px;opacity:.4}
+
+.search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search-inp{flex:1;min-width:140px;padding:9px 12px;background:#080b11;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none}
+.search-inp:focus{border-color:var(--cyan)}
+.cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.cat-chip{padding:5px 12px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--sub);font-size:11px;font-weight:600;cursor:pointer;font-family:'Exo 2',sans-serif;transition:.15s}
+.cat-chip.active{border-color:var(--gold);color:var(--gold);background:#f5c54215}
 
 .bypass-steps{margin-bottom:16px}
 .step-item{background:#080b11;border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px}
@@ -139,10 +149,11 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .result-label{font-size:12px;color:var(--green);font-weight:700;margin-bottom:8px}
 .result-content{font-size:13px;color:var(--text);word-break:break-all;background:#080b11;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.6;white-space:pre-wrap}
 .copy-row{display:flex;gap:8px}
+.cd-hint{font-size:11px;color:var(--gold);margin-top:4px}
 
 #adminPage{flex-direction:column}
-.admin-tabs-row{display:flex;background:#080b11;border-bottom:1px solid var(--border)}
-.atab{flex:1;padding:11px 4px;border:none;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s}
+.admin-tabs-row{display:flex;background:#080b11;border-bottom:1px solid var(--border);overflow-x:auto}
+.atab{flex:1;min-width:70px;padding:11px 4px;border:none;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s;white-space:nowrap}
 .atab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .admin-body{flex:1;padding:12px;overflow-y:auto}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
@@ -152,6 +163,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .stat-card.s-gold .stat-n{color:var(--gold)}
 .stat-card.s-green .stat-n{color:var(--green)}
 .stat-card.s-red .stat-n{color:var(--red)}
+.stat-card.s-purple .stat-n{color:var(--purple)}
 .tbl-wrap{border-radius:11px;border:1px solid var(--border);overflow:hidden;overflow-x:auto;margin-bottom:14px}
 .dtbl{width:100%;border-collapse:collapse;font-size:12px}
 .dtbl th{background:#0d1018;color:var(--sub);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
@@ -161,6 +173,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .bdg{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700}
 .bdg-ok{background:#00e67620;color:var(--green);border:1px solid var(--green)}
 .bdg-no{background:#ff3b5c20;color:var(--red);border:1px solid var(--red)}
+.bdg-warn{background:#f5c54220;color:var(--gold);border:1px solid var(--gold)}
 .filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .fbtn{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;font-weight:600;transition:.15s}
 .fbtn.active{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
@@ -174,6 +187,18 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .settings-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:10px}
 .settings-label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600}
 
+.user-tabs{display:flex;gap:6px;margin-bottom:14px}
+.utab{flex:1;padding:9px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:12px;cursor:pointer;text-align:center;transition:.15s}
+.utab.active{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
+
+.history-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px}
+.history-name{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
+.history-meta{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
+
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px;max-height:120px;overflow-y:auto}
+.emoji-btn{width:100%;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;background:#080b11;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.emoji-btn:hover,.emoji-btn.selected{border-color:var(--cyan);background:#00d4ff15}
+
 #connOverlay{position:fixed;inset:0;background:#07080cee;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 #connOverlay.hidden{display:none}
 .conn-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
@@ -185,6 +210,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 ::-webkit-scrollbar-thumb{background:#1a2232;border-radius:4px}
 
 .sec-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px;padding:8px;background:#080b11;border-radius:8px;border:1px solid var(--border)}
+.log-item{font-size:11px;padding:8px 10px;border-bottom:1px solid #0d1018;color:var(--sub)}
+.log-item:last-child{border:none}
+.log-time{color:var(--cyan);font-weight:600}
 </style>
 </head>
 <body>
@@ -199,7 +227,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   <div class="auth-logo">
     <span class="auth-icon">⚡</span>
     <div class="auth-title">VƯỢT LINK PRO</div>
-    <div class="auth-sub">v2 · BẢO MẬT NÂNG CẤP · FIREBASE + LINK4M</div>
+    <div class="auth-sub">v2.5 · BẢO MẬT + TÍNH NĂNG MỚI · FIREBASE + LINK4M</div>
   </div>
   <div class="auth-box">
     <div class="auth-tabs">
@@ -221,6 +249,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
         <label for="cbRemember">Ghi nhớ đăng nhập (7 ngày)</label>
       </div>
       <button class="btn btn-cyan btn-full" id="btnLogin" onclick="doLogin()">⚡ ĐĂNG NHẬP</button>
+      <p style="text-align:center;font-size:11px;color:var(--sub);margin-top:12px">Quên mật khẩu? Liên hệ Admin qua Zalo</p>
     </div>
     <div id="formReg" style="display:none">
       <div class="alert alert-err" id="regErr"></div>
@@ -259,7 +288,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
     </div>
   </div>
   <div class="user-bar">
-    <div class="user-chip">
+    <div class="user-chip" onclick="openProfileModal()">
       <div class="user-ava" id="uAva">👤</div>
       <div>
         <div class="user-dname" id="uName">—</div>
@@ -269,12 +298,53 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
     <span class="role-badge" id="uRoleBadge"></span>
   </div>
   <div class="content-area">
-    <div class="sec-title">🎮 CHỌN NỘI DUNG ĐỂ VƯỢT LINK</div>
-    <div id="itemGrid"></div>
-    <button class="btn btn-full" id="btnContactAdmin" onclick="contactAdmin()" style="margin-top:16px;background:linear-gradient(135deg,#0068ff,#004bb5);color:#fff;box-shadow:0 0 16px #0068ff44;display:none">
-      💬 Liên hệ Admin (Zalo)
-    </button>
-    <p id="contactHint" style="display:none;text-align:center;font-size:11px;color:var(--sub);margin-top:8px">Admin chưa cấu hình số Zalo</p>
+    <div class="user-tabs">
+      <button class="utab active" id="utabItems" onclick="switchUserTab('items')">🎮 Nội dung</button>
+      <button class="utab" id="utabHistory" onclick="switchUserTab('history')">📋 Lịch sử</button>
+      <button class="utab" id="utabProfile" onclick="switchUserTab('profile')">👤 Tài khoản</button>
+    </div>
+
+    <div id="userTabItems">
+      <div class="sec-title">CHỌN NỘI DUNG ĐỂ VƯỢT LINK</div>
+      <div class="search-row">
+        <input class="search-inp" id="itemSearch" placeholder="🔍 Tìm nội dung..." oninput="renderItemGrid()"/>
+      </div>
+      <div class="cat-filter" id="catFilter"></div>
+      <div id="itemGrid"></div>
+      <button class="btn btn-full" id="btnContactAdmin" onclick="contactAdmin()" style="margin-top:16px;background:linear-gradient(135deg,#0068ff,#004bb5);color:#fff;box-shadow:0 0 16px #0068ff44;display:none">
+        💬 Liên hệ Admin (Zalo)
+      </button>
+    </div>
+
+    <div id="userTabHistory" style="display:none">
+      <div class="sec-title">📋 LỊCH SỬ VƯỢT LINK CỦA BẠN</div>
+      <div id="userHistoryList"></div>
+    </div>
+
+    <div id="userTabProfile" style="display:none">
+      <div class="sec-title">👤 THÔNG TIN TÀI KHOẢN</div>
+      <div class="settings-row">
+        <div class="settings-label">Tên hiển thị</div>
+        <input class="inp" id="profName" placeholder="Tên hiển thị"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Avatar (chọn emoji)</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div class="user-ava" id="profAvaPreview" style="width:42px;height:42px;font-size:20px">👤</div>
+          <input class="inp" id="profAva" maxlength="4" style="width:80px" oninput="document.getElementById('profAvaPreview').textContent=this.value||'👤'"/>
+        </div>
+        <div class="emoji-grid" id="emojiGrid"></div>
+      </div>
+      <button class="btn btn-cyan btn-full" onclick="saveProfile()">💾 Lưu thông tin</button>
+
+      <div class="settings-row" style="margin-top:16px">
+        <div class="settings-label">🔒 Đổi mật khẩu</div>
+        <input class="inp" id="profOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
+        <input class="inp" id="profNewPass" type="password" placeholder="Mật khẩu mới (≥6 ký tự)" style="margin-bottom:8px"/>
+        <input class="inp" id="profNewPass2" type="password" placeholder="Xác nhận mật khẩu mới"/>
+        <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeMyPass()">🔒 Đổi mật khẩu</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -296,6 +366,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
     <button class="atab" onclick="aTab('items')">📦 Nội dung</button>
     <button class="atab" onclick="aTab('users')">👥 Khách</button>
     <button class="atab" onclick="aTab('orders')">📋 Lịch sử</button>
+    <button class="atab" onclick="aTab('logs')">📝 Log</button>
     <button class="atab" onclick="aTab('settings')">⚙️ Cài đặt</button>
   </div>
   <div class="admin-body" id="adminBody"></div>
@@ -343,6 +414,10 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
       <input class="inp" id="imDesc" placeholder="Mô tả nội dung..."/>
     </div>
     <div class="inp-group">
+      <div class="inp-label">Danh mục</div>
+      <input class="inp" id="imCategory" placeholder="VD: TikTok, Netflix, Game..."/>
+    </div>
+    <div class="inp-group">
       <div class="inp-label">Icon (emoji)</div>
       <input class="inp" id="imIcon" placeholder="🎵" maxlength="4" style="width:100px"/>
     </div>
@@ -361,11 +436,49 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   </div>
 </div>
 
+<!-- FORCE CHANGE PASS (Admin default) -->
+<div class="modal-bg" id="forcePassModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title">🔒 Đổi mật khẩu bắt buộc</div>
+    </div>
+    <div class="alert alert-warn show">Bạn đang dùng mật khẩu mặc định. Vui lòng đổi ngay để bảo mật!</div>
+    <div class="inp-group">
+      <div class="inp-label">Mật khẩu mới</div>
+      <input class="inp" id="forceNewPass" type="password" placeholder="≥ 6 ký tự"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Xác nhận</div>
+      <input class="inp" id="forceNewPass2" type="password" placeholder="Nhập lại"/>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="forceChangeAdminPass()">🔒 Đổi ngay</button>
+  </div>
+</div>
+
+<!-- RESET USER PASS MODAL -->
+<div class="modal-bg" id="resetPassModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title">🔑 Reset mật khẩu user</div>
+      <button class="modal-close" onclick="closeResetPass()">✕</button>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">User</div>
+      <input class="inp" id="rpUser" disabled/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Mật khẩu mới</div>
+      <input class="inp" id="rpNewPass" type="password" placeholder="≥ 6 ký tự"/>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="doResetUserPass()">🔑 Reset</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 // ======================================================
-// VƯỢT LINK PRO v2 — Nâng cấp bảo mật + sửa bug + cải thiện
+// VƯỢT LINK PRO v2.5 — Nâng cấp toàn diện
 // ======================================================
 const firebaseConfig = {
   apiKey: "AIzaSyA80m1h3IMimHcRhrA8mulpMtsVGs1o3YU",
@@ -382,20 +495,22 @@ const COL = 'vlp_data';
 const SESSION_K = 'vlp_session_v4';
 const REMEMBER_K = 'vlp_remember_v4';
 const ADMIN_USER = 'admin';
-// Mật khẩu mặc định sẽ được hash khi seed lần đầu. Không lưu plain text nữa.
 const DEFAULT_ADMIN_PASS = 'admin123';
 
 const LS_USERS    = 'vlp_users_v2';
 const LS_ITEMS    = 'vlp_items_v2';
 const LS_ORDERS   = 'vlp_orders_v2';
 const LS_SETTINGS = 'vlp_settings_v2';
+const LS_LOGS     = 'vlp_logs_v1';
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
 const RATE_KEY = 'vlp_rate_v1';
+const COOLDOWN_KEY = 'vlp_cooldown_v1';
 
 let localUsers = null;
 let localItems = null;
 let localOrders = null;
 let localSettings = null;
+let localLogs = null;
 let firebaseReady = false;
 let me = null;
 let currentItem = null;
@@ -403,8 +518,13 @@ let verifiedSteps = [];
 let editItemId = null;
 let curAdminTab = 'dash';
 let isBusy = false;
+let currentCatFilter = 'all';
+let currentUserTab = 'items';
+let resetTargetUser = null;
 
-// ===== CRYPTO — Hash mật khẩu bằng Web Crypto (PBKDF2) =====
+const EMOJIS = ['👤','😎','🔥','⚡','🎮','🎵','💎','🚀','👑','🐱','🐶','🦊','🐻','🐼','🐸','🦄','🌟','💪','🎯','🏆','💡','🛡️','📦','🔑','💰','🎁','🌈','👾','🤖','👻'];
+
+// ===== CRYPTO =====
 async function hashPassword(password, saltBase64) {
   const enc = new TextEncoder();
   const salt = saltBase64
@@ -428,10 +548,8 @@ async function verifyPassword(password, storedHash, storedSalt) {
   return hash === storedHash;
 }
 
-// Legacy plain-text migration: nếu còn password plain thì hash lại khi login thành công
 async function migrateIfPlain(user, plainPass) {
   if (user.passwordHash && user.passwordSalt) return user;
-  // Cũ: lưu plain
   if (user.password && user.password === plainPass) {
     const { hash, salt } = await hashPassword(plainPass);
     const updated = { ...user, passwordHash: hash, passwordSalt: salt };
@@ -452,14 +570,22 @@ function lsSet(key, val) {
 
 // ===== STORE HELPERS =====
 function getUsersArr() { return Object.values(localUsers || {}); }
-function getItemsArr() { return Object.values(localItems || {}); }
+function getItemsArr() {
+  return Object.values(localItems || {}).filter(i => !i.deleted);
+}
+function getAllItemsArr() { return Object.values(localItems || {}); }
 function getOrdersArr() {
   const arr = Object.values(localOrders || {});
   arr.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return arr;
 }
 function getSettings() {
-  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false };
+  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25 };
+}
+function getLogsArr() {
+  const arr = Object.values(localLogs || {});
+  arr.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
+  return arr.slice(0, 200);
 }
 
 function fbErr(e, label) {
@@ -492,8 +618,12 @@ function saveSettings(obj) {
   lsSet(LS_SETTINGS, { data: obj });
   return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings'));
 }
+function saveLogs(obj) {
+  localLogs = obj || {};
+  lsSet(LS_LOGS, { data: localLogs });
+  return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs'));
+}
 
-// Nội dung bí mật — tách riêng, chỉ fetch khi đã vượt đủ
 function saveSecretContent(itemId, content) {
   return db.collection(COL).doc('itemSecrets').set(
     { data: { [itemId]: content } }, { merge: true }
@@ -524,6 +654,12 @@ function updateItem(id, data) {
   return saveItems(localItems);
 }
 function removeItem(id) {
+  if (localItems && localItems[id]) {
+    localItems[id] = { ...localItems[id], deleted: true, active: false };
+  }
+  return saveItems(localItems || {});
+}
+function hardDeleteItem(id) {
   if (localItems) delete localItems[id];
   return saveItems(localItems || {});
 }
@@ -532,19 +668,33 @@ function addOrder(order) {
   localOrders[order.id] = order;
   const keys = Object.keys(localOrders).sort((a, b) =>
     (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
-  if (keys.length > 400) keys.slice(400).forEach(k => delete localOrders[k]);
+  if (keys.length > 500) keys.slice(500).forEach(k => delete localOrders[k]);
   return saveOrders(localOrders);
+}
+function addLog(action, detail) {
+  if (!localLogs) localLogs = {};
+  const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 5);
+  localLogs[id] = {
+    id,
+    action,
+    detail: detail || '',
+    by: me ? me.username : 'system',
+    ts: new Date().toISOString()
+  };
+  const keys = Object.keys(localLogs).sort((a, b) => (localLogs[b].ts || '').localeCompare(localLogs[a].ts || ''));
+  if (keys.length > 300) keys.slice(300).forEach(k => delete localLogs[k]);
+  return saveLogs(localLogs);
 }
 
 function checkFirebaseReady() {
-  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && !firebaseReady) {
+  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && localLogs !== null && !firebaseReady) {
     firebaseReady = true;
     document.getElementById('connOverlay').classList.add('hidden');
     tryAutoLogin();
   }
 }
 
-const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false };
+const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25 };
 
 async function ensureDefaults() {
   if (!localUsers) localUsers = {};
@@ -558,11 +708,11 @@ async function ensureDefaults() {
       role: 'admin',
       avatar: '👑',
       joined: new Date().toISOString(),
-      banned: false
+      banned: false,
+      mustChangePass: true
     };
     await saveUsers(localUsers);
   } else if (localUsers[ADMIN_USER].password && !localUsers[ADMIN_USER].passwordHash) {
-    // Migrate admin cũ
     const { hash, salt } = await hashPassword(localUsers[ADMIN_USER].password);
     const u = { ...localUsers[ADMIN_USER], passwordHash: hash, passwordSalt: salt };
     delete u.password;
@@ -572,6 +722,14 @@ async function ensureDefaults() {
   if (!localSettings || typeof localSettings !== 'object') {
     localSettings = { ...DEFAULT_SETTINGS };
     await saveSettings(localSettings);
+  }
+  if (localSettings.cooldownSec === undefined) {
+    localSettings = { ...localSettings, cooldownSec: 25 };
+    await saveSettings(localSettings);
+  }
+  if (!localLogs) {
+    localLogs = {};
+    await saveLogs(localLogs);
   }
   const settings = getSettings();
   if (!settings.seededDemo) {
@@ -614,7 +772,11 @@ function startListeners() {
     localUsers = val || {};
     if (first) { ensureDefaults().then(() => checkFirebaseReady()); }
     if (me && localUsers[me.username]) me = localUsers[me.username];
-    if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
+    if (document.getElementById('mainPage').classList.contains('active')) {
+      renderItemGrid();
+      if (currentUserTab === 'history') renderUserHistory();
+      if (currentUserTab === 'profile') fillProfileForm();
+    }
     if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
   });
 
@@ -630,6 +792,7 @@ function startListeners() {
     const first = localOrders === null;
     localOrders = val || {};
     if (first) checkFirebaseReady();
+    if (document.getElementById('mainPage').classList.contains('active') && currentUserTab === 'history') renderUserHistory();
     if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
       renderAdminBody(curAdminTab);
     }
@@ -641,6 +804,13 @@ function startListeners() {
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
   });
+
+  watchDoc('logs', LS_LOGS, {}, (val) => {
+    const first = localLogs === null;
+    localLogs = val || {};
+    if (first) checkFirebaseReady();
+    if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'logs') renderAdminBody('logs');
+  });
 }
 startListeners();
 
@@ -650,7 +820,7 @@ setTimeout(() => {
   }
 }, 8000);
 
-// ===== RATE LIMIT (client-side) =====
+// ===== RATE LIMIT + COOLDOWN =====
 function checkRate(action, max = 10, windowMs = 60000) {
   const now = Date.now();
   let data = lsGet(RATE_KEY, {});
@@ -660,6 +830,20 @@ function checkRate(action, max = 10, windowMs = 60000) {
   data[action].push(now);
   lsSet(RATE_KEY, data);
   return true;
+}
+
+function getCooldownLeft(itemId, round) {
+  const data = lsGet(COOLDOWN_KEY, {});
+  const key = itemId + '_' + round;
+  const last = data[key] || 0;
+  const cd = (getSettings().cooldownSec || 25) * 1000;
+  const left = last + cd - Date.now();
+  return left > 0 ? Math.ceil(left / 1000) : 0;
+}
+function setCooldown(itemId, round) {
+  const data = lsGet(COOLDOWN_KEY, {});
+  data[itemId + '_' + round] = Date.now();
+  lsSet(COOLDOWN_KEY, data);
 }
 
 // ===== AUTH =====
@@ -706,7 +890,6 @@ async function doLogin() {
     if (found.passwordHash && found.passwordSalt) {
       ok = await verifyPassword(p, found.passwordHash, found.passwordSalt);
     } else if (found.password) {
-      // Legacy plain
       const migrated = await migrateIfPlain(found, p);
       if (migrated) {
         ok = true;
@@ -719,16 +902,30 @@ async function doLogin() {
       return;
     }
 
+    // Check default admin password
+    if (u === ADMIN_USER) {
+      const isDefault = await verifyPassword(DEFAULT_ADMIN_PASS, user.passwordHash, user.passwordSalt);
+      if (isDefault) user = { ...user, mustChangePass: true };
+    }
+
     me = user;
+    me.lastLogin = new Date().toISOString();
+    await updateUser(u, me);
+
     const remember = document.getElementById('cbRemember').checked;
     const session = {
       username: u,
-      exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000) // 7 ngày hoặc 12 giờ
+      exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000)
     };
     localStorage.setItem(SESSION_K, JSON.stringify(session));
     if (remember) localStorage.setItem(REMEMBER_K, u);
     else localStorage.removeItem(REMEMBER_K);
-    enterMain();
+
+    if (me.mustChangePass && me.role === 'admin') {
+      document.getElementById('forcePassModal').classList.add('open');
+    } else {
+      enterMain();
+    }
   } finally {
     isBusy = false;
     document.getElementById('btnLogin').disabled = false;
@@ -805,13 +1002,35 @@ function tryAutoLogin() {
       const found = (localUsers || {})[sess.username];
       if (found && !found.banned) {
         me = found;
-        enterMain();
+        if (me.mustChangePass && me.role === 'admin') {
+          document.getElementById('forcePassModal').classList.add('open');
+        } else {
+          enterMain();
+        }
         return;
       }
     } catch (e) {
       localStorage.removeItem(SESSION_K);
     }
   }
+}
+
+async function forceChangeAdminPass() {
+  const np = document.getElementById('forceNewPass').value;
+  const np2 = document.getElementById('forceNewPass2').value;
+  if (np.length < 6) { toast('❌ Mật khẩu ≥ 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Xác nhận không khớp', 'err'); return; }
+  if (np === DEFAULT_ADMIN_PASS) { toast('❌ Không được dùng mật khẩu mặc định', 'err'); return; }
+
+  const { hash, salt } = await hashPassword(np);
+  const updated = { ...me, passwordHash: hash, passwordSalt: salt, mustChangePass: false };
+  delete updated.password;
+  await updateUser(ADMIN_USER, updated);
+  me = updated;
+  document.getElementById('forcePassModal').classList.remove('open');
+  addLog('change_pass', 'Admin đổi mật khẩu bắt buộc');
+  toast('✅ Đã đổi mật khẩu thành công!', 'ok');
+  enterMain();
 }
 
 // ===== NAV =====
@@ -840,24 +1059,30 @@ function enterMain() {
     rb.className = 'role-badge rb-user';
     document.getElementById('btnAdmin').style.display = 'none';
   }
-  renderItemGrid();
+  switchUserTab('items');
   updateContactBtn();
   restoreActiveBypassIfAny();
+}
+
+function switchUserTab(tab) {
+  currentUserTab = tab;
+  document.getElementById('userTabItems').style.display = tab === 'items' ? '' : 'none';
+  document.getElementById('userTabHistory').style.display = tab === 'history' ? '' : 'none';
+  document.getElementById('userTabProfile').style.display = tab === 'profile' ? '' : 'none';
+  document.getElementById('utabItems').classList.toggle('active', tab === 'items');
+  document.getElementById('utabHistory').classList.toggle('active', tab === 'history');
+  document.getElementById('utabProfile').classList.toggle('active', tab === 'profile');
+  if (tab === 'items') renderItemGrid();
+  if (tab === 'history') renderUserHistory();
+  if (tab === 'profile') fillProfileForm();
 }
 
 function updateContactBtn() {
   const s = getSettings();
   const zalo = String(s.zaloAdmin || '').replace(/\D/g, '');
   const btn = document.getElementById('btnContactAdmin');
-  const hint = document.getElementById('contactHint');
   if (!btn) return;
-  if (zalo.length >= 9) {
-    btn.style.display = '';
-    if (hint) hint.style.display = 'none';
-  } else {
-    btn.style.display = 'none';
-    if (hint) hint.style.display = 'none';
-  }
+  btn.style.display = zalo.length >= 9 ? '' : 'none';
 }
 
 function contactAdmin() {
@@ -886,12 +1111,127 @@ function goMain() {
   renderItemGrid();
 }
 
+// ===== PROFILE =====
+function openProfileModal() {
+  switchUserTab('profile');
+}
+
+function fillProfileForm() {
+  if (!me) return;
+  document.getElementById('profName').value = me.display || '';
+  document.getElementById('profAva').value = me.avatar || '👤';
+  document.getElementById('profAvaPreview').textContent = me.avatar || '👤';
+  const grid = document.getElementById('emojiGrid');
+  grid.innerHTML = EMOJIS.map(e => `<button class="emoji-btn ${me.avatar===e?'selected':''}" onclick="selectEmoji('${e}')">${e}</button>`).join('');
+}
+
+function selectEmoji(e) {
+  document.getElementById('profAva').value = e;
+  document.getElementById('profAvaPreview').textContent = e;
+  document.querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === e));
+}
+
+async function saveProfile() {
+  if (!me) return;
+  const name = (document.getElementById('profName').value || '').trim();
+  const ava = (document.getElementById('profAva').value || '').trim() || '👤';
+  if (!name) { toast('⚠️ Tên không được trống', 'err'); return; }
+  const updated = { ...me, display: name, avatar: ava };
+  await updateUser(me.username, updated);
+  me = updated;
+  document.getElementById('uName').textContent = name;
+  document.getElementById('uAva').textContent = ava;
+  toast('✅ Đã cập nhật thông tin!', 'ok');
+}
+
+async function changeMyPass() {
+  if (!me) return;
+  const old = document.getElementById('profOldPass').value;
+  const np = document.getElementById('profNewPass').value;
+  const np2 = document.getElementById('profNewPass2').value;
+
+  let ok = false;
+  if (me.passwordHash && me.passwordSalt) {
+    ok = await verifyPassword(old, me.passwordHash, me.passwordSalt);
+  }
+  if (!ok) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
+  if (np.length < 6) { toast('❌ Mật khẩu mới ≥ 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Xác nhận không khớp', 'err'); return; }
+
+  const { hash, salt } = await hashPassword(np);
+  const updated = { ...me, passwordHash: hash, passwordSalt: salt };
+  delete updated.password;
+  await updateUser(me.username, updated);
+  me = updated;
+  document.getElementById('profOldPass').value = '';
+  document.getElementById('profNewPass').value = '';
+  document.getElementById('profNewPass2').value = '';
+  toast('✅ Đã đổi mật khẩu!', 'ok');
+}
+
+// ===== USER HISTORY =====
+function renderUserHistory() {
+  const list = document.getElementById('userHistoryList');
+  if (!me) { list.innerHTML = ''; return; }
+  const myOrders = getOrdersArr().filter(o => o.user === me.username);
+  if (!myOrders.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div>Bạn chưa vượt link lần nào</div></div>';
+    return;
+  }
+  list.innerHTML = myOrders.map(o => `
+    <div class="history-item">
+      <div class="history-name">${esc(o.itemName || 'Nội dung')}</div>
+      <div class="history-meta">
+        <span>${fmtDT(o.createdAt)}</span>
+        <span class="bdg bdg-ok">✅ Thành công</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ===== ITEM GRID =====
+function getCategories() {
+  const cats = new Set();
+  getItemsArr().filter(i => i.active !== false).forEach(i => {
+    if (i.category) cats.add(i.category.trim());
+  });
+  return Array.from(cats).sort();
+}
+
+function renderCatFilter() {
+  const cats = getCategories();
+  const el = document.getElementById('catFilter');
+  if (!cats.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<button class="cat-chip ${currentCatFilter==='all'?'active':''}" onclick="setCatFilter('all')">Tất cả</button>` +
+    cats.map(c => `<button class="cat-chip ${currentCatFilter===c?'active':''}" onclick="setCatFilter('${esc(c)}')">${esc(c)}</button>`).join('');
+}
+
+function setCatFilter(c) {
+  currentCatFilter = c;
+  renderItemGrid();
+}
+
 function renderItemGrid() {
   const grid = document.getElementById('itemGrid');
-  const active = getItemsArr().filter(i => i.active !== false);
+  const q = (document.getElementById('itemSearch')?.value || '').toLowerCase().trim();
+  let active = getItemsArr().filter(i => i.active !== false);
+  if (currentCatFilter !== 'all') {
+    active = active.filter(i => (i.category || '').trim() === currentCatFilter);
+  }
+  if (q) {
+    active = active.filter(i =>
+      (i.name || '').toLowerCase().includes(q) ||
+      (i.desc || '').toLowerCase().includes(q) ||
+      (i.category || '').toLowerCase().includes(q)
+    );
+  }
+  // newest first
+  active.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+  renderCatFilter();
+
   if (!active.length) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Chưa có nội dung nào</div></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Không tìm thấy nội dung nào</div></div>';
     return;
   }
   grid.innerHTML = active.map(item => `
@@ -902,6 +1242,7 @@ function renderItemGrid() {
         <div class="item-desc">${esc(item.desc || '')}</div>
         <div class="item-meta">
           <span class="rounds-badge">⚡ ${item.rounds || 1} lượt vượt</span>
+          ${item.category ? `<span class="cat-badge">${esc(item.category)}</span>` : ''}
         </div>
       </div>
       <span style="color:var(--sub);font-size:18px">›</span>
@@ -914,7 +1255,7 @@ function openBypass(id) {
   if (!me) return;
   if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
-  if (!currentItem || currentItem.active === false) return;
+  if (!currentItem || currentItem.active === false || currentItem.deleted) return;
   const rounds = Math.max(1, Math.min(20, parseInt(currentItem.rounds) || 1));
   currentItem.rounds = rounds;
   verifiedSteps = new Array(rounds).fill(false);
@@ -950,13 +1291,12 @@ function restoreActiveBypassIfAny() {
     clearActiveBypassState();
     return;
   }
-  // Hết hạn sau 2 giờ
   if (saved.ts && Date.now() - saved.ts > 2 * 3600000) {
     clearActiveBypassState();
     return;
   }
   const item = (localItems || {})[saved.itemId];
-  if (!item) { clearActiveBypassState(); return; }
+  if (!item || item.deleted) { clearActiveBypassState(); return; }
   if (saved.rounds !== undefined && saved.rounds !== item.rounds) {
     clearActiveBypassState();
     openBypass(saved.itemId);
@@ -980,6 +1320,7 @@ function renderSteps() {
     const done = !!verifiedSteps[i];
     const firstPending = verifiedSteps.indexOf(false);
     const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
+    const cdLeft = getCooldownLeft(item.id, i);
     html += `
       <div class="step-item" id="step_${i}">
         <div class="step-hd">
@@ -987,7 +1328,9 @@ function renderSteps() {
           <div class="step-label">Lượt ${i + 1}</div>
         </div>
         <div class="step-body">
-          <button class="btn btn-cyan btn-sm" onclick="openLink(${i})" ${done ? 'disabled' : ''}>🔗 Lấy Link</button>
+          <button class="btn btn-cyan btn-sm" id="getLinkBtn_${i}" onclick="openLink(${i})" ${done || cdLeft > 0 ? 'disabled' : ''}>
+            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Lấy Link'}
+          </button>
           <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}"
             type="text" autocomplete="off" spellcheck="false" inputmode="text"
             placeholder="Dán mã xác nhận..."
@@ -998,28 +1341,65 @@ function renderSteps() {
           <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}"
             onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
         </div>
+        ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s mới lấy link lại được</div>` : ''}
       </div>`;
   }
   document.getElementById('bmSteps').innerHTML = html;
+
+  // Update cooldown timers
+  for (let i = 0; i < rounds; i++) {
+    if (!verifiedSteps[i] && getCooldownLeft(item.id, i) > 0) {
+      startCooldownTimer(i);
+    }
+  }
+}
+
+function startCooldownTimer(idx) {
+  const timer = setInterval(() => {
+    if (!currentItem) { clearInterval(timer); return; }
+    const left = getCooldownLeft(currentItem.id, idx);
+    const btn = document.getElementById('getLinkBtn_' + idx);
+    const hint = document.getElementById('cdHint_' + idx);
+    if (left <= 0) {
+      clearInterval(timer);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🔗 Lấy Link';
+      }
+      if (hint) hint.remove();
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ ' + left + 's';
+    }
+    if (hint) hint.textContent = 'Chờ ' + left + 's mới lấy link lại được';
+  }, 1000);
 }
 
 function openLink(idx) {
   const item = currentItem;
   if (!item || !me) return;
-  if (!checkRate('openLink', 15, 60000)) {
+  if (!checkRate('openLink', 20, 60000)) {
     toast('⚠️ Thao tác quá nhanh. Đợi một chút.', 'err');
     return;
   }
+  const cd = getCooldownLeft(item.id, idx);
+  if (cd > 0) {
+    toast('⏳ Còn ' + cd + 's mới lấy link lại được', 'err');
+    return;
+  }
+
   const code = genVerifyCode(8);
-  // Lưu mã + timestamp + user để khó bị spoof hơn
   const payload = {
     code,
     user: me.username,
     itemId: item.id,
     round: idx,
-    exp: Date.now() + 30 * 60 * 1000 // 30 phút
+    exp: Date.now() + 30 * 60 * 1000
   };
   localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify(payload));
+  setCooldown(item.id, idx);
 
   const revealUrl = location.origin + location.pathname +
     '?vlpcode=' + encodeURIComponent(code) +
@@ -1030,6 +1410,7 @@ function openLink(idx) {
     const link4mUrl = buildLink4mUrl(revealUrl);
     window.open(link4mUrl, '_blank');
     toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong dán mã vào ô bên dưới!');
+    renderSteps(); // refresh cooldown UI
   } catch (e) {
     localStorage.removeItem(pendingCodeKey(item.id, idx));
     toast('❌ ' + (e && e.message ? e.message : 'Không tạo được link'), 'err');
@@ -1129,7 +1510,6 @@ function updateProgress() {
 function showResult() {
   const item = currentItem;
   if (!item || !me) return;
-  // Chỉ cho phép khi đã verify đủ (double-check)
   if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) {
     toast('❌ Chưa hoàn thành đủ lượt', 'err');
     return;
@@ -1191,7 +1571,7 @@ function closeBypass() {
 function aTab(t) {
   curAdminTab = t;
   document.querySelectorAll('.atab').forEach((b, i) => {
-    b.classList.toggle('active', ['dash', 'items', 'users', 'orders', 'settings'][i] === t);
+    b.classList.toggle('active', ['dash', 'items', 'users', 'orders', 'logs', 'settings'][i] === t);
   });
   renderAdminBody(t);
 }
@@ -1202,6 +1582,7 @@ function renderAdminBody(t) {
   else if (t === 'items') renderItemsAdmin(body);
   else if (t === 'users') renderUsersAdmin(body);
   else if (t === 'orders') renderOrdersAdmin(body);
+  else if (t === 'logs') renderLogsAdmin(body);
   else if (t === 'settings') renderSettings(body);
 }
 
@@ -1211,21 +1592,37 @@ function renderDash(body) {
   const items = getItemsArr().filter(i => i.active !== false).length;
   const orders = getOrdersArr();
   const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
+  const weekOrders = orders.filter(o => isWeek(o.createdAt)).length;
+
+  // Top items
+  const itemCount = {};
+  orders.forEach(o => { itemCount[o.itemName] = (itemCount[o.itemName] || 0) + 1; });
+  const topItems = Object.entries(itemCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
   body.innerHTML = `
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-n">${users}</div><div class="stat-l">👥 Thành viên</div></div>
       <div class="stat-card s-gold"><div class="stat-n">${items}</div><div class="stat-l">📦 Nội dung</div></div>
       <div class="stat-card s-green"><div class="stat-n">${orders.length}</div><div class="stat-l">📋 Tổng lượt</div></div>
       <div class="stat-card s-red"><div class="stat-n">${todayOrders}</div><div class="stat-l">🗓️ Hôm nay</div></div>
+      <div class="stat-card s-purple"><div class="stat-n">${weekOrders}</div><div class="stat-l">📅 Tuần này</div></div>
+      <div class="stat-card"><div class="stat-n">${banned}</div><div class="stat-l">🚫 Đang khóa</div></div>
     </div>
     ${banned ? `<div class="alert alert-err show" style="margin-bottom:12px">🚫 ${banned} tài khoản đang bị khóa</div>` : ''}
+    
+    <div class="sec-title" style="margin-bottom:10px">🏆 Top nội dung được vượt nhiều</div>
+    ${topItems.length ? `<div class="tbl-wrap"><table class="dtbl">
+      <thead><tr><th>#</th><th>Nội dung</th><th>Lượt</th></tr></thead>
+      <tbody>${topItems.map((t,i) => `<tr><td>${i+1}</td><td>${esc(t[0])}</td><td><strong>${t[1]}</strong></td></tr>`).join('')}</tbody>
+    </table></div>` : '<div style="color:var(--sub);font-size:12px;margin-bottom:14px">Chưa có dữ liệu</div>'}
+
     <div class="sec-title" style="margin-bottom:10px">📋 Lịch sử gần nhất</div>
-    ${renderOrderTable(orders.slice(0, 10))}
+    ${renderOrderTable(orders.slice(0, 8))}
   `;
 }
 
 function renderItemsAdmin(body) {
-  const items = getItemsArr();
+  const items = getAllItemsArr().filter(i => !i.deleted);
   body.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div class="sec-title" style="margin-bottom:0">📦 QUẢN LÝ NỘI DUNG</div>
@@ -1240,7 +1637,7 @@ function renderItemsAdmin(body) {
           <div style="font-size:22px;flex-shrink:0">${item.icon || '📦'}</div>
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)}</div>
-            <div class="imr-sub">${item.rounds || 1} lượt vượt • ${esc(item.desc || '')}</div>
+            <div class="imr-sub">${item.rounds || 1} lượt • ${item.category ? esc(item.category) + ' • ' : ''}${esc(item.desc || '')}</div>
             <div style="margin-top:4px"><span class="bdg ${item.active !== false ? 'bdg-ok' : 'bdg-no'}">${item.active !== false ? 'Bật' : 'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
@@ -1256,14 +1653,18 @@ function renderItemsAdmin(body) {
 
 function clearAllItems() {
   if (!confirm('Xóa TOÀN BỘ nội dung trên server? Không thể hoàn tác.')) return;
-  localItems = {};
+  const ids = Object.keys(localItems || {});
+  ids.forEach(id => {
+    if (localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false };
+  });
   const s = { ...getSettings(), seededDemo: true };
   localSettings = s;
   Promise.all([
-    saveItems({}),
+    saveItems(localItems),
     saveSettings(s),
     db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(() => {})
   ]).then(() => {
+    addLog('clear_all_items', 'Xóa toàn bộ nội dung');
     aTab('items');
     renderItemGrid();
     toast('🗑 Đã xóa hết trên server.', 'ok');
@@ -1289,10 +1690,11 @@ function renderUsersAdmin(body) {
               <td style="color:var(--sub)">@${esc(u.username)}</td>
               <td>${orders.filter(o => o.user === u.username).length}</td>
               <td><span class="bdg ${u.banned ? 'bdg-no' : 'bdg-ok'}">${u.banned ? 'Khóa' : 'OK'}</span></td>
-              <td>
+              <td style="white-space:nowrap">
                 <button class="btn btn-xs ${u.banned ? 'btn-green' : 'btn-red'}" onclick="toggleBan('${u.username}')">
-                  ${u.banned ? 'Mở khóa' : 'Khóa'}
+                  ${u.banned ? 'Mở' : 'Khóa'}
                 </button>
+                <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')" title="Reset mật khẩu">🔑</button>
               </td>
             </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
         </tbody>
@@ -1315,17 +1717,46 @@ function toggleBan(username) {
   if (!u || u.role === 'admin') return;
   u.banned = !u.banned;
   updateUser(username, u).then(() => {
+    addLog(u.banned ? 'ban_user' : 'unban_user', username);
     toast(u.banned ? '🚫 Đã khóa tài khoản' : '✅ Đã mở khóa', 'ok');
     aTab('users');
   });
 }
 
+function openResetPass(username) {
+  resetTargetUser = username;
+  document.getElementById('rpUser').value = username;
+  document.getElementById('rpNewPass').value = '';
+  document.getElementById('resetPassModal').classList.add('open');
+}
+function closeResetPass() {
+  document.getElementById('resetPassModal').classList.remove('open');
+  resetTargetUser = null;
+}
+async function doResetUserPass() {
+  if (!resetTargetUser) return;
+  const np = document.getElementById('rpNewPass').value;
+  if (np.length < 6) { toast('❌ Mật khẩu ≥ 6 ký tự', 'err'); return; }
+  const u = (localUsers || {})[resetTargetUser];
+  if (!u) { toast('Không tìm thấy user', 'err'); return; }
+  const { hash, salt } = await hashPassword(np);
+  const updated = { ...u, passwordHash: hash, passwordSalt: salt };
+  delete updated.password;
+  await updateUser(resetTargetUser, updated);
+  addLog('reset_pass', resetTargetUser);
+  closeResetPass();
+  toast('✅ Đã reset mật khẩu cho @' + resetTargetUser, 'ok');
+}
+
 function renderOrdersAdmin(body) {
   const orders = getOrdersArr();
   body.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div class="sec-title" style="margin-bottom:0">📋 LỊCH SỬ VƯỢT LINK</div>
-      <span style="font-size:12px;color:var(--sub)">${orders.length} lượt</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:12px;color:var(--sub)">${orders.length} lượt</span>
+        <button class="btn btn-ghost btn-xs" onclick="exportOrdersCSV()">📥 Xuất CSV</button>
+      </div>
     </div>
     <div class="filter-row">
       <button class="fbtn active" onclick="filterOrders('all',this)">Tất cả</button>
@@ -1361,6 +1792,39 @@ function filterOrders(range, btn) {
   document.getElementById('orderTableWrap').innerHTML = renderOrderTable(orders);
 }
 
+function exportOrdersCSV() {
+  const orders = getOrdersArr();
+  if (!orders.length) { toast('Không có dữ liệu', 'err'); return; }
+  let csv = 'ID,User,Display,Item,Status,Time\n';
+  orders.forEach(o => {
+    csv += `"${o.id}","${o.user}","${(o.display||'').replace(/"/g,'""')}","${(o.itemName||'').replace(/"/g,'""')}","${o.status}","${o.createdAt}"\n`;
+  });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vuotlink_orders_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 Đã xuất CSV!', 'ok');
+}
+
+function renderLogsAdmin(body) {
+  const logs = getLogsArr();
+  body.innerHTML = `
+    <div class="sec-title" style="margin-bottom:12px">📝 NHẬT KÝ HOẠT ĐỘNG ADMIN</div>
+    <div class="tbl-wrap">
+      ${logs.length ? logs.map(l => `
+        <div class="log-item">
+          <span class="log-time">${fmtDT(l.ts)}</span> · 
+          <strong style="color:var(--text)">${esc(l.by)}</strong> · 
+          ${esc(l.action)} ${l.detail ? '→ ' + esc(l.detail) : ''}
+        </div>
+      `).join('') : '<div class="empty-state"><div class="empty-icon">📝</div><div>Chưa có log</div></div>'}
+    </div>
+  `;
+}
+
 function renderSettings(body) {
   const s = getSettings();
   body.innerHTML = `
@@ -1385,6 +1849,12 @@ function renderSettings(body) {
     </div>
 
     <div class="settings-row">
+      <div class="settings-label">⏳ Cooldown giữa 2 lần "Lấy Link" (giây)</div>
+      <input class="inp" id="setCooldown" type="number" min="5" max="120" value="${s.cooldownSec || 25}" style="width:100px"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('cooldownSec','setCooldown',true)">💾 Lưu</button>
+    </div>
+
+    <div class="settings-row">
       <div class="settings-label">🛡️ Đổi mật khẩu Admin</div>
       <input class="inp" id="setOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
       <input class="inp" id="setNewPass" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" style="margin-bottom:8px"/>
@@ -1395,15 +1865,19 @@ function renderSettings(body) {
     <div class="settings-row">
       <div class="settings-label">☁️ Trạng thái server</div>
       <div style="font-size:13px;color:var(--green)">● Firestore Online — project: shopvip-139ea</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data · Version 2.5</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v2 đã nâng cấp:</b><br>
-        • Mật khẩu hash PBKDF2 (không còn plain text)<br>
-        • Session có thời hạn + rate limit<br>
-        • Khóa / mở khóa user<br>
-        • Mã xác nhận có expiry + gắn user<br>
-        • Sửa bug clearAllItems<br>
-        • Nội dung thật vẫn tách riêng itemSecrets
+        <b>v2.5 đã nâng cấp:</b><br>
+        • Profile user (đổi tên + avatar)<br>
+        • Lịch sử vượt link cá nhân<br>
+        • Tìm kiếm + lọc theo danh mục<br>
+        • Cooldown chống spam Lấy Link<br>
+        • Soft-delete item<br>
+        • Admin activity log<br>
+        • Reset mật khẩu user<br>
+        • Xuất CSV lịch sử<br>
+        • Bắt buộc đổi pass admin mặc định<br>
+        • Dashboard thống kê chi tiết hơn
       </div>
     </div>
   `;
@@ -1411,12 +1885,13 @@ function renderSettings(body) {
 
 function saveSetting(key, inputId, isNum) {
   let val = document.getElementById(inputId).value;
-  if (isNum) val = parseInt(val) || 2;
+  if (isNum) val = parseInt(val) || (key === 'cooldownSec' ? 25 : 2);
   else val = (val || '').trim();
   const s = { ...getSettings() };
   s[key] = val;
   saveSettings(s).then(() => {
     toast('✅ Đã lưu lên server!', 'ok');
+    addLog('update_setting', key + ' = ' + val);
   }).catch(e => {
     toast('❌ Lưu thất bại', 'err');
   });
@@ -1441,7 +1916,7 @@ async function changeAdminPass() {
   if (np !== np2) { toast('❌ Xác nhận mật khẩu không khớp', 'err'); return; }
 
   const { hash, salt } = await hashPassword(np);
-  const updated = { ...admin, passwordHash: hash, passwordSalt: salt };
+  const updated = { ...admin, passwordHash: hash, passwordSalt: salt, mustChangePass: false };
   delete updated.password;
   await updateUser(ADMIN_USER, updated);
   if (me && me.username === ADMIN_USER) me = updated;
@@ -1449,6 +1924,7 @@ async function changeAdminPass() {
   document.getElementById('setOldPass').value = '';
   document.getElementById('setNewPass').value = '';
   document.getElementById('setNewPass2').value = '';
+  addLog('change_pass', 'Admin đổi mật khẩu');
   toast('✅ Đã đổi mật khẩu (đã hash)!', 'ok');
 }
 
@@ -1461,6 +1937,7 @@ function openItemModal(id) {
     document.getElementById('imTitle').textContent = '✏️ Sửa nội dung';
     document.getElementById('imName').value = item.name || '';
     document.getElementById('imDesc').value = item.desc || '';
+    document.getElementById('imCategory').value = item.category || '';
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
     document.getElementById('imContent').value = '⏳ Đang tải nội dung...';
@@ -1473,6 +1950,7 @@ function openItemModal(id) {
     document.getElementById('imTitle').textContent = '➕ Thêm nội dung';
     document.getElementById('imName').value = '';
     document.getElementById('imDesc').value = '';
+    document.getElementById('imCategory').value = '';
     document.getElementById('imIcon').value = '📦';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
     document.getElementById('imContent').value = '';
@@ -1531,6 +2009,7 @@ checkRevealCode();
 function saveItem() {
   const name = (document.getElementById('imName').value || '').trim();
   const desc = (document.getElementById('imDesc').value || '').trim();
+  const category = (document.getElementById('imCategory').value || '').trim();
   const icon = (document.getElementById('imIcon').value || '').trim() || '📦';
   const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
   const content = (document.getElementById('imContent').value || '').trim();
@@ -1541,17 +2020,19 @@ function saveItem() {
   let itemId = editItemId;
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
-    // Không lưu content vào items
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, icon, rounds });
+    updateItem(itemId, { ...rest, name, desc, category, icon, rounds });
+    addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
     updateItem(itemId, {
-      id: itemId, name, desc, icon, rounds,
+      id: itemId, name, desc, category, icon, rounds,
       active: true,
+      deleted: false,
       addedBy: me.username,
       createdAt: new Date().toISOString()
     });
+    addLog('add_item', name);
   }
   saveSecretContent(itemId, content).then(() => {
     closeItemModal();
@@ -1565,15 +2046,18 @@ function toggleItem(id) {
   if (!item) return;
   item.active = item.active === false ? true : false;
   updateItem(id, item);
+  addLog(item.active !== false ? 'enable_item' : 'disable_item', item.name);
   aTab('items');
   toast(item.active !== false ? '✅ Đã bật' : '⏸ Đã tắt');
 }
 
 function deleteItem(id) {
-  if (!confirm('Xóa nội dung này?')) return;
+  if (!confirm('Xóa nội dung này? (soft-delete, có thể khôi phục nếu cần)')) return;
+  const item = (localItems || {})[id];
   deleteSecretContent(id);
   removeItem(id).then(() => {
-    if (!Object.keys(localItems || {}).length) {
+    addLog('delete_item', item ? item.name : id);
+    if (!Object.keys(localItems || {}).filter(k => !localItems[k].deleted).length) {
       const s = { ...getSettings(), seededDemo: true };
       saveSettings(s);
     }
