@@ -724,20 +724,38 @@ async function clearExpiredBan(u) {
 }
 
 function getRankExcluded() {
+  // Ưu tiên cờ trên user (lưu Firebase users — không mất khi reload)
+  const map = {};
+  Object.values(localUsers || {}).forEach(u => {
+    if (u && u.rankHidden) map[u.username] = true;
+  });
+  // Gộp thêm settings.rankExcluded (legacy)
   const s = getSettings();
-  return (s && s.rankExcluded) || {};
+  const fromS = (s && s.rankExcluded) || {};
+  Object.keys(fromS).forEach(k => { if (fromS[k]) map[k] = true; });
+  return map;
 }
 
 function isRankExcluded(username) {
+  const u = (localUsers || {})[username];
+  if (u && u.rankHidden) return true;
   return !!getRankExcluded()[username];
 }
 
 async function setRankExcluded(username, excluded) {
+  const u = (localUsers || {})[username];
+  if (u) {
+    const updated = { ...u, rankHidden: !!excluded };
+    if (!excluded) delete updated.rankHidden;
+    await updateUser(username, updated);
+  }
+  // Đồng bộ settings (backup)
   const s = { ...getSettings() };
   const map = { ...(s.rankExcluded || {}) };
   if (excluded) map[username] = true;
   else delete map[username];
   s.rankExcluded = map;
+  localSettings = s;
   await saveSettings(s);
 }
 
@@ -752,6 +770,34 @@ function flagUser(username, flag, detail) {
   flags.unshift(entry);
   const updated = { ...u, flags: flags.slice(0, 30), suspicious: true, lastFlagAt: entry.at };
   return updateUser(username, updated);
+}
+
+/** Khóa 7 ngày ngay nếu vượt quá nhanh (anti copy nội dung) */
+const TOO_FAST_MS = 80000; // 1 phút 20 giây
+async function autoBanTooFast(username, seconds) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return;
+  if (isUserBanned(u)) return;
+  const reason = 'Bot: vượt link quá nhanh (' + seconds + 's < 1p20s) — nghi sao chép/gian lận';
+  const banUntil = new Date(Date.now() + 7 * 86400000).toISOString();
+  const flags = Array.isArray(u.flags) ? [...u.flags] : [];
+  flags.unshift({ flag: 'too_fast_ban', detail: reason, at: new Date().toISOString() });
+  const updated = {
+    ...u,
+    banned: true,
+    banReason: reason,
+    banUntil,
+    banDuration: 7 * 86400,
+    suspicious: true,
+    flags: flags.slice(0, 30),
+    rankHidden: true // ẩn xếp hạng luôn
+  };
+  await updateUser(username, updated);
+  addLog('auto_ban_too_fast', username + ' — ' + seconds + 's');
+  if (me && me.username === username) {
+    me = updated;
+    showBanLive(reason + ' — Khóa 7 ngày');
+  }
 }
 
 function attachDevice(username) {
@@ -868,7 +914,21 @@ function saveUsers(obj) {
 }
 function saveItems(obj) { localItems = obj || {}; lsSet(LS_ITEMS, { data: localItems }); return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems')); }
 function saveOrders(obj) { localOrders = obj || {}; lsSet(LS_ORDERS, { data: localOrders }); return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders')); }
-function saveSettings(obj) { localSettings = obj; lsSet(LS_SETTINGS, { data: obj }); return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings')); }
+function saveSettings(obj) {
+  localSettings = obj || localSettings || {};
+  lsSet(LS_SETTINGS, { data: localSettings });
+  return db.collection(COL).doc('settings').get().then(snap => {
+    const remote = (snap.exists && snap.data() && snap.data().data) || {};
+    // merge: local thắng, nhưng giữ rankExcluded remote nếu local thiếu
+    const merged = { ...remote, ...localSettings };
+    if ((!localSettings.rankExcluded || !Object.keys(localSettings.rankExcluded).length) && remote.rankExcluded) {
+      merged.rankExcluded = { ...remote.rankExcluded, ...(localSettings.rankExcluded || {}) };
+    }
+    localSettings = merged;
+    lsSet(LS_SETTINGS, { data: localSettings });
+    return db.collection(COL).doc('settings').set({ data: localSettings });
+  }).catch(e => fbErr(e, 'saveSettings'));
+}
 function saveLogs(obj) { localLogs = obj || {}; lsSet(LS_LOGS, { data: localLogs }); return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs')); }
 function saveKeys(obj) { localKeys = obj || {}; lsSet(LS_KEYS, { data: localKeys }); return db.collection(COL).doc('redeemKeys').set({ data: localKeys }).catch(e => fbErr(e, 'saveKeys')); }
 function getKeysArr() {
@@ -1031,8 +1091,13 @@ function startListeners() {
   watchDoc('settings', LS_SETTINGS, DEFAULT_SETTINGS, (val) => {
     const first = localSettings === null;
     localSettings = val || { ...DEFAULT_SETTINGS };
+    if (!localSettings.rankExcluded) localSettings.rankExcluded = {};
     if (first) checkFirebaseReady();
-    if (document.getElementById('mainPage').classList.contains('active')) { updateContactBtn(); renderItemGrid(); }
+    if (document.getElementById('mainPage').classList.contains('active')) {
+      updateContactBtn();
+      renderItemGrid();
+      if (currentUserTab === 'rank') renderRankList();
+    }
   });
   watchDoc('logs', LS_LOGS, {}, (val) => {
     const first = localLogs === null;
@@ -1407,16 +1472,20 @@ function renderRankList() {
 }
 async function adminExcludeRank(username) {
   if (!me || me.role !== 'admin') return;
-  if (!confirm('Gỡ @' + username + ' khỏi bảng xếp hạng tuần?')) return;
+  if (!confirm('Gỡ @' + username + ' khỏi bảng xếp hạng tuần? (lưu vĩnh viễn)')) return;
   await setRankExcluded(username, true);
   addLog('rank_exclude', username);
+  // đảm bảo UI cập nhật ngay cả trước khi snapshot về
+  if (localUsers && localUsers[username]) localUsers[username].rankHidden = true;
   renderRankList();
-  toast('Đã gỡ @' + username + ' khỏi xếp hạng', 'ok');
+  if (document.getElementById('adminPage').classList.contains('active')) aTab(curAdminTab, false);
+  toast('Đã gỡ @' + username + ' khỏi xếp hạng (đã lưu)', 'ok');
 }
 async function adminIncludeRank(username) {
   if (!me || me.role !== 'admin') return;
   await setRankExcluded(username, false);
   addLog('rank_include', username);
+  if (localUsers && localUsers[username]) delete localUsers[username].rankHidden;
   renderRankList();
   if (curAdminTab === 'users' || curAdminTab === 'fraud') aTab(curAdminTab, false);
   toast('Đã cho @' + username + ' hiện lại trên xếp hạng', 'ok');
@@ -1865,6 +1934,7 @@ async function createServerKey(note) {
 async function openLink(idx) {
   const item = currentItem;
   if (!item || !me) return;
+  if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   if (!checkRate('openLink', 20, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
   const cd = getCooldownLeft(item.id, idx);
   if (cd > 0) { toast('⏳ Còn ' + cd + 's', 'err'); return; }
@@ -1916,16 +1986,23 @@ function handleCodeInput(el, idx) {
 function verifyCode(idx) {
   const inp = document.getElementById('codeinp_' + idx);
   if (!inp || inp.disabled || !currentItem || !me) return;
+  if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   const val = (inp.value || '').trim().toUpperCase();
   if (!val) { toast('⚠️ Nhập mã xác nhận!', 'err'); return; }
   const key = pendingCodeKey(currentItem.id, idx);
   let expected = null;
+  let payload = null;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) { toast('⚠️ Cần bấm Lấy Link trước!', 'err'); return; }
-    const payload = JSON.parse(raw);
+    payload = JSON.parse(raw);
     if (payload.exp && Date.now() > payload.exp) { localStorage.removeItem(key); toast('⚠️ Mã hết hạn', 'err'); return; }
     if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) { toast('❌ Mã không hợp lệ', 'err'); return; }
+    // Chống dán mã quá nhanh sau khi bấm Lấy Link (tối thiểu 8s/lượt)
+    if (payload.startedAt && (Date.now() - payload.startedAt) < 8000) {
+      toast('⏳ Đợi thêm vài giây rồi dán mã (chống bot)', 'err');
+      return;
+    }
     expected = (payload.code || '').toUpperCase();
   } catch (e) { toast('❌ Lỗi dữ liệu mã', 'err'); return; }
   if (val !== expected) { toast('❌ Mã không đúng!', 'err'); return; }
@@ -1957,26 +2034,47 @@ function showResult() {
   const item = currentItem;
   if (!item || !me) return;
   if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) { toast('❌ Chưa đủ lượt', 'err'); return; }
+  if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
+
+  // Đo thời gian từ lần Lấy Link đầu tiên
+  let started = 0, elapsed = 0, tooFast = false;
+  try {
+    const stKey = 'vlp_start_' + item.id + '_' + me.username;
+    started = parseInt(localStorage.getItem(stKey) || '0', 10);
+    localStorage.removeItem(stKey);
+    if (started) {
+      elapsed = Date.now() - started;
+      tooFast = elapsed < TOO_FAST_MS;
+    }
+  } catch(e) {}
 
   document.getElementById('bmResultContent').textContent = '⏳ Đang tải...';
   document.getElementById('bmResult').classList.add('show');
+
+  if (tooFast) {
+    const sec = Math.round(elapsed / 1000);
+    document.getElementById('bmResultContent').textContent = '🚫 Phát hiện gian lận: hoàn thành trong ' + sec + 's (< 1 phút 20s). Tài khoản bị khóa 7 ngày.';
+    toast('🚫 Vượt quá nhanh — khóa 7 ngày', 'err');
+    autoBanTooFast(me.username, sec).then(() => {
+      setTimeout(() => { try { closeBypass(); } catch(e) {} }, 1500);
+    });
+    return;
+  }
+
   fetchSecretContent(item.id).then(content => {
     if (content === null) content = '(Không có nội dung)';
+    // double-check ban trước khi hiện nội dung
+    if (isUserBanned(me)) {
+      document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa — không nhận nội dung.';
+      return;
+    }
     document.getElementById('bmResultContent').textContent = content;
     addOrder({
       id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
       user: me.username, display: me.display, itemId: item.id, itemName: item.name,
-      status: 'success', createdAt: new Date().toISOString()
+      status: 'success', createdAt: new Date().toISOString(),
+      durationMs: elapsed || null
     });
-    // anti-abuse: vượt quá nhanh
-    try {
-      const stKey = 'vlp_start_' + item.id + '_' + me.username;
-      const started = parseInt(localStorage.getItem(stKey) || '0', 10);
-      localStorage.removeItem(stKey);
-      if (started && (Date.now() - started) < 45000) {
-        flagUser(me.username, 'too_fast', 'Hoàn thành item trong ' + Math.round((Date.now()-started)/1000) + 's');
-      }
-    } catch(e) {}
     toast('🎉 Hoàn thành!', 'ok');
     setTimeout(() => renderItemGrid(), 500);
   });
