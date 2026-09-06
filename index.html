@@ -470,6 +470,7 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
     <button class="atab active" onclick="aTab('dash')">📊 Tổng quan</button>
     <button class="atab" onclick="aTab('items')">📦 Nội dung</button>
     <button class="atab" onclick="aTab('users')">👥 Khách</button>
+    <button class="atab" onclick="aTab('fraud')">🛡 Nghi vấn</button>
     <button class="atab" onclick="aTab('orders')">📋 Lịch sử</button>
     <button class="atab" onclick="aTab('keys')">🔑 Key</button>
     <button class="atab" onclick="aTab('logs')">📝 Log</button>
@@ -615,6 +616,18 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       <div class="inp-label">Lý do khóa</div>
       <input class="inp" id="banReason" placeholder="VD: Spam, gian lận..."/>
     </div>
+    <div class="inp-group">
+      <div class="inp-label">Thời gian khóa</div>
+      <select class="inp" id="banDuration">
+        <option value="0">Vĩnh viễn</option>
+        <option value="3600">1 giờ</option>
+        <option value="21600">6 giờ</option>
+        <option value="86400">1 ngày</option>
+        <option value="259200">3 ngày</option>
+        <option value="604800">7 ngày</option>
+        <option value="2592000">30 ngày</option>
+      </select>
+    </div>
     <button class="btn btn-red btn-full" onclick="confirmBan()">🚫 Xác nhận khóa</button>
   </div>
 </div>
@@ -661,6 +674,104 @@ const THEME_K = 'vlp_theme_v1';
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
 const RATE_KEY = 'vlp_rate_v1';
 const COOLDOWN_KEY = 'vlp_cooldown_v1';
+const DEVICE_KEY = 'vlp_device_v1';
+const RANK_EX_KEY = 'vlp_rank_excluded'; // fallback LS; chính ở settings.rankExcluded
+
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+function isUserBanned(u) {
+  if (!u) return true;
+  if (u.banUntil) {
+    const t = new Date(u.banUntil).getTime();
+    if (t > Date.now()) return true;
+    // hết hạn → coi như mở (sẽ clear async khi login/snapshot)
+    if (u.banned) return false;
+  }
+  return !!u.banned;
+}
+
+function formatBanUntil(u) {
+  if (!u) return '';
+  if (u.banUntil) {
+    const t = new Date(u.banUntil).getTime();
+    if (t > Date.now()) {
+      const left = t - Date.now();
+      return 'đến ' + new Date(t).toLocaleString('vi-VN') + ' (còn ' + formatCountdown(left) + ')';
+    }
+    return '';
+  }
+  return u.banned ? 'vĩnh viễn' : '';
+}
+
+async function clearExpiredBan(u) {
+  if (!u || !u.username) return u;
+  if (u.banUntil && new Date(u.banUntil).getTime() <= Date.now() && u.banned) {
+    const updated = { ...u, banned: false };
+    delete updated.banReason;
+    delete updated.banUntil;
+    delete updated.banDuration;
+    await updateUser(u.username, updated);
+    return updated;
+  }
+  return u;
+}
+
+function getRankExcluded() {
+  const s = getSettings();
+  return (s && s.rankExcluded) || {};
+}
+
+function isRankExcluded(username) {
+  return !!getRankExcluded()[username];
+}
+
+async function setRankExcluded(username, excluded) {
+  const s = { ...getSettings() };
+  const map = { ...(s.rankExcluded || {}) };
+  if (excluded) map[username] = true;
+  else delete map[username];
+  s.rankExcluded = map;
+  await saveSettings(s);
+}
+
+function flagUser(username, flag, detail) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return Promise.resolve();
+  const flags = Array.isArray(u.flags) ? [...u.flags] : [];
+  const entry = { flag, detail: String(detail || '').slice(0, 120), at: new Date().toISOString() };
+  // tránh spam cùng flag trong 1h
+  const recent = flags.find(f => f.flag === flag && (Date.now() - new Date(f.at).getTime()) < 3600000);
+  if (recent) return Promise.resolve();
+  flags.unshift(entry);
+  const updated = { ...u, flags: flags.slice(0, 30), suspicious: true, lastFlagAt: entry.at };
+  return updateUser(username, updated);
+}
+
+function attachDevice(username) {
+  const u = (localUsers || {})[username];
+  if (!u) return Promise.resolve();
+  const did = getDeviceId();
+  const ids = Array.isArray(u.deviceIds) ? [...u.deviceIds] : [];
+  if (!ids.includes(did)) {
+    ids.unshift(did);
+    return updateUser(username, { ...u, deviceIds: ids.slice(0, 8), lastDeviceId: did });
+  }
+  if (u.lastDeviceId !== did) return updateUser(username, { ...u, lastDeviceId: did });
+  return Promise.resolve();
+}
+
+function countAccountsOnDevice(deviceId) {
+  if (!deviceId) return 0;
+  return getUsersArr().filter(u => Array.isArray(u.deviceIds) && u.deviceIds.includes(deviceId)).length;
+}
+
 
 let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null, localKeys = null;
 let firebaseReady = false, me = null, currentItem = null, verifiedSteps = [];
@@ -714,7 +825,7 @@ function getOrdersArr() {
   return arr;
 }
 function getSettings() {
-  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86' };
+  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {} };
 }
 function getLogsArr() {
   const arr = Object.values(localLogs || {});
@@ -736,7 +847,25 @@ function fbErr(e, label) {
   } else toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
 }
 
-function saveUsers(obj) { localUsers = obj; lsSet(LS_USERS, { data: obj }); return db.collection(COL).doc('users').set({ data: obj }).catch(e => fbErr(e, 'saveUsers')); }
+function saveUsers(obj) {
+  localUsers = obj || {};
+  lsSet(LS_USERS, { data: localUsers });
+  // Ghi merge-safe: lấy snapshot hiện tại rồi gộp, tránh up code / race xóa mất user
+  return db.collection(COL).doc('users').get().then(snap => {
+    const remote = (snap.exists && snap.data() && snap.data().data) || {};
+    const merged = { ...remote, ...localUsers };
+    // Không bao giờ ghi đè remote bằng object rỗng hơn nhiều user (trừ khi admin cố ý)
+    if (Object.keys(remote).length > Object.keys(localUsers).length + 2 && Object.keys(localUsers).length <= 1) {
+      console.warn('saveUsers: skip overwrite risk', Object.keys(remote).length, Object.keys(localUsers).length);
+      localUsers = { ...remote, ...localUsers };
+      lsSet(LS_USERS, { data: localUsers });
+      return db.collection(COL).doc('users').set({ data: localUsers });
+    }
+    localUsers = merged;
+    lsSet(LS_USERS, { data: localUsers });
+    return db.collection(COL).doc('users').set({ data: localUsers });
+  }).catch(e => fbErr(e, 'saveUsers'));
+}
 function saveItems(obj) { localItems = obj || {}; lsSet(LS_ITEMS, { data: localItems }); return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems')); }
 function saveOrders(obj) { localOrders = obj || {}; lsSet(LS_ORDERS, { data: localOrders }); return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders')); }
 function saveSettings(obj) { localSettings = obj; lsSet(LS_SETTINGS, { data: obj }); return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings')); }
@@ -765,7 +894,12 @@ function deleteSecretContent(itemId) {
   }).catch(e => fbErr(e, 'deleteSecretContent'));
 }
 
-function updateUser(username, data) { if (!localUsers) localUsers = {}; localUsers[username] = data; return saveUsers(localUsers); }
+function updateUser(username, data) {
+  if (!localUsers) localUsers = {};
+  localUsers[username] = data;
+  lsSet(LS_USERS, { data: localUsers });
+  return saveUsers(localUsers);
+}
 function updateItem(id, data) { if (!localItems) localItems = {}; localItems[id] = data; return saveItems(localItems); }
 function removeItem(id) {
   if (localItems && localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false };
@@ -806,7 +940,7 @@ function checkFirebaseReady() {
   }
 }
 
-const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86' };
+const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {} };
 
 async function ensureDefaults() {
   if (!localUsers) localUsers = {};
@@ -831,6 +965,7 @@ async function ensureDefaults() {
     await saveSettings(localSettings);
   }
   if (!localLogs) { localLogs = {}; await saveLogs(localLogs); }
+  if (localSettings.rankExcluded === undefined) { localSettings = { ...localSettings, rankExcluded: {} }; await saveSettings(localSettings); }
   if (!getSettings().seededDemo) { localSettings = { ...getSettings(), seededDemo: true }; await saveSettings(localSettings); }
 }
 
@@ -859,10 +994,15 @@ function startListeners() {
     if (first) ensureDefaults().then(() => checkFirebaseReady());
     if (me && localUsers[me.username]) {
       const updated = localUsers[me.username];
-      if (updated.banned && !me.banned) {
+      if (isUserBanned(updated) && !isUserBanned(me)) {
         me = updated;
-        showBanLive(updated.banReason || 'Vi phạm quy định');
+        const until = formatBanUntil(updated);
+        showBanLive((updated.banReason || 'Vi phạm quy định') + (until ? ' — ' + until : ''));
         return;
+      }
+      // auto clear expired
+      if (updated.banUntil && new Date(updated.banUntil).getTime() <= Date.now() && updated.banned) {
+        clearExpiredBan(updated).then(x => { me = x; });
       }
       me = updated;
     }
@@ -1026,7 +1166,17 @@ async function doLogin() {
   if (!u || !p) { showAlert('loginErr', '⚠️ Điền đầy đủ thông tin', 'err'); return; }
   const found = (localUsers || {})[u];
   if (!found) { showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err'); return; }
-  if (found.banned) { showAlert('loginErr', '🚫 Tài khoản bị khóa' + (found.banReason ? ': ' + found.banReason : ''), 'err'); return; }
+  // clear ban hết hạn
+  if (found.banUntil && new Date(found.banUntil).getTime() <= Date.now() && found.banned) {
+    found = { ...found, banned: false };
+    delete found.banReason; delete found.banUntil; delete found.banDuration;
+    localUsers[u] = found;
+  }
+  if (isUserBanned(found)) {
+    const until = formatBanUntil(found);
+    showAlert('loginErr', '🚫 Tài khoản bị khóa' + (found.banReason ? ': ' + found.banReason : '') + (until ? ' (' + until + ')' : ''), 'err');
+    return;
+  }
 
   isBusy = true;
   document.getElementById('btnLogin').disabled = true;
@@ -1046,6 +1196,10 @@ async function doLogin() {
     me = user;
     me.lastLogin = new Date().toISOString();
     await updateUser(u, me);
+    await attachDevice(u);
+    // multi-acc cùng máy
+    const nDev = countAccountsOnDevice(getDeviceId());
+    if (nDev >= 4) flagUser(u, 'multi_device', nDev + ' acc trên cùng thiết bị');
     const remember = document.getElementById('cbRemember').checked;
     localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000) }));
     if (remember) localStorage.setItem(REMEMBER_K, u); else localStorage.removeItem(REMEMBER_K);
@@ -1072,8 +1226,11 @@ async function doRegister() {
   document.getElementById('btnReg').disabled = true;
   try {
     const { hash, salt } = await hashPassword(p);
-    const nu = { username: u, passwordHash: hash, passwordSalt: salt, display: name, role: 'user', avatar: '👤', joined: new Date().toISOString(), banned: false };
+    const did = getDeviceId();
+    const nu = { username: u, passwordHash: hash, passwordSalt: salt, display: name, role: 'user', avatar: '👤', joined: new Date().toISOString(), banned: false, deviceIds: [did], lastDeviceId: did };
     await updateUser(u, nu);
+    const nDev = countAccountsOnDevice(did);
+    if (nDev >= 3) await flagUser(u, 'multi_device', 'Đăng ký acc thứ ' + nDev + ' trên cùng máy');
     showAlert('regOk', '✅ Thành công! Đang đăng nhập...', 'ok');
     setTimeout(() => { me = nu; localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + 7 * 86400000 })); enterMain(); }, 700);
   } finally { isBusy = false; document.getElementById('btnReg').disabled = false; }
@@ -1097,8 +1254,9 @@ function tryAutoLogin() {
       const sess = JSON.parse(saved);
       if (sess.exp && Date.now() > sess.exp) { localStorage.removeItem(SESSION_K); return; }
       const found = (localUsers || {})[sess.username];
-      if (found && !found.banned) {
+      if (found && !isUserBanned(found)) {
         me = found;
+        attachDevice(found.username);
         if (me.mustChangePass && me.role === 'admin') document.getElementById('forcePassModal').classList.add('open');
         else enterMain();
       }
@@ -1217,7 +1375,8 @@ function formatCountdown(ms) {
 function renderRankList() {
   const list = document.getElementById('rankList');
   if (!list) return;
-  const weekOrders = getOrdersArr().filter(o => isWeek(o.createdAt) && o.status === 'success');
+  const excluded = getRankExcluded();
+  const weekOrders = getOrdersArr().filter(o => isWeek(o.createdAt) && o.status === 'success' && !excluded[o.user]);
   const map = {};
   weekOrders.forEach(o => {
     if (!map[o.user]) map[o.user] = { user: o.user, display: o.display || o.user, count: 0 };
@@ -1229,25 +1388,43 @@ function renderRankList() {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><div>Chưa có dữ liệu tuần này</div></div>';
     return;
   }
+  const isAdmin = me && me.role === 'admin';
   list.innerHTML = ranked.map((r, i) => {
     const posClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'ro';
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
     const u = (localUsers || {})[r.user];
     const ava = (u && u.avatar) || '👤';
+    const rmBtn = isAdmin ? `<button class="btn btn-xs btn-red" style="margin-left:6px" onclick="adminExcludeRank('${r.user}')" title="Gỡ khỏi xếp hạng">✕</button>` : '';
     return `<div class="rank-row">
       <div class="rank-pos ${posClass}">${medal}</div>
       <div class="rank-info">
         <div class="rank-name">${ava} ${esc(r.display)}</div>
         <div class="rank-sub">@${esc(r.user)}</div>
       </div>
-      <div class="rank-score">${r.count}</div>
+      <div class="rank-score">${r.count}${rmBtn}</div>
     </div>`;
   }).join('');
+}
+async function adminExcludeRank(username) {
+  if (!me || me.role !== 'admin') return;
+  if (!confirm('Gỡ @' + username + ' khỏi bảng xếp hạng tuần?')) return;
+  await setRankExcluded(username, true);
+  addLog('rank_exclude', username);
+  renderRankList();
+  toast('Đã gỡ @' + username + ' khỏi xếp hạng', 'ok');
+}
+async function adminIncludeRank(username) {
+  if (!me || me.role !== 'admin') return;
+  await setRankExcluded(username, false);
+  addLog('rank_include', username);
+  renderRankList();
+  if (curAdminTab === 'users' || curAdminTab === 'fraud') aTab(curAdminTab, false);
+  toast('Đã cho @' + username + ' hiện lại trên xếp hạng', 'ok');
 }
 
 async function redeemKey() {
   if (!me) { toast('Cần đăng nhập', 'err'); return; }
-  if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
+  if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   const code = (document.getElementById('redeemKeyInp').value || '').trim().toUpperCase();
   if (!code) { toast('Nhập key', 'err'); return; }
   if (!checkRate('redeem', 10, 60000)) { toast('Thử quá nhiều', 'err'); return; }
@@ -1558,7 +1735,7 @@ function startComingSoonTimers() {
 // ===== BYPASS =====
 function openBypass(id) {
   if (!me) return;
-  if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
+  if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
   if (!currentItem || currentItem.active === false || currentItem.deleted) return;
   if (isComingSoon(currentItem)) {
@@ -1703,8 +1880,14 @@ async function openLink(idx) {
   localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify({
     code, user: me.username, itemId: item.id, round: idx,
     exp: Date.now() + 30 * 60 * 1000,
-    fromServer
+    fromServer,
+    startedAt: Date.now()
   }));
+  // lưu mốc bắt đầu item để đo tốc độ vượt
+  try {
+    const stKey = 'vlp_start_' + item.id + '_' + me.username;
+    if (!localStorage.getItem(stKey)) localStorage.setItem(stKey, String(Date.now()));
+  } catch(e) {}
   setCooldown(item.id, idx);
 
   const revealUrl = location.origin + location.pathname +
@@ -1785,6 +1968,15 @@ function showResult() {
       user: me.username, display: me.display, itemId: item.id, itemName: item.name,
       status: 'success', createdAt: new Date().toISOString()
     });
+    // anti-abuse: vượt quá nhanh
+    try {
+      const stKey = 'vlp_start_' + item.id + '_' + me.username;
+      const started = parseInt(localStorage.getItem(stKey) || '0', 10);
+      localStorage.removeItem(stKey);
+      if (started && (Date.now() - started) < 45000) {
+        flagUser(me.username, 'too_fast', 'Hoàn thành item trong ' + Math.round((Date.now()-started)/1000) + 's');
+      }
+    } catch(e) {}
     toast('🎉 Hoàn thành!', 'ok');
     setTimeout(() => renderItemGrid(), 500);
   });
@@ -1816,7 +2008,7 @@ function aTab(t, resetPage) {
   const prev = curAdminTab;
   curAdminTab = t;
   document.querySelectorAll('.atab').forEach((b, i) => {
-    b.classList.toggle('active', ['dash','items','users','orders','keys','logs','settings'][i] === t);
+    b.classList.toggle('active', ['dash','items','users','fraud','orders','keys','logs','settings'][i] === t);
   });
   // Chỉ reset trang khi đổi tab (không reset khi bấm phân trang)
   if (resetPage !== false && prev !== t) {
@@ -1830,6 +2022,7 @@ function renderAdminBody(t) {
   if (t === 'dash') renderDash(body);
   else if (t === 'items') renderItemsAdmin(body);
   else if (t === 'users') renderUsersAdmin(body);
+  else if (t === 'fraud') renderFraudAdmin(body);
   else if (t === 'orders') renderOrdersAdmin(body);
   else if (t === 'keys') renderKeysAdmin(body);
   else if (t === 'logs') renderLogsAdmin(body);
@@ -1838,7 +2031,7 @@ function renderAdminBody(t) {
 
 function renderDash(body) {
   const users = getUsersArr().filter(u => u.role !== 'admin').length;
-  const banned = getUsersArr().filter(u => u.banned).length;
+  const banned = getUsersArr().filter(u => isUserBanned(u)).length;
   const items = getItemsArr().filter(i => i.active !== false).length;
   const orders = getOrdersArr();
   const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
@@ -1946,6 +2139,72 @@ function clearAllItems() {
   });
 }
 
+
+function renderFraudAdmin(body) {
+  const users = getUsersArr().filter(u => u.role !== 'admin');
+  const flagged = users.filter(u => u.suspicious || (u.flags && u.flags.length) || (u.deviceIds && u.deviceIds.length >= 2));
+  // multi-device groups
+  const byDev = {};
+  users.forEach(u => (u.deviceIds || []).forEach(d => {
+    if (!byDev[d]) byDev[d] = [];
+    byDev[d].push(u.username);
+  }));
+  const multi = Object.entries(byDev).filter(([, arr]) => arr.length >= 2).sort((a,b) => b[1].length - a[1].length);
+  const excluded = Object.keys(getRankExcluded());
+
+  body.innerHTML = `
+    <div class="sec-title">🛡 NGHI VẤN / ANTI-ABUSE</div>
+    <div class="alert alert-info show" style="margin-bottom:12px">Tự gắn cờ: vượt &lt; 45s, ≥3–4 acc cùng máy. Admin có thể khóa / ẩn xếp hạng.</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">${flagged.length} user có cờ · ${multi.length} nhóm máy dùng chung · ${excluded.length} ẩn xếp hạng</div>
+    <div class="tbl-wrap" style="margin-bottom:16px">
+      <table class="dtbl">
+        <thead><tr><th>User</th><th>Cờ gần nhất</th><th>Máy</th><th></th></tr></thead>
+        <tbody>
+          ${flagged.length ? flagged.slice(0, 50).map(u => {
+            const last = (u.flags && u.flags[0]) ? (u.flags[0].flag + ': ' + (u.flags[0].detail||'')) : (u.suspicious ? 'suspicious' : '—');
+            return `<tr>
+              <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong><br><span style="color:var(--sub);font-size:11px">@${esc(u.username)}</span></td>
+              <td style="font-size:11px">${esc(last)}</td>
+              <td style="font-size:11px">${(u.deviceIds||[]).length}</td>
+              <td style="white-space:nowrap">
+                <button class="btn btn-xs btn-red" onclick="openBanModal('${u.username}')">Khóa</button>
+                <button class="btn btn-xs btn-ghost" onclick="clearUserFlags('${u.username}')">Xóa cờ</button>
+              </td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:16px">Chưa có nghi vấn</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="sec-title">📱 Cùng thiết bị</div>
+    <div class="tbl-wrap" style="margin-bottom:16px">
+      <table class="dtbl">
+        <thead><tr><th>Device</th><th>Số acc</th><th>Usernames</th></tr></thead>
+        <tbody>
+          ${multi.length ? multi.slice(0, 30).map(([d, arr]) => `<tr>
+            <td style="font-size:10px;font-family:monospace">${esc(d.slice(0,14))}…</td>
+            <td>${arr.length}</td>
+            <td style="font-size:11px">${arr.map(x => '@'+esc(x)).join(', ')}</td>
+          </tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--sub);padding:16px">Không có</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="sec-title">🏆 Đang ẩn khỏi xếp hạng</div>
+    <div style="font-size:12px;color:var(--sub)">
+      ${excluded.length ? excluded.map(x => `<div style="margin:6px 0">@${esc(x)} <button class="btn btn-xs btn-green" onclick="adminIncludeRank('${x}')">Hiện lại</button></div>`).join('') : 'Không có ai bị ẩn'}
+    </div>
+  `;
+}
+function clearUserFlags(username) {
+  const u = (localUsers || {})[username];
+  if (!u) return;
+  const updated = { ...u, suspicious: false, flags: [] };
+  updateUser(username, updated).then(() => {
+    addLog('clear_flags', username);
+    toast('Đã xóa cờ @' + username, 'ok');
+    aTab('fraud', false);
+  });
+}
+
 function renderUsersAdmin(body) {
   const allUsers = getUsersArr().filter(u => u.role !== 'admin');
   allUsers.sort((a, b) => (b.createdAt || b.joinDate || '').localeCompare(a.createdAt || a.joinDate || ''));
@@ -1970,10 +2229,11 @@ function renderUsersAdmin(body) {
               <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong>${u.banReason?`<br><span style="font-size:9px;color:var(--red)">${esc(u.banReason)}</span>`:''}</td>
               <td style="color:var(--sub)">@${esc(u.username)}</td>
               <td>${orders.filter(o => o.user === u.username).length}</td>
-              <td><span class="bdg ${u.banned?'bdg-no':'bdg-ok'}">${u.banned?'Khóa':'OK'}</span></td>
+              <td><span class="bdg ${isUserBanned(u)?'bdg-no':'bdg-ok'}">${isUserBanned(u)?'Khóa':'OK'}</span>${u.suspicious?' <span class="bdg bdg-no" title="Nghi vấn">⚠</span>':''}${isRankExcluded(u.username)?' <span class="bdg" style="background:#333;color:#aaa">Ẩn hạng</span>':''}${formatBanUntil(u)?`<br><span style="font-size:9px;color:var(--red)">${esc(formatBanUntil(u))}</span>`:''}</td>
               <td style="white-space:nowrap">
-                <button class="btn btn-xs ${u.banned?'btn-green':'btn-red'}" onclick="${u.banned?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${u.banned?'Mở':'Khóa'}</button>
+                <button class="btn btn-xs ${isUserBanned(u)?'btn-green':'btn-red'}" onclick="${isUserBanned(u)?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${isUserBanned(u)?'Mở':'Khóa'}</button>
                 <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
+                <button class="btn btn-xs ${isRankExcluded(u.username)?'btn-green':'btn-ghost'}" onclick="${isRankExcluded(u.username)?`adminIncludeRank('${u.username}')`:`adminExcludeRank('${u.username}')`}" title="Xếp hạng">${isRankExcluded(u.username)?'Hiện hạng':'Ẩn hạng'}</button>
               </td>
             </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
         </tbody>
@@ -1998,9 +2258,9 @@ function filterUserTable(q) {
       <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong>${u.banReason?`<br><span style="font-size:9px;color:var(--red)">${esc(u.banReason)}</span>`:''}</td>
       <td style="color:var(--sub)">@${esc(u.username)}</td>
       <td>${orders.filter(o => o.user === u.username).length}</td>
-      <td><span class="bdg ${u.banned?'bdg-no':'bdg-ok'}">${u.banned?'Khóa':'OK'}</span></td>
+      <td><span class="bdg ${isUserBanned(u)?'bdg-no':'bdg-ok'}">${isUserBanned(u)?'Khóa':'OK'}</span>${u.suspicious?' <span class="bdg bdg-no">⚠</span>':''}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-xs ${u.banned?'btn-green':'btn-red'}" onclick="${u.banned?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${u.banned?'Mở':'Khóa'}</button>
+        <button class="btn btn-xs ${isUserBanned(u)?'btn-green':'btn-red'}" onclick="${isUserBanned(u)?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${isUserBanned(u)?'Mở':'Khóa'}</button>
         <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
       </td>
     </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Không tìm thấy</td></tr>';
@@ -2033,31 +2293,50 @@ function openBanModal(username) {
   banTargetUser = username;
   document.getElementById('banUserName').value = username;
   document.getElementById('banReason').value = '';
+  const dur = document.getElementById('banDuration');
+  if (dur) dur.value = '0';
   document.getElementById('banModal').classList.add('open');
 }
 function closeBanModal() { document.getElementById('banModal').classList.remove('open'); banTargetUser = null; }
 function confirmBan() {
   if (!banTargetUser) return;
   const reason = (document.getElementById('banReason').value || '').trim() || 'Vi phạm quy định';
+  const dur = parseInt((document.getElementById('banDuration') || {}).value || '0', 10) || 0;
   const u = (localUsers || {})[banTargetUser];
   if (!u || u.role === 'admin') return;
   u.banned = true;
   u.banReason = reason;
+  if (dur > 0) {
+    u.banUntil = new Date(Date.now() + dur * 1000).toISOString();
+    u.banDuration = dur;
+  } else {
+    delete u.banUntil;
+    delete u.banDuration;
+  }
   updateUser(banTargetUser, u).then(() => {
-    addLog('ban_user', banTargetUser + ' — ' + reason);
+    const label = dur > 0 ? formatBanUntil(u) : 'vĩnh viễn';
+    addLog('ban_user', banTargetUser + ' — ' + reason + ' (' + label + ')');
     closeBanModal();
-    toast('🚫 Đã khóa @' + banTargetUser, 'ok');
+    toast('🚫 Đã khóa @' + banTargetUser + (dur > 0 ? ' (' + label + ')' : ' vĩnh viễn'), 'ok');
     aTab('users');
   });
 }
 function toggleBan(username) {
   const u = (localUsers || {})[username];
   if (!u || u.role === 'admin') return;
-  u.banned = !u.banned;
-  if (!u.banned) delete u.banReason;
+  if (isUserBanned(u)) {
+    u.banned = false;
+    delete u.banReason;
+    delete u.banUntil;
+    delete u.banDuration;
+  } else {
+    u.banned = true;
+    u.banReason = u.banReason || 'Vi phạm quy định';
+    delete u.banUntil;
+  }
   updateUser(username, u).then(() => {
-    addLog(u.banned ? 'ban_user' : 'unban_user', username);
-    toast(u.banned ? '🚫 Đã khóa' : '✅ Đã mở khóa', 'ok');
+    addLog(isUserBanned(u) ? 'ban_user' : 'unban_user', username);
+    toast(isUserBanned(u) ? '🚫 Đã khóa' : '✅ Đã mở khóa', 'ok');
     aTab('users');
   });
 }
