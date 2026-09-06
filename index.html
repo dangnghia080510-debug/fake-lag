@@ -3,73 +3,78 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>⚡ hackfree Pro v2.5</title>
+<title>⚡ VượtLink Pro v3</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;500;600;700;900&display=swap');
 :root{
-  --bg:#07080c;--panel:#0d1018;--card:#111620;--border:#1a2232;
-  --gold:#f5c542;--gold2:#c9971a;--cyan:#00d4ff;--cyan2:#007fa8;
+  --bg:#05060a;--panel:#0a0d14;--card:#0e1320;--border:#1a2438;
+  --gold:#f5c542;--gold2:#c9971a;--cyan:#00e5ff;--cyan2:#0090b8;
   --green:#00e676;--green2:#00a152;--red:#ff3b5c;--red2:#b71c3a;
-  --purple:#9c27b0;--purple2:#6a0080;--text:#dde6f0;--sub:#4e6378;
-  --glow-gold:0 0 16px #f5c54244;--glow-cyan:0 0 16px #00d4ff33;--glow-green:0 0 16px #00e67633;
+  --purple:#b14dff;--purple2:#7a1fff;--text:#e8f0fa;--sub:#5a6f88;
+  --glow-gold:0 0 20px #f5c54255;--glow-cyan:0 0 20px #00e5ff44;--glow-green:0 0 16px #00e67644;
+  --glow-purple:0 0 18px #b14dff44;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%;overflow-x:hidden}
 body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text)}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,212,255,.012) 3px,rgba(0,212,255,.012) 4px);pointer-events:none;z-index:9990}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse at 20% 0%,#0a1a30 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 100%,#120a28 0%,transparent 45%),
+  repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,229,255,.008) 3px,rgba(0,229,255,.008) 4px);
+  pointer-events:none;z-index:9990}
 
 .page{display:none;min-height:100vh;flex-direction:column}
 .page.active{display:flex}
 
-.topnav{background:#0d1018ee;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px);position:sticky;top:0;z-index:200}
-.brand{display:flex;align-items:center;gap:8px;text-decoration:none}
-.brand-icon{font-size:20px;filter:drop-shadow(0 0 6px #00d4ff)}
-.brand-name{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+.topnav{background:rgba(10,13,20,.92);border-bottom:1px solid var(--border);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(14px);position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-icon{font-size:22px;filter:drop-shadow(0 0 8px #00e5ff)}
+.brand-name{font-family:'Orbitron',sans-serif;font-size:17px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1.5px}
 .nav-right{display:flex;gap:8px;align-items:center}
 
-.admin-topbar{background:#0d1018;border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200}
-.admin-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid var(--gold);box-shadow:var(--glow-gold);position:relative;flex-shrink:0}
+.admin-topbar{background:#0a0d14;border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200}
+.admin-ava{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid var(--gold);box-shadow:var(--glow-gold);position:relative;flex-shrink:0}
 .admin-tick{position:absolute;bottom:-2px;right:-2px;background:#1d9bf0;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-size:8px;border:1.5px solid var(--panel);color:#fff;font-weight:900}
 .admin-info{flex:1}
 .admin-dname{font-weight:700;font-size:14px;color:var(--gold)}
 .admin-sub{font-size:10px;color:var(--sub)}
 .admin-back{background:none;border:1px solid var(--border);border-radius:8px;color:var(--sub);padding:5px 10px;font-size:12px;cursor:pointer;font-family:'Exo 2',sans-serif}
 
-.btn{padding:10px 16px;border:none;border-radius:10px;font-family:'Exo 2',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:.18s;letter-spacing:.4px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn{padding:10px 16px;border:none;border-radius:11px;font-family:'Exo 2',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:.18s;letter-spacing:.4px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn:active{transform:scale(.95)}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
 .btn-cyan{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#040810;box-shadow:var(--glow-cyan)}
-.btn-cyan:hover:not(:disabled){filter:brightness(1.1)}
+.btn-cyan:hover:not(:disabled){filter:brightness(1.12)}
 .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0600;box-shadow:var(--glow-gold)}
-.btn-gold:hover:not(:disabled){filter:brightness(1.1)}
+.btn-gold:hover:not(:disabled){filter:brightness(1.12)}
 .btn-green{background:linear-gradient(135deg,var(--green),var(--green2));color:#010e05;box-shadow:var(--glow-green)}
-.btn-green:hover:not(:disabled){filter:brightness(1.1)}
+.btn-green:hover:not(:disabled){filter:brightness(1.12)}
 .btn-red{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff}
+.btn-purple{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:var(--glow-purple)}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--sub)}
 .btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
 .btn-sm{padding:7px 12px;font-size:12px;border-radius:8px}
 .btn-xs{padding:5px 9px;font-size:11px;border-radius:7px}
 .btn-full{width:100%}
 
-.inp{width:100%;padding:11px 13px;background:#080b11;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:14px;outline:none;transition:.18s}
-.inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #00d4ff12}
+.inp{width:100%;padding:11px 13px;background:#070a11;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:14px;outline:none;transition:.18s}
+.inp:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #00e5ff15}
 .inp::placeholder{color:#2a3a4a}
 .inp-label{font-size:11px;color:var(--sub);margin-bottom:5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
 .inp-group{margin-bottom:13px}
 textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
-select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%234e6378'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
 
-#authPage{background:radial-gradient(ellipse at 40% 10%,#0b1e36 0%,#07080c 55%);align-items:center;justify-content:center;padding:18px}
+#authPage{background:radial-gradient(ellipse at 40% 10%,#0b1e36 0%,#05060a 55%);align-items:center;justify-content:center;padding:18px}
 .auth-logo{text-align:center;margin-bottom:24px}
-.auth-icon{font-size:52px;display:block;filter:drop-shadow(0 0 18px #00d4ff);margin-bottom:6px;animation:float 3s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.auth-title{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}
-.auth-sub{font-size:11px;color:var(--sub);margin-top:3px;letter-spacing:1px}
-.auth-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:390px;box-shadow:0 16px 50px #00000060,0 0 30px #00d4ff08}
-.auth-tabs{display:flex;gap:4px;margin-bottom:20px;background:#080b11;border-radius:10px;padding:4px}
-.auth-tab{flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:.18s}
+.auth-icon{font-size:56px;display:block;filter:drop-shadow(0 0 22px #00e5ff);margin-bottom:6px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.auth-title{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:800;background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}
+.auth-sub{font-size:11px;color:var(--sub);margin-top:4px;letter-spacing:1.2px}
+.auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:390px;box-shadow:0 20px 60px #00000070,0 0 40px #00e5ff0a}
+.auth-tabs{display:flex;gap:4px;margin-bottom:20px;background:#070a11;border-radius:10px;padding:4px}
+.auth-tab{flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:.18s}
 .auth-tab.active{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#040810}
 .remember-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .remember-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--cyan);cursor:pointer}
@@ -82,137 +87,170 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 .alert-info{background:#050d18;border:1px solid var(--cyan);color:var(--cyan)}
 .alert-warn{background:#1a1505;border:1px solid var(--gold);color:var(--gold)}
 
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--cyan);border-radius:11px;padding:10px 18px;z-index:9999;font-size:13px;color:var(--cyan);transition:.28s;white-space:nowrap;box-shadow:var(--glow-cyan);max-width:90vw;text-align:center}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--cyan);border-radius:12px;padding:11px 18px;z-index:9999;font-size:13px;color:var(--cyan);transition:.28s;white-space:nowrap;box-shadow:var(--glow-cyan);max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.t-ok{border-color:var(--green);color:var(--green);box-shadow:var(--glow-green)}
 .toast.t-err{border-color:var(--red);color:var(--red)}
 
-.modal-bg{display:none;position:fixed;inset:0;background:#000000aa;z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal-bg{display:none;position:fixed;inset:0;background:#000000bb;z-index:500;align-items:center;justify-content:center;padding:16px}
 .modal-bg.open{display:flex}
-.modal-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #00000080}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px #00000090}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.modal-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--gold)}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:var(--gold)}
 .modal-close{background:none;border:none;color:var(--sub);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px}
 .modal-close:hover{color:var(--red)}
 
 #mainPage{flex-direction:column}
-.user-bar{background:#0d1018;border-bottom:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
-.user-chip{display:flex;align-items:center;gap:8px;cursor:pointer}
-.user-ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:14px;border:1.5px solid var(--cyan);flex-shrink:0}
+.user-bar{background:#0a0d14;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.user-chip{display:flex;align-items:center;gap:9px;cursor:pointer}
+.user-ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan2));display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--cyan);flex-shrink:0;box-shadow:0 0 10px #00e5ff33}
 .user-dname{font-size:13px;font-weight:700;color:var(--cyan)}
 .user-join{font-size:10px;color:var(--sub)}
-.role-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
+.role-badge{font-size:10px;padding:3px 9px;border-radius:6px;font-weight:700}
 .rb-admin{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#0a0600}
 .rb-user{background:linear-gradient(90deg,var(--cyan),var(--cyan2));color:#040810}
-.rb-banned{background:linear-gradient(90deg,var(--red),var(--red2));color:#fff}
 
-.content-area{flex:1;padding:12px;max-width:620px;margin:0 auto;width:100%}
-.sec-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
-.sec-title::before{content:'';display:block;width:3px;height:16px;background:var(--cyan);border-radius:2px;flex-shrink:0}
-.item-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.18s}
-.item-card:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
-.item-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background:linear-gradient(135deg,#0f1e30,#0a1220)}
-.item-info{flex:1;min-width:0}
-.item-name{font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item-desc{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
-.item-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rounds-badge{font-size:10px;background:#00d4ff18;border:1px solid var(--cyan);color:var(--cyan);padding:2px 8px;border-radius:6px;font-weight:700}
-.cat-badge{font-size:10px;background:#f5c54218;border:1px solid var(--gold);color:var(--gold);padding:2px 8px;border-radius:6px;font-weight:700}
-.empty-state{text-align:center;padding:50px 20px;color:var(--sub)}
-.empty-icon{font-size:44px;margin-bottom:10px;opacity:.4}
+.content-area{flex:1;padding:14px;max-width:680px;margin:0 auto;width:100%}
+.sec-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--cyan);letter-spacing:1.2px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';display:block;width:3px;height:14px;background:linear-gradient(180deg,var(--cyan),var(--purple));border-radius:2px;flex-shrink:0}
+
+/* ===== PRODUCT GRID (Gaming style) ===== */
+.product-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:520px){.product-grid{grid-template-columns:repeat(2,1fr)}}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:.22s;position:relative}
+.product-card:hover{border-color:var(--cyan);box-shadow:0 0 24px #00e5ff22,0 8px 24px #00000050;transform:translateY(-2px)}
+.product-card.done{opacity:.55;pointer-events:none}
+.product-card.done::after{content:'ĐÃ LẤY';position:absolute;top:10px;left:10px;background:var(--green);color:#010e05;font-size:9px;font-weight:800;padding:3px 8px;border-radius:6px;z-index:2;letter-spacing:.5px}
+.product-img-wrap{position:relative;width:100%;aspect-ratio:1;background:linear-gradient(145deg,#0c1220,#080c16);overflow:hidden}
+.product-img{width:100%;height:100%;object-fit:cover;display:block}
+.product-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:.7}
+.product-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.4px;z-index:2}
+.badge-hot{background:linear-gradient(135deg,#ff3b5c,#ff6b35);color:#fff;box-shadow:0 0 10px #ff3b5c55}
+.badge-sale{background:linear-gradient(135deg,var(--gold),#ff9f1a);color:#0a0600}
+.badge-new{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff}
+.product-body{padding:10px 11px 12px}
+.product-name{font-weight:700;font-size:13px;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-desc{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:7px}
+.product-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.rounds-badge{font-size:10px;background:#00e5ff15;border:1px solid var(--cyan);color:var(--cyan);padding:2px 7px;border-radius:6px;font-weight:700}
+.cat-badge{font-size:9px;background:#f5c54215;border:1px solid var(--gold);color:var(--gold);padding:2px 6px;border-radius:5px;font-weight:700}
+.product-btn{margin-top:8px;width:100%;padding:8px;border:none;border-radius:9px;background:linear-gradient(135deg,#b14dff,#6a1fff);color:#fff;font-family:'Exo 2',sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.3px;box-shadow:0 0 14px #b14dff33}
+.product-btn:active{transform:scale(.97)}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--sub);grid-column:1/-1}
+.empty-icon{font-size:48px;margin-bottom:10px;opacity:.4}
 
 .search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.search-inp{flex:1;min-width:140px;padding:9px 12px;background:#080b11;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none}
+.search-inp{flex:1;min-width:140px;padding:10px 13px;background:#070a11;border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none}
 .search-inp:focus{border-color:var(--cyan)}
-.cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.cat-chip{padding:5px 12px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--sub);font-size:11px;font-weight:600;cursor:pointer;font-family:'Exo 2',sans-serif;transition:.15s}
-.cat-chip.active{border-color:var(--gold);color:var(--gold);background:#f5c54215}
+.cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.cat-chip{padding:6px 13px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--sub);font-size:11px;font-weight:600;cursor:pointer;font-family:'Exo 2',sans-serif;transition:.15s}
+.cat-chip.active{border-color:var(--gold);color:var(--gold);background:#f5c54215;box-shadow:0 0 10px #f5c54222}
 
 .bypass-steps{margin-bottom:16px}
-.step-item{background:#080b11;border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px}
+.step-item{background:#070a11;border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px}
 .step-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .step-num{width:26px;height:26px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sub);flex-shrink:0;transition:.3s}
 .step-num.done{background:var(--green);color:#010e05}
-.step-num.active{background:var(--cyan);color:#040810}
+.step-num.active{background:var(--cyan);color:#040810;box-shadow:0 0 10px #00e5ff55}
 .step-label{font-size:13px;font-weight:700;color:var(--text)}
 .step-body{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.code-inp{flex:1;min-width:120px;padding:9px 11px;background:#040608;border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;transition:.18s;-webkit-user-select:text;user-select:text}
-.code-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #00d4ff22}
+.code-inp{flex:1;min-width:120px;padding:9px 11px;background:#040608;border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;transition:.18s}
+.code-inp:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #00e5ff22}
 .code-inp.verified{border-color:var(--green);background:#051209;color:var(--green)}
 .code-inp:disabled{opacity:.7;cursor:not-allowed;background:#051209}
 .progress-area{margin:12px 0}
-.prog-bar{height:5px;background:#1a2232;border-radius:5px;overflow:hidden}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--gold));border-radius:5px;transition:width .4s ease}
+.prog-bar{height:6px;background:#1a2438;border-radius:6px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--gold));border-radius:6px;transition:width .4s ease}
 .prog-text{font-size:11px;color:var(--sub);margin-top:5px;text-align:center}
 .result-area{background:#040e08;border:1px solid var(--green);border-radius:12px;padding:14px;display:none}
 .result-area.show{display:block}
 .result-label{font-size:12px;color:var(--green);font-weight:700;margin-bottom:8px}
-.result-content{font-size:13px;color:var(--text);word-break:break-all;background:#080b11;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.6;white-space:pre-wrap}
+.result-content{font-size:13px;color:var(--text);word-break:break-all;background:#070a11;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.6;white-space:pre-wrap}
 .copy-row{display:flex;gap:8px}
 .cd-hint{font-size:11px;color:var(--gold);margin-top:4px}
 
 #adminPage{flex-direction:column}
-.admin-tabs-row{display:flex;background:#080b11;border-bottom:1px solid var(--border);overflow-x:auto}
-.atab{flex:1;min-width:70px;padding:11px 4px;border:none;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s;white-space:nowrap}
+.admin-tabs-row{display:flex;background:#070a11;border-bottom:1px solid var(--border);overflow-x:auto}
+.atab{flex:1;min-width:68px;padding:11px 4px;border:none;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s;white-space:nowrap}
 .atab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .admin-body{flex:1;padding:12px;overflow-y:auto}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px;text-align:center}
-.stat-n{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--cyan);line-height:1}
-.stat-l{font-size:10px;color:var(--sub);margin-top:3px;font-weight:600}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
+.stat-n{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;color:var(--cyan);line-height:1}
+.stat-l{font-size:10px;color:var(--sub);margin-top:4px;font-weight:600}
 .stat-card.s-gold .stat-n{color:var(--gold)}
 .stat-card.s-green .stat-n{color:var(--green)}
 .stat-card.s-red .stat-n{color:var(--red)}
 .stat-card.s-purple .stat-n{color:var(--purple)}
-.tbl-wrap{border-radius:11px;border:1px solid var(--border);overflow:hidden;overflow-x:auto;margin-bottom:14px}
+.tbl-wrap{border-radius:12px;border:1px solid var(--border);overflow:hidden;overflow-x:auto;margin-bottom:14px}
 .dtbl{width:100%;border-collapse:collapse;font-size:12px}
-.dtbl th{background:#0d1018;color:var(--sub);padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
-.dtbl td{padding:8px 10px;border-bottom:1px solid #0d1018;color:var(--text);vertical-align:middle}
+.dtbl th{background:#0a0d14;color:var(--sub);padding:9px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+.dtbl td{padding:9px 10px;border-bottom:1px solid #0a0d14;color:var(--text);vertical-align:middle}
 .dtbl tr:last-child td{border:none}
-.dtbl tr:hover td{background:#0d1018}
+.dtbl tr:hover td{background:#0a0d14}
 .bdg{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700}
 .bdg-ok{background:#00e67620;color:var(--green);border:1px solid var(--green)}
 .bdg-no{background:#ff3b5c20;color:var(--red);border:1px solid var(--red)}
-.bdg-warn{background:#f5c54220;color:var(--gold);border:1px solid var(--gold)}
 .filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .fbtn{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;font-weight:600;transition:.15s}
-.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
+.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:#00e5ff12}
 .item-manage-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.imr-thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#070a11}
 .imr-info{flex:1;min-width:0}
 .imr-name{font-weight:700;font-size:13px;color:var(--text)}
 .imr-sub{font-size:10px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .imr-acts{display:flex;gap:5px;flex-shrink:0}
-.srch-inp{background:#080b11;border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;width:100%;margin-bottom:11px}
+.srch-inp{background:#070a11;border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;outline:none;width:100%;margin-bottom:11px}
 .srch-inp:focus{border-color:var(--cyan)}
 .settings-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:10px}
 .settings-label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600}
 
 .user-tabs{display:flex;gap:6px;margin-bottom:14px}
-.utab{flex:1;padding:9px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:12px;cursor:pointer;text-align:center;transition:.15s}
-.utab.active{border-color:var(--cyan);color:var(--cyan);background:#00d4ff12}
+.utab{flex:1;padding:10px;border:1px solid var(--border);border-radius:11px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-weight:600;font-size:12px;cursor:pointer;text-align:center;transition:.15s}
+.utab.active{border-color:var(--cyan);color:var(--cyan);background:#00e5ff12;box-shadow:0 0 12px #00e5ff15}
 
 .history-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px}
 .history-name{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
 .history-meta{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
 
 .emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px;max-height:120px;overflow-y:auto}
-.emoji-btn{width:100%;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;background:#080b11;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
-.emoji-btn:hover,.emoji-btn.selected{border-color:var(--cyan);background:#00d4ff15}
+.emoji-btn{width:100%;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;background:#070a11;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.emoji-btn:hover,.emoji-btn.selected{border-color:var(--cyan);background:#00e5ff15}
 
-#connOverlay{position:fixed;inset:0;background:#07080cee;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.img-preview-box{width:100%;max-height:180px;border-radius:12px;overflow:hidden;background:#070a11;border:1px solid var(--border);margin-top:8px;display:none}
+.img-preview-box.show{display:block}
+.img-preview-box img{width:100%;height:auto;max-height:180px;object-fit:contain;display:block}
+.img-upload-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px dashed var(--border);border-radius:11px;background:#070a11;color:var(--sub);font-size:13px;cursor:pointer;transition:.15s;margin-top:6px}
+.img-upload-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.page-btn{padding:6px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--sub);font-size:12px;cursor:pointer;font-family:'Exo 2',sans-serif}
+.page-btn.active{border-color:var(--cyan);color:var(--cyan);background:#00e5ff15}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+
+#connOverlay{position:fixed;inset:0;background:#05060aee;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 #connOverlay.hidden{display:none}
-.conn-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite}
+.conn-spin{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .conn-text{font-size:14px;color:var(--cyan);font-weight:600}
 
 ::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:#080b11}
-::-webkit-scrollbar-thumb{background:#1a2232;border-radius:4px}
+::-webkit-scrollbar-track{background:#070a11}
+::-webkit-scrollbar-thumb{background:#1a2438;border-radius:4px}
 
-.sec-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px;padding:8px;background:#080b11;border-radius:8px;border:1px solid var(--border)}
-.log-item{font-size:11px;padding:8px 10px;border-bottom:1px solid #0d1018;color:var(--sub)}
+.sec-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px;padding:8px;background:#070a11;border-radius:8px;border:1px solid var(--border)}
+.log-item{font-size:11px;padding:8px 10px;border-bottom:1px solid #0a0d14;color:var(--sub)}
 .log-item:last-child{border:none}
 .log-time{color:var(--cyan);font-weight:600}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#1a2438;border-radius:24px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#5a6f88;border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:linear-gradient(90deg,var(--cyan),var(--cyan2))}
+.toggle input:checked + .toggle-slider:before{transform:translateX(20px);background:#fff}
 </style>
 </head>
 <body>
@@ -227,7 +265,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   <div class="auth-logo">
     <span class="auth-icon">⚡</span>
     <div class="auth-title">VƯỢT LINK PRO</div>
-    <div class="auth-sub">v2.5 · BẢO MẬT + TÍNH NĂNG MỚI · FIREBASE + LINK4M</div>
+    <div class="auth-sub">v3 · GAMING UI · ẢNH + GIỚI HẠN · FIREBASE</div>
   </div>
   <div class="auth-box">
     <div class="auth-tabs">
@@ -249,7 +287,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
         <label for="cbRemember">Ghi nhớ đăng nhập (7 ngày)</label>
       </div>
       <button class="btn btn-cyan btn-full" id="btnLogin" onclick="doLogin()">⚡ ĐĂNG NHẬP</button>
-      <p style="text-align:center;font-size:11px;color:var(--sub);margin-top:12px">Quên mật khẩu? Liên hệ Admin qua Zalo</p>
+      <p style="text-align:center;font-size:11px;color:var(--sub);margin-top:12px">Quên mật khẩu? Liên hệ Admin</p>
     </div>
     <div id="formReg" style="display:none">
       <div class="alert alert-err" id="regErr"></div>
@@ -288,7 +326,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     </div>
   </div>
   <div class="user-bar">
-    <div class="user-chip" onclick="openProfileModal()">
+    <div class="user-chip" onclick="switchUserTab('profile')">
       <div class="user-ava" id="uAva">👤</div>
       <div>
         <div class="user-dname" id="uName">—</div>
@@ -305,30 +343,30 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     </div>
 
     <div id="userTabItems">
-      <div class="sec-title">CHỌN NỘI DUNG ĐỂ VƯỢT LINK</div>
+      <div class="sec-title">CHỌN NỘI DUNG</div>
       <div class="search-row">
         <input class="search-inp" id="itemSearch" placeholder="🔍 Tìm nội dung..." oninput="renderItemGrid()"/>
       </div>
       <div class="cat-filter" id="catFilter"></div>
-      <div id="itemGrid"></div>
-      <button class="btn btn-full" id="btnContactAdmin" onclick="contactAdmin()" style="margin-top:16px;background:linear-gradient(135deg,#0068ff,#004bb5);color:#fff;box-shadow:0 0 16px #0068ff44;display:none">
+      <div class="product-grid" id="itemGrid"></div>
+      <button class="btn btn-full" id="btnContactAdmin" onclick="contactAdmin()" style="margin-top:18px;background:linear-gradient(135deg,#0068ff,#004bb5);color:#fff;box-shadow:0 0 16px #0068ff44;display:none">
         💬 Liên hệ Admin (Zalo)
       </button>
     </div>
 
     <div id="userTabHistory" style="display:none">
-      <div class="sec-title">📋 LỊCH SỬ VƯỢT LINK CỦA BẠN</div>
+      <div class="sec-title">📋 LỊCH SỬ CỦA BẠN</div>
       <div id="userHistoryList"></div>
     </div>
 
     <div id="userTabProfile" style="display:none">
-      <div class="sec-title">👤 THÔNG TIN TÀI KHOẢN</div>
+      <div class="sec-title">👤 TÀI KHOẢN</div>
       <div class="settings-row">
         <div class="settings-label">Tên hiển thị</div>
         <input class="inp" id="profName" placeholder="Tên hiển thị"/>
       </div>
       <div class="settings-row">
-        <div class="settings-label">Avatar (chọn emoji)</div>
+        <div class="settings-label">Avatar</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <div class="user-ava" id="profAvaPreview" style="width:42px;height:42px;font-size:20px">👤</div>
           <input class="inp" id="profAva" maxlength="4" style="width:80px" oninput="document.getElementById('profAvaPreview').textContent=this.value||'👤'"/>
@@ -386,7 +424,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
       <div class="prog-text" id="bmProgText">0 / 0 lượt hoàn thành</div>
     </div>
     <div class="result-area" id="bmResult">
-      <div class="result-label">✅ Hoàn thành! Đây là nội dung của bạn:</div>
+      <div class="result-label">✅ Hoàn thành! Nội dung của bạn:</div>
       <div class="result-content" id="bmResultContent"></div>
       <div class="copy-row">
         <button class="btn btn-green btn-sm" style="flex:1" onclick="copyResult()">📋 Sao chép</button>
@@ -418,31 +456,42 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
       <input class="inp" id="imCategory" placeholder="VD: TikTok, Netflix, Game..."/>
     </div>
     <div class="inp-group">
-      <div class="inp-label">Icon (emoji)</div>
+      <div class="inp-label">Icon (emoji) — dùng khi chưa có ảnh</div>
       <input class="inp" id="imIcon" placeholder="🎵" maxlength="4" style="width:100px"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Ảnh mô tả (chọn từ album)</div>
+      <input type="file" id="imImageFile" accept="image/*" style="display:none" onchange="handleImageSelect(event)"/>
+      <div class="img-upload-btn" onclick="document.getElementById('imImageFile').click()">📷 Chọn ảnh từ album</div>
+      <div class="img-preview-box" id="imImagePreview">
+        <img id="imImagePreviewImg" alt="preview"/>
+      </div>
+      <button class="btn btn-ghost btn-xs" style="margin-top:6px;display:none" id="imRemoveImg" onclick="removeSelectedImage()">🗑 Xóa ảnh</button>
     </div>
     <div class="inp-group">
       <div class="inp-label">Số lượt vượt link (1-20)</div>
       <input class="inp" id="imRounds" type="number" min="1" max="20" placeholder="2" style="width:120px"/>
     </div>
     <div class="inp-group">
+      <div class="inp-label">Giới hạn số lần 1 user được vượt (0 = không giới hạn)</div>
+      <input class="inp" id="imMaxTimes" type="number" min="0" max="100" placeholder="1" style="width:120px"/>
+    </div>
+    <div class="inp-group">
       <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
       <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt..."></textarea>
     </div>
     <div class="sec-note">
-      ℹ️ Hệ thống tự gọi API Link4M và sinh mã xác nhận mỗi lần bấm "Lấy Link". Nội dung thật được tách riêng, không đồng bộ realtime cho mọi client.
+      ℹ️ Ảnh được nén tự động trước khi lưu (max ~480px). Nội dung thật tách riêng, không lộ realtime.
     </div>
     <button class="btn btn-gold btn-full" style="margin-top:12px" onclick="saveItem()">💾 LƯU</button>
   </div>
 </div>
 
-<!-- FORCE CHANGE PASS (Admin default) -->
+<!-- FORCE CHANGE PASS -->
 <div class="modal-bg" id="forcePassModal">
   <div class="modal-box">
-    <div class="modal-hd">
-      <div class="modal-title">🔒 Đổi mật khẩu bắt buộc</div>
-    </div>
-    <div class="alert alert-warn show">Bạn đang dùng mật khẩu mặc định. Vui lòng đổi ngay để bảo mật!</div>
+    <div class="modal-hd"><div class="modal-title">🔒 Đổi mật khẩu bắt buộc</div></div>
+    <div class="alert alert-warn show">Bạn đang dùng mật khẩu mặc định. Vui lòng đổi ngay!</div>
     <div class="inp-group">
       <div class="inp-label">Mật khẩu mới</div>
       <input class="inp" id="forceNewPass" type="password" placeholder="≥ 6 ký tự"/>
@@ -455,7 +504,7 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   </div>
 </div>
 
-<!-- RESET USER PASS MODAL -->
+<!-- RESET PASS -->
 <div class="modal-bg" id="resetPassModal">
   <div class="modal-box">
     <div class="modal-hd">
@@ -474,11 +523,30 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   </div>
 </div>
 
+<!-- BAN REASON -->
+<div class="modal-bg" id="banModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-title">🚫 Khóa tài khoản</div>
+      <button class="modal-close" onclick="closeBanModal()">✕</button>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">User</div>
+      <input class="inp" id="banUserName" disabled/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Lý do khóa</div>
+      <input class="inp" id="banReason" placeholder="VD: Spam, gian lận..."/>
+    </div>
+    <button class="btn btn-red btn-full" onclick="confirmBan()">🚫 Xác nhận khóa</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 // ======================================================
-// VƯỢT LINK PRO v2.5 — Nâng cấp toàn diện
+// VƯỢT LINK PRO v3 — Ảnh + Giới hạn + Gaming UI
 // ======================================================
 const firebaseConfig = {
   apiKey: "AIzaSyA80m1h3IMimHcRhrA8mulpMtsVGs1o3YU",
@@ -497,57 +565,40 @@ const REMEMBER_K = 'vlp_remember_v4';
 const ADMIN_USER = 'admin';
 const DEFAULT_ADMIN_PASS = 'admin123';
 
-const LS_USERS    = 'vlp_users_v2';
-const LS_ITEMS    = 'vlp_items_v2';
-const LS_ORDERS   = 'vlp_orders_v2';
+const LS_USERS = 'vlp_users_v2';
+const LS_ITEMS = 'vlp_items_v2';
+const LS_ORDERS = 'vlp_orders_v2';
 const LS_SETTINGS = 'vlp_settings_v2';
-const LS_LOGS     = 'vlp_logs_v1';
+const LS_LOGS = 'vlp_logs_v1';
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
 const RATE_KEY = 'vlp_rate_v1';
 const COOLDOWN_KEY = 'vlp_cooldown_v1';
 
-let localUsers = null;
-let localItems = null;
-let localOrders = null;
-let localSettings = null;
-let localLogs = null;
-let firebaseReady = false;
-let me = null;
-let currentItem = null;
-let verifiedSteps = [];
-let editItemId = null;
-let curAdminTab = 'dash';
-let isBusy = false;
-let currentCatFilter = 'all';
-let currentUserTab = 'items';
-let resetTargetUser = null;
+let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null;
+let firebaseReady = false, me = null, currentItem = null, verifiedSteps = [];
+let editItemId = null, curAdminTab = 'dash', isBusy = false;
+let currentCatFilter = 'all', currentUserTab = 'items';
+let resetTargetUser = null, banTargetUser = null;
+let selectedImageData = null; // base64
+let usersPage = 1, ordersPage = 1;
+const PAGE_SIZE = 12;
 
 const EMOJIS = ['👤','😎','🔥','⚡','🎮','🎵','💎','🚀','👑','🐱','🐶','🦊','🐻','🐼','🐸','🦄','🌟','💪','🎯','🏆','💡','🛡️','📦','🔑','💰','🎁','🌈','👾','🤖','👻'];
 
 // ===== CRYPTO =====
 async function hashPassword(password, saltBase64) {
   const enc = new TextEncoder();
-  const salt = saltBase64
-    ? Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0))
-    : crypto.getRandomValues(new Uint8Array(16));
+  const salt = saltBase64 ? Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0)) : crypto.getRandomValues(new Uint8Array(16));
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial,
-    256
-  );
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256);
   const hashArr = new Uint8Array(bits);
-  const hashB64 = btoa(String.fromCharCode(...hashArr));
-  const saltB64 = btoa(String.fromCharCode(...salt));
-  return { hash: hashB64, salt: saltB64 };
+  return { hash: btoa(String.fromCharCode(...hashArr)), salt: btoa(String.fromCharCode(...salt)) };
 }
-
 async function verifyPassword(password, storedHash, storedSalt) {
   if (!storedHash || !storedSalt) return false;
   const { hash } = await hashPassword(password, storedSalt);
   return hash === storedHash;
 }
-
 async function migrateIfPlain(user, plainPass) {
   if (user.passwordHash && user.passwordSalt) return user;
   if (user.password && user.password === plainPass) {
@@ -560,19 +611,13 @@ async function migrateIfPlain(user, plainPass) {
   return null;
 }
 
-// ===== localStorage helpers =====
-function lsGet(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
-}
-function lsSet(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
+// ===== LS =====
+function lsGet(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-// ===== STORE HELPERS =====
+// ===== STORE =====
 function getUsersArr() { return Object.values(localUsers || {}); }
-function getItemsArr() {
-  return Object.values(localItems || {}).filter(i => !i.deleted);
-}
+function getItemsArr() { return Object.values(localItems || {}).filter(i => !i.deleted); }
 function getAllItemsArr() { return Object.values(localItems || {}); }
 function getOrdersArr() {
   const arr = Object.values(localOrders || {});
@@ -580,54 +625,36 @@ function getOrdersArr() {
   return arr;
 }
 function getSettings() {
-  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25 };
+  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1 };
 }
 function getLogsArr() {
   const arr = Object.values(localLogs || {});
   arr.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
   return arr.slice(0, 200);
 }
+function countUserCompletions(username, itemId) {
+  return getOrdersArr().filter(o => o.user === username && o.itemId === itemId && o.status === 'success').length;
+}
+function hasUserCompleted(username, itemId) {
+  return countUserCompletions(username, itemId) > 0;
+}
 
 function fbErr(e, label) {
   console.error(label, e);
   const msg = String((e && e.message) || e || '');
   if (msg.includes('PERMISSION') || msg.includes('permission') || msg.includes('Missing or insufficient')) {
-    toast('❌ Firestore chặn ghi. Vào Firebase → Firestore → Rules → tạm thời allow read, write: if true', 'err');
-  } else {
-    toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
-  }
+    toast('❌ Firestore chặn ghi. Vào Rules → allow read, write: if true', 'err');
+  } else toast('❌ Lỗi server: ' + (msg.slice(0, 80) || label), 'err');
 }
 
-function saveUsers(obj) {
-  localUsers = obj;
-  lsSet(LS_USERS, { data: obj });
-  return db.collection(COL).doc('users').set({ data: obj }).catch(e => fbErr(e, 'saveUsers'));
-}
-function saveItems(obj) {
-  localItems = obj || {};
-  lsSet(LS_ITEMS, { data: localItems });
-  return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems'));
-}
-function saveOrders(obj) {
-  localOrders = obj || {};
-  lsSet(LS_ORDERS, { data: localOrders });
-  return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders'));
-}
-function saveSettings(obj) {
-  localSettings = obj;
-  lsSet(LS_SETTINGS, { data: obj });
-  return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings'));
-}
-function saveLogs(obj) {
-  localLogs = obj || {};
-  lsSet(LS_LOGS, { data: localLogs });
-  return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs'));
-}
+function saveUsers(obj) { localUsers = obj; lsSet(LS_USERS, { data: obj }); return db.collection(COL).doc('users').set({ data: obj }).catch(e => fbErr(e, 'saveUsers')); }
+function saveItems(obj) { localItems = obj || {}; lsSet(LS_ITEMS, { data: localItems }); return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems')); }
+function saveOrders(obj) { localOrders = obj || {}; lsSet(LS_ORDERS, { data: localOrders }); return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders')); }
+function saveSettings(obj) { localSettings = obj; lsSet(LS_SETTINGS, { data: obj }); return db.collection(COL).doc('settings').set({ data: obj }).catch(e => fbErr(e, 'saveSettings')); }
+function saveLogs(obj) { localLogs = obj || {}; lsSet(LS_LOGS, { data: localLogs }); return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs')); }
 
 function saveSecretContent(itemId, content) {
-  return db.collection(COL).doc('itemSecrets').set(
-    { data: { [itemId]: content } }, { merge: true }
-  ).catch(e => fbErr(e, 'saveSecretContent'));
+  return db.collection(COL).doc('itemSecrets').set({ data: { [itemId]: content } }, { merge: true }).catch(e => fbErr(e, 'saveSecretContent'));
 }
 function fetchSecretContent(itemId) {
   return db.collection(COL).doc('itemSecrets').get().then(snap => {
@@ -643,44 +670,23 @@ function deleteSecretContent(itemId) {
   }).catch(e => fbErr(e, 'deleteSecretContent'));
 }
 
-function updateUser(username, data) {
-  if (!localUsers) localUsers = {};
-  localUsers[username] = data;
-  return saveUsers(localUsers);
-}
-function updateItem(id, data) {
-  if (!localItems) localItems = {};
-  localItems[id] = data;
-  return saveItems(localItems);
-}
+function updateUser(username, data) { if (!localUsers) localUsers = {}; localUsers[username] = data; return saveUsers(localUsers); }
+function updateItem(id, data) { if (!localItems) localItems = {}; localItems[id] = data; return saveItems(localItems); }
 function removeItem(id) {
-  if (localItems && localItems[id]) {
-    localItems[id] = { ...localItems[id], deleted: true, active: false };
-  }
-  return saveItems(localItems || {});
-}
-function hardDeleteItem(id) {
-  if (localItems) delete localItems[id];
+  if (localItems && localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false };
   return saveItems(localItems || {});
 }
 function addOrder(order) {
   if (!localOrders) localOrders = {};
   localOrders[order.id] = order;
-  const keys = Object.keys(localOrders).sort((a, b) =>
-    (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
+  const keys = Object.keys(localOrders).sort((a, b) => (localOrders[b].createdAt || '').localeCompare(localOrders[a].createdAt || ''));
   if (keys.length > 500) keys.slice(500).forEach(k => delete localOrders[k]);
   return saveOrders(localOrders);
 }
 function addLog(action, detail) {
   if (!localLogs) localLogs = {};
   const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 5);
-  localLogs[id] = {
-    id,
-    action,
-    detail: detail || '',
-    by: me ? me.username : 'system',
-    ts: new Date().toISOString()
-  };
+  localLogs[id] = { id, action, detail: detail || '', by: me ? me.username : 'system', ts: new Date().toISOString() };
   const keys = Object.keys(localLogs).sort((a, b) => (localLogs[b].ts || '').localeCompare(localLogs[a].ts || ''));
   if (keys.length > 300) keys.slice(300).forEach(k => delete localLogs[k]);
   return saveLogs(localLogs);
@@ -694,23 +700,13 @@ function checkFirebaseReady() {
   }
 }
 
-const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25 };
+const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1 };
 
 async function ensureDefaults() {
   if (!localUsers) localUsers = {};
   if (!localUsers[ADMIN_USER]) {
     const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASS);
-    localUsers[ADMIN_USER] = {
-      username: ADMIN_USER,
-      passwordHash: hash,
-      passwordSalt: salt,
-      display: 'Admin',
-      role: 'admin',
-      avatar: '👑',
-      joined: new Date().toISOString(),
-      banned: false,
-      mustChangePass: true
-    };
+    localUsers[ADMIN_USER] = { username: ADMIN_USER, passwordHash: hash, passwordSalt: salt, display: 'Admin', role: 'admin', avatar: '👑', joined: new Date().toISOString(), banned: false, mustChangePass: true };
     await saveUsers(localUsers);
   } else if (localUsers[ADMIN_USER].password && !localUsers[ADMIN_USER].passwordHash) {
     const { hash, salt } = await hashPassword(localUsers[ADMIN_USER].password);
@@ -719,49 +715,28 @@ async function ensureDefaults() {
     localUsers[ADMIN_USER] = u;
     await saveUsers(localUsers);
   }
-  if (!localSettings || typeof localSettings !== 'object') {
-    localSettings = { ...DEFAULT_SETTINGS };
-    await saveSettings(localSettings);
-  }
-  if (localSettings.cooldownSec === undefined) {
-    localSettings = { ...localSettings, cooldownSec: 25 };
-    await saveSettings(localSettings);
-  }
-  if (!localLogs) {
-    localLogs = {};
-    await saveLogs(localLogs);
-  }
-  const settings = getSettings();
-  if (!settings.seededDemo) {
-    localSettings = { ...settings, seededDemo: true };
-    await saveSettings(localSettings);
-  }
+  if (!localSettings || typeof localSettings !== 'object') { localSettings = { ...DEFAULT_SETTINGS }; await saveSettings(localSettings); }
+  if (localSettings.cooldownSec === undefined) { localSettings = { ...localSettings, cooldownSec: 25 }; await saveSettings(localSettings); }
+  if (localSettings.hideCompleted === undefined) { localSettings = { ...localSettings, hideCompleted: true }; await saveSettings(localSettings); }
+  if (localSettings.maxTimesDefault === undefined) { localSettings = { ...localSettings, maxTimesDefault: 1 }; await saveSettings(localSettings); }
+  if (!localLogs) { localLogs = {}; await saveLogs(localLogs); }
+  if (!getSettings().seededDemo) { localSettings = { ...getSettings(), seededDemo: true }; await saveSettings(localSettings); }
 }
 
-// ===== LISTENERS =====
-function watchDoc(docName, lsKey, lsFallback, onData, onFirst) {
+function watchDoc(docName, lsKey, lsFallback, onData) {
   let responded = false;
   const timer = setTimeout(() => {
-    if (!responded) {
-      responded = true;
-      const cached = lsGet(lsKey, { data: lsFallback });
-      onData(cached.data !== undefined ? cached.data : lsFallback, true);
-      onFirst && onFirst();
-    }
+    if (!responded) { responded = true; const cached = lsGet(lsKey, { data: lsFallback }); onData(cached.data !== undefined ? cached.data : lsFallback); }
   }, 5000);
   db.collection(COL).doc(docName).onSnapshot(snap => {
     if (!responded) { responded = true; clearTimeout(timer); }
-    const val = (snap.exists && snap.data() && snap.data().data !== undefined)
-      ? snap.data().data
-      : lsGet(lsKey, { data: lsFallback }).data ?? lsFallback;
+    const val = (snap.exists && snap.data() && snap.data().data !== undefined) ? snap.data().data : (lsGet(lsKey, { data: lsFallback }).data ?? lsFallback);
     lsSet(lsKey, { data: val });
-    onData(val, false);
-    if (!responded || true) onFirst && onFirst();
+    onData(val);
   }, err => {
     if (!responded) { responded = true; clearTimeout(timer); }
     const cached = lsGet(lsKey, { data: lsFallback });
-    onData(cached.data !== undefined ? cached.data : lsFallback, true);
-    onFirst && onFirst();
+    onData(cached.data !== undefined ? cached.data : lsFallback);
     console.error(docName, err);
   });
 }
@@ -770,16 +745,11 @@ function startListeners() {
   watchDoc('users', LS_USERS, {}, (val) => {
     const first = localUsers === null;
     localUsers = val || {};
-    if (first) { ensureDefaults().then(() => checkFirebaseReady()); }
+    if (first) ensureDefaults().then(() => checkFirebaseReady());
     if (me && localUsers[me.username]) me = localUsers[me.username];
-    if (document.getElementById('mainPage').classList.contains('active')) {
-      renderItemGrid();
-      if (currentUserTab === 'history') renderUserHistory();
-      if (currentUserTab === 'profile') fillProfileForm();
-    }
+    if (document.getElementById('mainPage').classList.contains('active')) { renderItemGrid(); if (currentUserTab === 'history') renderUserHistory(); if (currentUserTab === 'profile') fillProfileForm(); }
     if (document.getElementById('adminPage').classList.contains('active')) renderAdminBody(curAdminTab);
   });
-
   watchDoc('items', LS_ITEMS, {}, (val) => {
     const first = localItems === null;
     localItems = val || {};
@@ -787,24 +757,19 @@ function startListeners() {
     if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
     if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
   });
-
   watchDoc('orders', LS_ORDERS, {}, (val) => {
     const first = localOrders === null;
     localOrders = val || {};
     if (first) checkFirebaseReady();
-    if (document.getElementById('mainPage').classList.contains('active') && currentUserTab === 'history') renderUserHistory();
-    if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) {
-      renderAdminBody(curAdminTab);
-    }
+    if (document.getElementById('mainPage').classList.contains('active')) { if (currentUserTab === 'history') renderUserHistory(); renderItemGrid(); }
+    if (document.getElementById('adminPage').classList.contains('active') && (curAdminTab === 'orders' || curAdminTab === 'dash')) renderAdminBody(curAdminTab);
   });
-
   watchDoc('settings', LS_SETTINGS, DEFAULT_SETTINGS, (val) => {
     const first = localSettings === null;
     localSettings = val || { ...DEFAULT_SETTINGS };
     if (first) checkFirebaseReady();
-    if (document.getElementById('mainPage').classList.contains('active')) updateContactBtn();
+    if (document.getElementById('mainPage').classList.contains('active')) { updateContactBtn(); renderItemGrid(); }
   });
-
   watchDoc('logs', LS_LOGS, {}, (val) => {
     const first = localLogs === null;
     localLogs = val || {};
@@ -813,14 +778,9 @@ function startListeners() {
   });
 }
 startListeners();
+setTimeout(() => { if (!firebaseReady) document.getElementById('connMsg').textContent = 'Kết nối chậm... Kiểm tra mạng.'; }, 8000);
 
-setTimeout(() => {
-  if (!firebaseReady) {
-    document.getElementById('connMsg').textContent = 'Kết nối chậm... Đang thử lại. Kiểm tra mạng.';
-  }
-}, 8000);
-
-// ===== RATE LIMIT + COOLDOWN =====
+// ===== RATE + COOLDOWN =====
 function checkRate(action, max = 10, windowMs = 60000) {
   const now = Date.now();
   let data = lsGet(RATE_KEY, {});
@@ -831,11 +791,9 @@ function checkRate(action, max = 10, windowMs = 60000) {
   lsSet(RATE_KEY, data);
   return true;
 }
-
 function getCooldownLeft(itemId, round) {
   const data = lsGet(COOLDOWN_KEY, {});
-  const key = itemId + '_' + round;
-  const last = data[key] || 0;
+  const last = data[itemId + '_' + round] || 0;
   const cd = (getSettings().cooldownSec || 25) * 1000;
   const left = last + cd - Date.now();
   return left > 0 ? Math.ceil(left / 1000) : 0;
@@ -846,6 +804,59 @@ function setCooldown(itemId, round) {
   lsSet(COOLDOWN_KEY, data);
 }
 
+// ===== IMAGE COMPRESS =====
+function compressImage(file, maxWidth = 480, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) { reject(new Error('Không phải ảnh')); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // if still huge, reduce quality more
+        if (dataUrl.length > 700000) {
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
+        } else resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Không đọc được ảnh'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Lỗi đọc file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImageSelect(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  try {
+    toast('⏳ Đang nén ảnh...');
+    selectedImageData = await compressImage(file);
+    const preview = document.getElementById('imImagePreview');
+    const img = document.getElementById('imImagePreviewImg');
+    img.src = selectedImageData;
+    preview.classList.add('show');
+    document.getElementById('imRemoveImg').style.display = '';
+    toast('✅ Đã chọn ảnh', 'ok');
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Không xử lý được ảnh'), 'err');
+    selectedImageData = null;
+  }
+  ev.target.value = '';
+}
+function removeSelectedImage() {
+  selectedImageData = null;
+  document.getElementById('imImagePreview').classList.remove('show');
+  document.getElementById('imImagePreviewImg').src = '';
+  document.getElementById('imRemoveImg').style.display = 'none';
+}
+
 // ===== AUTH =====
 function switchTab(t) {
   document.getElementById('formLogin').style.display = t === 'login' ? 'block' : 'none';
@@ -853,7 +864,6 @@ function switchTab(t) {
   document.getElementById('tabLogin').classList.toggle('active', t === 'login');
   document.getElementById('tabReg').classList.toggle('active', t === 'reg');
 }
-
 function showAlert(id, msg, type) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -863,173 +873,108 @@ function showAlert(id, msg, type) {
 }
 
 async function doLogin() {
-  if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
+  if (!firebaseReady) { toast('Đang kết nối máy chủ...', 'err'); return; }
   if (isBusy) return;
-  if (!checkRate('login', 8, 60000)) { showAlert('loginErr', '⚠️ Thử quá nhiều lần. Đợi 1 phút rồi thử lại.', 'err'); return; }
-
+  if (!checkRate('login', 8, 60000)) { showAlert('loginErr', '⚠️ Thử quá nhiều. Đợi 1 phút.', 'err'); return; }
   const u = (document.getElementById('liUser').value || '').trim().toLowerCase();
   const p = document.getElementById('liPass').value || '';
-  if (!u || !p) { showAlert('loginErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
-
+  if (!u || !p) { showAlert('loginErr', '⚠️ Điền đầy đủ thông tin', 'err'); return; }
   const found = (localUsers || {})[u];
-  if (!found) {
-    showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err');
-    return;
-  }
-  if (found.banned) {
-    showAlert('loginErr', '🚫 Tài khoản đã bị khóa. Liên hệ Admin.', 'err');
-    return;
-  }
+  if (!found) { showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err'); return; }
+  if (found.banned) { showAlert('loginErr', '🚫 Tài khoản bị khóa' + (found.banReason ? ': ' + found.banReason : ''), 'err'); return; }
 
   isBusy = true;
   document.getElementById('btnLogin').disabled = true;
   try {
-    let ok = false;
-    let user = found;
-
-    if (found.passwordHash && found.passwordSalt) {
-      ok = await verifyPassword(p, found.passwordHash, found.passwordSalt);
-    } else if (found.password) {
+    let ok = false, user = found;
+    if (found.passwordHash && found.passwordSalt) ok = await verifyPassword(p, found.passwordHash, found.passwordSalt);
+    else if (found.password) {
       const migrated = await migrateIfPlain(found, p);
-      if (migrated) {
-        ok = true;
-        user = migrated;
-      }
+      if (migrated) { ok = true; user = migrated; }
     }
+    if (!ok) { showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err'); return; }
 
-    if (!ok) {
-      showAlert('loginErr', '❌ Sai tên đăng nhập hoặc mật khẩu', 'err');
-      return;
-    }
-
-    // Check default admin password
     if (u === ADMIN_USER) {
       const isDefault = await verifyPassword(DEFAULT_ADMIN_PASS, user.passwordHash, user.passwordSalt);
       if (isDefault) user = { ...user, mustChangePass: true };
     }
-
     me = user;
     me.lastLogin = new Date().toISOString();
     await updateUser(u, me);
-
     const remember = document.getElementById('cbRemember').checked;
-    const session = {
-      username: u,
-      exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000)
-    };
-    localStorage.setItem(SESSION_K, JSON.stringify(session));
-    if (remember) localStorage.setItem(REMEMBER_K, u);
-    else localStorage.removeItem(REMEMBER_K);
-
-    if (me.mustChangePass && me.role === 'admin') {
-      document.getElementById('forcePassModal').classList.add('open');
-    } else {
-      enterMain();
-    }
-  } finally {
-    isBusy = false;
-    document.getElementById('btnLogin').disabled = false;
-  }
+    localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + (remember ? 7 * 86400000 : 12 * 3600000) }));
+    if (remember) localStorage.setItem(REMEMBER_K, u); else localStorage.removeItem(REMEMBER_K);
+    if (me.mustChangePass && me.role === 'admin') document.getElementById('forcePassModal').classList.add('open');
+    else enterMain();
+  } finally { isBusy = false; document.getElementById('btnLogin').disabled = false; }
 }
 
 async function doRegister() {
-  if (!firebaseReady) { toast('Đang kết nối máy chủ, vui lòng đợi...', 'err'); return; }
+  if (!firebaseReady) { toast('Đang kết nối...', 'err'); return; }
   if (isBusy) return;
-  if (!checkRate('register', 5, 300000)) { showAlert('regErr', '⚠️ Đăng ký quá nhiều. Thử lại sau.', 'err'); return; }
-
+  if (!checkRate('register', 5, 300000)) { showAlert('regErr', '⚠️ Đăng ký quá nhiều.', 'err'); return; }
   const name = (document.getElementById('riName').value || '').trim();
   const u = (document.getElementById('riUser').value || '').trim().toLowerCase();
   const p = document.getElementById('riPass').value || '';
   const p2 = document.getElementById('riPass2').value || '';
-
-  if (!name || !u || !p || !p2) { showAlert('regErr', '⚠️ Vui lòng điền đầy đủ thông tin', 'err'); return; }
-  if (!/^[a-z0-9_]{3,20}$/.test(u)) { showAlert('regErr', '⚠️ Username chỉ gồm chữ thường, số, gạch dưới (3-20 ký tự)', 'err'); return; }
-  if (p.length < 6) { showAlert('regErr', '⚠️ Mật khẩu ít nhất 6 ký tự', 'err'); return; }
-  if (p !== p2) { showAlert('regErr', '⚠️ Xác nhận mật khẩu không khớp', 'err'); return; }
+  if (!name || !u || !p || !p2) { showAlert('regErr', '⚠️ Điền đầy đủ', 'err'); return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(u)) { showAlert('regErr', '⚠️ Username 3-20 ký tự chữ/số/_', 'err'); return; }
+  if (p.length < 6) { showAlert('regErr', '⚠️ Mật khẩu ≥ 6 ký tự', 'err'); return; }
+  if (p !== p2) { showAlert('regErr', '⚠️ Xác nhận không khớp', 'err'); return; }
   if ((localUsers || {})[u]) { showAlert('regErr', '❌ Username đã tồn tại', 'err'); return; }
 
   isBusy = true;
   document.getElementById('btnReg').disabled = true;
   try {
     const { hash, salt } = await hashPassword(p);
-    const nu = {
-      username: u,
-      passwordHash: hash,
-      passwordSalt: salt,
-      display: name,
-      role: 'user',
-      avatar: '👤',
-      joined: new Date().toISOString(),
-      banned: false
-    };
+    const nu = { username: u, passwordHash: hash, passwordSalt: salt, display: name, role: 'user', avatar: '👤', joined: new Date().toISOString(), banned: false };
     await updateUser(u, nu);
-    showAlert('regOk', '✅ Tạo tài khoản thành công! Đang đăng nhập...', 'ok');
-    setTimeout(() => {
-      me = nu;
-      localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + 7 * 86400000 }));
-      enterMain();
-    }, 700);
-  } finally {
-    isBusy = false;
-    document.getElementById('btnReg').disabled = false;
-  }
+    showAlert('regOk', '✅ Thành công! Đang đăng nhập...', 'ok');
+    setTimeout(() => { me = nu; localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + 7 * 86400000 })); enterMain(); }, 700);
+  } finally { isBusy = false; document.getElementById('btnReg').disabled = false; }
 }
 
 function doLogout() {
   localStorage.removeItem(SESSION_K);
   me = null;
   showPage('authPage');
-  const rem = localStorage.getItem(REMEMBER_K);
-  document.getElementById('liUser').value = rem || '';
+  document.getElementById('liUser').value = localStorage.getItem(REMEMBER_K) || '';
   document.getElementById('liPass').value = '';
   toast('Đã đăng xuất');
 }
 
 function tryAutoLogin() {
   const rem = localStorage.getItem(REMEMBER_K);
-  if (rem) {
-    document.getElementById('liUser').value = rem;
-    document.getElementById('cbRemember').checked = true;
-  }
+  if (rem) { document.getElementById('liUser').value = rem; document.getElementById('cbRemember').checked = true; }
   const saved = localStorage.getItem(SESSION_K);
   if (saved) {
     try {
       const sess = JSON.parse(saved);
-      if (sess.exp && Date.now() > sess.exp) {
-        localStorage.removeItem(SESSION_K);
-        return;
-      }
+      if (sess.exp && Date.now() > sess.exp) { localStorage.removeItem(SESSION_K); return; }
       const found = (localUsers || {})[sess.username];
       if (found && !found.banned) {
         me = found;
-        if (me.mustChangePass && me.role === 'admin') {
-          document.getElementById('forcePassModal').classList.add('open');
-        } else {
-          enterMain();
-        }
-        return;
+        if (me.mustChangePass && me.role === 'admin') document.getElementById('forcePassModal').classList.add('open');
+        else enterMain();
       }
-    } catch (e) {
-      localStorage.removeItem(SESSION_K);
-    }
+    } catch (e) { localStorage.removeItem(SESSION_K); }
   }
 }
 
 async function forceChangeAdminPass() {
   const np = document.getElementById('forceNewPass').value;
   const np2 = document.getElementById('forceNewPass2').value;
-  if (np.length < 6) { toast('❌ Mật khẩu ≥ 6 ký tự', 'err'); return; }
-  if (np !== np2) { toast('❌ Xác nhận không khớp', 'err'); return; }
-  if (np === DEFAULT_ADMIN_PASS) { toast('❌ Không được dùng mật khẩu mặc định', 'err'); return; }
-
+  if (np.length < 6) { toast('❌ ≥ 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Không khớp', 'err'); return; }
+  if (np === DEFAULT_ADMIN_PASS) { toast('❌ Không dùng mật khẩu mặc định', 'err'); return; }
   const { hash, salt } = await hashPassword(np);
   const updated = { ...me, passwordHash: hash, passwordSalt: salt, mustChangePass: false };
   delete updated.password;
   await updateUser(ADMIN_USER, updated);
   me = updated;
   document.getElementById('forcePassModal').classList.remove('open');
-  addLog('change_pass', 'Admin đổi mật khẩu bắt buộc');
-  toast('✅ Đã đổi mật khẩu thành công!', 'ok');
+  addLog('change_pass', 'Admin đổi pass bắt buộc');
+  toast('✅ Đã đổi mật khẩu!', 'ok');
   enterMain();
 }
 
@@ -1038,32 +983,24 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
 function enterMain() {
-  if (me && me.banned) {
-    toast('Tài khoản bị khóa', 'err');
-    doLogout();
-    return;
-  }
+  if (me && me.banned) { toast('Tài khoản bị khóa', 'err'); doLogout(); return; }
   showPage('mainPage');
   document.getElementById('uAva').textContent = me.avatar || '👤';
   document.getElementById('uName').textContent = me.display;
   document.getElementById('uJoin').textContent = 'Tham gia: ' + fmtDate(me.joined);
   const rb = document.getElementById('uRoleBadge');
   if (me.role === 'admin') {
-    rb.textContent = '⭐ ADMIN';
-    rb.className = 'role-badge rb-admin';
+    rb.textContent = '⭐ ADMIN'; rb.className = 'role-badge rb-admin';
     document.getElementById('btnAdmin').style.display = '';
   } else {
-    rb.textContent = '👤 THÀNH VIÊN';
-    rb.className = 'role-badge rb-user';
+    rb.textContent = '👤 THÀNH VIÊN'; rb.className = 'role-badge rb-user';
     document.getElementById('btnAdmin').style.display = 'none';
   }
   switchUserTab('items');
   updateContactBtn();
   restoreActiveBypassIfAny();
 }
-
 function switchUserTab(tab) {
   currentUserTab = tab;
   document.getElementById('userTabItems').style.display = tab === 'items' ? '' : 'none';
@@ -1076,28 +1013,20 @@ function switchUserTab(tab) {
   if (tab === 'history') renderUserHistory();
   if (tab === 'profile') fillProfileForm();
 }
-
 function updateContactBtn() {
-  const s = getSettings();
-  const zalo = String(s.zaloAdmin || '').replace(/\D/g, '');
+  const zalo = String(getSettings().zaloAdmin || '').replace(/\D/g, '');
   const btn = document.getElementById('btnContactAdmin');
-  if (!btn) return;
-  btn.style.display = zalo.length >= 9 ? '' : 'none';
+  if (btn) btn.style.display = zalo.length >= 9 ? '' : 'none';
 }
-
 function contactAdmin() {
-  const s = getSettings();
-  let zalo = String(s.zaloAdmin || '').trim();
-  if (!zalo) { toast('Admin chưa cấu hình số Zalo', 'err'); return; }
-  zalo = zalo.replace(/[\s\-\.]/g, '');
+  let zalo = String(getSettings().zaloAdmin || '').trim().replace(/[\s\-\.]/g, '');
+  if (!zalo) { toast('Admin chưa cấu hình Zalo', 'err'); return; }
   if (zalo.startsWith('+84')) zalo = zalo.slice(1);
   else if (zalo.startsWith('0') && zalo.length >= 9) zalo = '84' + zalo.slice(1);
   else if (!zalo.startsWith('84') && /^\d{9,11}$/.test(zalo)) zalo = '84' + zalo.replace(/^0/, '');
-  const url = 'https://zalo.me/' + zalo.replace(/\D/g, '');
-  window.open(url, '_blank');
-  toast('Đang mở Zalo Admin...');
+  window.open('https://zalo.me/' + zalo.replace(/\D/g, ''), '_blank');
+  toast('Đang mở Zalo...');
 }
-
 function goAdmin() {
   if (!me || me.role !== 'admin') { toast('Không có quyền!', 'err'); return; }
   document.getElementById('adminDName').textContent = me.display;
@@ -1105,59 +1034,42 @@ function goAdmin() {
   showPage('adminPage');
   aTab('dash');
 }
-
-function goMain() {
-  showPage('mainPage');
-  renderItemGrid();
-}
+function goMain() { showPage('mainPage'); renderItemGrid(); }
 
 // ===== PROFILE =====
-function openProfileModal() {
-  switchUserTab('profile');
-}
-
 function fillProfileForm() {
   if (!me) return;
   document.getElementById('profName').value = me.display || '';
   document.getElementById('profAva').value = me.avatar || '👤';
   document.getElementById('profAvaPreview').textContent = me.avatar || '👤';
-  const grid = document.getElementById('emojiGrid');
-  grid.innerHTML = EMOJIS.map(e => `<button class="emoji-btn ${me.avatar===e?'selected':''}" onclick="selectEmoji('${e}')">${e}</button>`).join('');
+  document.getElementById('emojiGrid').innerHTML = EMOJIS.map(e => `<button class="emoji-btn ${me.avatar===e?'selected':''}" onclick="selectEmoji('${e}')">${e}</button>`).join('');
 }
-
 function selectEmoji(e) {
   document.getElementById('profAva').value = e;
   document.getElementById('profAvaPreview').textContent = e;
   document.querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === e));
 }
-
 async function saveProfile() {
   if (!me) return;
   const name = (document.getElementById('profName').value || '').trim();
   const ava = (document.getElementById('profAva').value || '').trim() || '👤';
-  if (!name) { toast('⚠️ Tên không được trống', 'err'); return; }
+  if (!name) { toast('⚠️ Tên trống', 'err'); return; }
   const updated = { ...me, display: name, avatar: ava };
   await updateUser(me.username, updated);
   me = updated;
   document.getElementById('uName').textContent = name;
   document.getElementById('uAva').textContent = ava;
-  toast('✅ Đã cập nhật thông tin!', 'ok');
+  toast('✅ Đã cập nhật!', 'ok');
 }
-
 async function changeMyPass() {
   if (!me) return;
   const old = document.getElementById('profOldPass').value;
   const np = document.getElementById('profNewPass').value;
   const np2 = document.getElementById('profNewPass2').value;
-
-  let ok = false;
-  if (me.passwordHash && me.passwordSalt) {
-    ok = await verifyPassword(old, me.passwordHash, me.passwordSalt);
-  }
-  if (!ok) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
-  if (np.length < 6) { toast('❌ Mật khẩu mới ≥ 6 ký tự', 'err'); return; }
-  if (np !== np2) { toast('❌ Xác nhận không khớp', 'err'); return; }
-
+  let ok = me.passwordHash && me.passwordSalt ? await verifyPassword(old, me.passwordHash, me.passwordSalt) : false;
+  if (!ok) { toast('❌ Mật khẩu hiện tại sai', 'err'); return; }
+  if (np.length < 6) { toast('❌ ≥ 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Không khớp', 'err'); return; }
   const { hash, salt } = await hashPassword(np);
   const updated = { ...me, passwordHash: hash, passwordSalt: salt };
   delete updated.password;
@@ -1169,13 +1081,13 @@ async function changeMyPass() {
   toast('✅ Đã đổi mật khẩu!', 'ok');
 }
 
-// ===== USER HISTORY =====
+// ===== HISTORY =====
 function renderUserHistory() {
   const list = document.getElementById('userHistoryList');
   if (!me) { list.innerHTML = ''; return; }
   const myOrders = getOrdersArr().filter(o => o.user === me.username);
   if (!myOrders.length) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div>Bạn chưa vượt link lần nào</div></div>';
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div>Chưa vượt link lần nào</div></div>';
     return;
   }
   list.innerHTML = myOrders.map(o => `
@@ -1192,12 +1104,9 @@ function renderUserHistory() {
 // ===== ITEM GRID =====
 function getCategories() {
   const cats = new Set();
-  getItemsArr().filter(i => i.active !== false).forEach(i => {
-    if (i.category) cats.add(i.category.trim());
-  });
+  getItemsArr().filter(i => i.active !== false).forEach(i => { if (i.category) cats.add(i.category.trim()); });
   return Array.from(cats).sort();
 }
-
 function renderCatFilter() {
   const cats = getCategories();
   const el = document.getElementById('catFilter');
@@ -1205,49 +1114,56 @@ function renderCatFilter() {
   el.innerHTML = `<button class="cat-chip ${currentCatFilter==='all'?'active':''}" onclick="setCatFilter('all')">Tất cả</button>` +
     cats.map(c => `<button class="cat-chip ${currentCatFilter===c?'active':''}" onclick="setCatFilter('${esc(c)}')">${esc(c)}</button>`).join('');
 }
-
-function setCatFilter(c) {
-  currentCatFilter = c;
-  renderItemGrid();
-}
+function setCatFilter(c) { currentCatFilter = c; renderItemGrid(); }
 
 function renderItemGrid() {
   const grid = document.getElementById('itemGrid');
   const q = (document.getElementById('itemSearch')?.value || '').toLowerCase().trim();
+  const hideCompleted = getSettings().hideCompleted !== false;
   let active = getItemsArr().filter(i => i.active !== false);
-  if (currentCatFilter !== 'all') {
-    active = active.filter(i => (i.category || '').trim() === currentCatFilter);
-  }
-  if (q) {
-    active = active.filter(i =>
-      (i.name || '').toLowerCase().includes(q) ||
-      (i.desc || '').toLowerCase().includes(q) ||
-      (i.category || '').toLowerCase().includes(q)
-    );
-  }
-  // newest first
-  active.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
+  if (currentCatFilter !== 'all') active = active.filter(i => (i.category || '').trim() === currentCatFilter);
+  if (q) active = active.filter(i => (i.name||'').toLowerCase().includes(q) || (i.desc||'').toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
+
+  // mark completed / filter
+  active = active.map(item => {
+    const times = me ? countUserCompletions(me.username, item.id) : 0;
+    const maxT = item.maxTimes !== undefined ? item.maxTimes : 1;
+    const done = maxT > 0 && times >= maxT;
+    return { ...item, _done: done, _times: times };
+  });
+
+  if (hideCompleted) active = active.filter(i => !i._done);
+  active.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   renderCatFilter();
 
   if (!active.length) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Không tìm thấy nội dung nào</div></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div>Không có nội dung phù hợp</div></div>';
     return;
   }
-  grid.innerHTML = active.map(item => `
-    <div class="item-card" onclick="openBypass('${item.id}')">
-      <div class="item-icon">${item.icon || '📦'}</div>
-      <div class="item-info">
-        <div class="item-name">${esc(item.name)}</div>
-        <div class="item-desc">${esc(item.desc || '')}</div>
-        <div class="item-meta">
-          <span class="rounds-badge">⚡ ${item.rounds || 1} lượt vượt</span>
-          ${item.category ? `<span class="cat-badge">${esc(item.category)}</span>` : ''}
+
+  grid.innerHTML = active.map(item => {
+    const badge = item._done ? '' : (item.badge === 'hot' ? '<span class="product-badge badge-hot">HOT</span>' : item.badge === 'sale' ? '<span class="product-badge badge-sale">SALE</span>' : item.badge === 'new' ? '<span class="product-badge badge-new">NEW</span>' : '');
+    const imgHtml = item.image
+      ? `<img class="product-img" src="${item.image}" alt="" loading="lazy"/>`
+      : `<div class="product-img-placeholder">${item.icon || '📦'}</div>`;
+    return `
+      <div class="product-card ${item._done ? 'done' : ''}" onclick="${item._done ? '' : `openBypass('${item.id}')`}">
+        <div class="product-img-wrap">
+          ${imgHtml}
+          ${badge}
         </div>
-      </div>
-      <span style="color:var(--sub);font-size:18px">›</span>
-    </div>
-  `).join('');
+        <div class="product-body">
+          <div class="product-name">${esc(item.name)}</div>
+          <div class="product-desc">${esc(item.desc || '')}</div>
+          <div class="product-meta">
+            <span class="rounds-badge">⚡ ${item.rounds || 1} lượt</span>
+            ${item.category ? `<span class="cat-badge">${esc(item.category)}</span>` : ''}
+          </div>
+          ${item._done ? '' : `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ===== BYPASS =====
@@ -1256,13 +1172,22 @@ function openBypass(id) {
   if (me.banned) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
   if (!currentItem || currentItem.active === false || currentItem.deleted) return;
+
+  const maxT = currentItem.maxTimes !== undefined ? currentItem.maxTimes : 1;
+  if (maxT > 0) {
+    const times = countUserCompletions(me.username, id);
+    if (times >= maxT) {
+      toast('⚠️ Bạn đã vượt đủ số lần cho nội dung này', 'err');
+      return;
+    }
+  }
+
   const rounds = Math.max(1, Math.min(20, parseInt(currentItem.rounds) || 1));
   currentItem.rounds = rounds;
   verifiedSteps = new Array(rounds).fill(false);
 
   document.getElementById('bmTitle').textContent = '⚡ ' + currentItem.name;
-  document.getElementById('bmInfo').textContent =
-    `Hoàn thành đủ ${rounds} lượt vượt link bên dưới để nhận nội dung.`;
+  document.getElementById('bmInfo').textContent = `Hoàn thành đủ ${rounds} lượt vượt link để nhận nội dung.`;
   document.getElementById('bmInfo').className = 'alert alert-info show';
   document.getElementById('bmResult').classList.remove('show');
   updateProgress();
@@ -1273,41 +1198,21 @@ function openBypass(id) {
 
 function saveActiveBypassState() {
   if (!currentItem) return;
-  lsSet(ACTIVE_BYPASS_KEY, {
-    itemId: currentItem.id,
-    rounds: currentItem.rounds,
-    verifiedSteps,
-    username: me ? me.username : null,
-    ts: Date.now()
-  });
+  lsSet(ACTIVE_BYPASS_KEY, { itemId: currentItem.id, rounds: currentItem.rounds, verifiedSteps, username: me ? me.username : null, ts: Date.now() });
 }
-function clearActiveBypassState() {
-  try { localStorage.removeItem(ACTIVE_BYPASS_KEY); } catch (e) {}
-}
+function clearActiveBypassState() { try { localStorage.removeItem(ACTIVE_BYPASS_KEY); } catch (e) {} }
 function restoreActiveBypassIfAny() {
   const saved = lsGet(ACTIVE_BYPASS_KEY, null);
   if (!saved || !saved.itemId) return;
-  if (saved.username && me && saved.username !== me.username) {
-    clearActiveBypassState();
-    return;
-  }
-  if (saved.ts && Date.now() - saved.ts > 2 * 3600000) {
-    clearActiveBypassState();
-    return;
-  }
+  if (saved.username && me && saved.username !== me.username) { clearActiveBypassState(); return; }
+  if (saved.ts && Date.now() - saved.ts > 2 * 3600000) { clearActiveBypassState(); return; }
   const item = (localItems || {})[saved.itemId];
   if (!item || item.deleted) { clearActiveBypassState(); return; }
-  if (saved.rounds !== undefined && saved.rounds !== item.rounds) {
-    clearActiveBypassState();
-    openBypass(saved.itemId);
-    return;
-  }
   openBypass(saved.itemId);
   if (Array.isArray(saved.verifiedSteps) && currentItem) {
     verifiedSteps = saved.verifiedSteps.slice(0, currentItem.rounds);
     while (verifiedSteps.length < currentItem.rounds) verifiedSteps.push(false);
-    renderSteps();
-    updateProgress();
+    renderSteps(); updateProgress();
     if (verifiedSteps.every(v => v)) showResult();
   }
 }
@@ -1322,7 +1227,7 @@ function renderSteps() {
     const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
     const cdLeft = getCooldownLeft(item.id, i);
     html += `
-      <div class="step-item" id="step_${i}">
+      <div class="step-item">
         <div class="step-hd">
           <div class="step-num ${numClass}" id="snum_${i}">${done ? '✓' : (i + 1)}</div>
           <div class="step-label">Lượt ${i + 1}</div>
@@ -1331,29 +1236,20 @@ function renderSteps() {
           <button class="btn btn-cyan btn-sm" id="getLinkBtn_${i}" onclick="openLink(${i})" ${done || cdLeft > 0 ? 'disabled' : ''}>
             ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Lấy Link'}
           </button>
-          <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}"
-            type="text" autocomplete="off" spellcheck="false" inputmode="text"
-            placeholder="Dán mã xác nhận..."
-            value="${done ? '✅ Đã xác nhận' : ''}"
-            ${done ? 'disabled' : ''}
+          <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}" type="text" autocomplete="off" spellcheck="false"
+            placeholder="Dán mã xác nhận..." value="${done ? '✅ Đã xác nhận' : ''}" ${done ? 'disabled' : ''}
             onkeydown="if(event.key==='Enter'){event.preventDefault();verifyCode(${i});}"
             oninput="handleCodeInput(this, ${i})"/>
-          <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}"
-            onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
+          <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}" onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
         </div>
-        ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s mới lấy link lại được</div>` : ''}
+        ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s</div>` : ''}
       </div>`;
   }
   document.getElementById('bmSteps').innerHTML = html;
-
-  // Update cooldown timers
   for (let i = 0; i < rounds; i++) {
-    if (!verifiedSteps[i] && getCooldownLeft(item.id, i) > 0) {
-      startCooldownTimer(i);
-    }
+    if (!verifiedSteps[i] && getCooldownLeft(item.id, i) > 0) startCooldownTimer(i);
   }
 }
-
 function startCooldownTimer(idx) {
   const timer = setInterval(() => {
     if (!currentItem) { clearInterval(timer); return; }
@@ -1362,220 +1258,146 @@ function startCooldownTimer(idx) {
     const hint = document.getElementById('cdHint_' + idx);
     if (left <= 0) {
       clearInterval(timer);
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '🔗 Lấy Link';
-      }
+      if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Lấy Link'; }
       if (hint) hint.remove();
       return;
     }
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '⏳ ' + left + 's';
-    }
-    if (hint) hint.textContent = 'Chờ ' + left + 's mới lấy link lại được';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ' + left + 's'; }
+    if (hint) hint.textContent = 'Chờ ' + left + 's';
   }, 1000);
 }
 
 function openLink(idx) {
   const item = currentItem;
   if (!item || !me) return;
-  if (!checkRate('openLink', 20, 60000)) {
-    toast('⚠️ Thao tác quá nhanh. Đợi một chút.', 'err');
-    return;
-  }
+  if (!checkRate('openLink', 20, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
   const cd = getCooldownLeft(item.id, idx);
-  if (cd > 0) {
-    toast('⏳ Còn ' + cd + 's mới lấy link lại được', 'err');
-    return;
-  }
+  if (cd > 0) { toast('⏳ Còn ' + cd + 's', 'err'); return; }
 
   const code = genVerifyCode(8);
-  const payload = {
-    code,
-    user: me.username,
-    itemId: item.id,
-    round: idx,
-    exp: Date.now() + 30 * 60 * 1000
-  };
-  localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify(payload));
+  localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify({
+    code, user: me.username, itemId: item.id, round: idx, exp: Date.now() + 30 * 60 * 1000
+  }));
   setCooldown(item.id, idx);
 
   const revealUrl = location.origin + location.pathname +
     '?vlpcode=' + encodeURIComponent(code) +
     '&vlpitem=' + encodeURIComponent(item.id) +
     '&vlpround=' + idx;
-
   try {
-    const link4mUrl = buildLink4mUrl(revealUrl);
-    window.open(link4mUrl, '_blank');
-    toast('Đã mở link lượt ' + (idx + 1) + '. Vượt xong dán mã vào ô bên dưới!');
-    renderSteps(); // refresh cooldown UI
+    window.open(buildLink4mUrl(revealUrl), '_blank');
+    toast('Đã mở link lượt ' + (idx + 1));
+    renderSteps();
   } catch (e) {
     localStorage.removeItem(pendingCodeKey(item.id, idx));
-    toast('❌ ' + (e && e.message ? e.message : 'Không tạo được link'), 'err');
+    toast('❌ ' + (e.message || 'Không tạo được link'), 'err');
   }
 }
 
 function handleCodeInput(el, idx) {
-  if (!el) return;
   const btn = document.getElementById('verifyBtn_' + idx);
   if (!btn) return;
-  if (el.value.trim()) {
-    btn.classList.remove('btn-ghost');
-    btn.classList.add('btn-cyan');
-  } else {
-    btn.classList.remove('btn-cyan');
-    btn.classList.add('btn-ghost');
-  }
+  if (el.value.trim()) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-cyan'); }
+  else { btn.classList.remove('btn-cyan'); btn.classList.add('btn-ghost'); }
 }
 
 function verifyCode(idx) {
   const inp = document.getElementById('codeinp_' + idx);
   if (!inp || inp.disabled || !currentItem || !me) return;
   const val = (inp.value || '').trim().toUpperCase();
-  if (!val) {
-    toast('⚠️ Vui lòng nhập / dán mã xác nhận!', 'err');
-    inp.focus();
-    return;
-  }
+  if (!val) { toast('⚠️ Nhập mã xác nhận!', 'err'); return; }
   const key = pendingCodeKey(currentItem.id, idx);
   let expected = null;
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) {
-      toast('⚠️ Bạn cần bấm "Lấy Link" trước rồi mới có mã!', 'err');
-      return;
-    }
+    if (!raw) { toast('⚠️ Cần bấm Lấy Link trước!', 'err'); return; }
     const payload = JSON.parse(raw);
-    if (payload.exp && Date.now() > payload.exp) {
-      localStorage.removeItem(key);
-      toast('⚠️ Mã đã hết hạn. Bấm Lấy Link lại.', 'err');
-      return;
-    }
-    if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) {
-      toast('❌ Mã không hợp lệ cho lượt này', 'err');
-      return;
-    }
+    if (payload.exp && Date.now() > payload.exp) { localStorage.removeItem(key); toast('⚠️ Mã hết hạn', 'err'); return; }
+    if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) { toast('❌ Mã không hợp lệ', 'err'); return; }
     expected = (payload.code || '').toUpperCase();
-  } catch (e) {
-    toast('❌ Dữ liệu mã lỗi. Bấm Lấy Link lại.', 'err');
-    return;
-  }
-
-  if (val !== expected) {
-    toast('❌ Mã xác nhận không đúng!', 'err');
-    return;
-  }
+  } catch (e) { toast('❌ Lỗi dữ liệu mã', 'err'); return; }
+  if (val !== expected) { toast('❌ Mã không đúng!', 'err'); return; }
 
   localStorage.removeItem(key);
   verifiedSteps[idx] = true;
-  inp.value = '✅ Đã xác nhận';
-  inp.classList.add('verified');
-  inp.disabled = true;
+  inp.value = '✅ Đã xác nhận'; inp.classList.add('verified'); inp.disabled = true;
   const btn = document.getElementById('verifyBtn_' + idx);
-  if (btn) {
-    btn.disabled = true;
-    btn.className = 'btn btn-green btn-sm';
-  }
+  if (btn) { btn.disabled = true; btn.className = 'btn btn-green btn-sm'; }
   const snum = document.getElementById('snum_' + idx);
-  if (snum) {
-    snum.textContent = '✓';
-    snum.className = 'step-num done';
-  }
+  if (snum) { snum.textContent = '✓'; snum.className = 'step-num done'; }
   if (idx + 1 < currentItem.rounds) {
     const nextNum = document.getElementById('snum_' + (idx + 1));
     if (nextNum) nextNum.className = 'step-num active';
   }
   updateProgress();
-  if (verifiedSteps.every(v => v)) {
-    clearActiveBypassState();
-    setTimeout(showResult, 350);
-  } else {
-    saveActiveBypassState();
-    toast('✅ Lượt ' + (idx + 1) + ' xác nhận thành công!', 'ok');
-  }
+  if (verifiedSteps.every(v => v)) { clearActiveBypassState(); setTimeout(showResult, 350); }
+  else { saveActiveBypassState(); toast('✅ Lượt ' + (idx + 1) + ' OK!', 'ok'); }
 }
 
 function updateProgress() {
   const done = verifiedSteps.filter(Boolean).length;
   const total = currentItem ? currentItem.rounds : 0;
-  const pct = total > 0 ? (done / total) * 100 : 0;
-  const fill = document.getElementById('bmProgFill');
-  const txt = document.getElementById('bmProgText');
-  if (fill) fill.style.width = pct + '%';
-  if (txt) txt.textContent = done + ' / ' + total + ' lượt hoàn thành';
+  document.getElementById('bmProgFill').style.width = (total > 0 ? (done / total) * 100 : 0) + '%';
+  document.getElementById('bmProgText').textContent = done + ' / ' + total + ' lượt hoàn thành';
 }
 
 function showResult() {
   const item = currentItem;
   if (!item || !me) return;
-  if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) {
-    toast('❌ Chưa hoàn thành đủ lượt', 'err');
+  if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) { toast('❌ Chưa đủ lượt', 'err'); return; }
+
+  const maxT = item.maxTimes !== undefined ? item.maxTimes : 1;
+  if (maxT > 0 && countUserCompletions(me.username, item.id) >= maxT) {
+    toast('⚠️ Đã vượt đủ số lần cho phép', 'err');
     return;
   }
-  document.getElementById('bmResultContent').textContent = '⏳ Đang tải nội dung...';
-  document.getElementById('bmResult').classList.add('show');
 
+  document.getElementById('bmResultContent').textContent = '⏳ Đang tải...';
+  document.getElementById('bmResult').classList.add('show');
   fetchSecretContent(item.id).then(content => {
-    if (content === null) content = '(Không có nội dung hoặc đã bị xóa)';
+    if (content === null) content = '(Không có nội dung)';
     document.getElementById('bmResultContent').textContent = content;
-    const order = {
+    addOrder({
       id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
-      user: me.username,
-      display: me.display,
-      itemId: item.id,
-      itemName: item.name,
-      status: 'success',
-      createdAt: new Date().toISOString()
-    };
-    addOrder(order);
-    toast('🎉 Hoàn thành! Nội dung đã được mở khóa!', 'ok');
+      user: me.username, display: me.display, itemId: item.id, itemName: item.name,
+      status: 'success', createdAt: new Date().toISOString()
+    });
+    toast('🎉 Hoàn thành!', 'ok');
+    setTimeout(() => renderItemGrid(), 500);
   });
 }
 
 function copyResult() {
   const txt = document.getElementById('bmResultContent').textContent;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).then(() => toast('📋 Đã sao chép!', 'ok')).catch(() => fallbackCopy(txt));
-  } else fallbackCopy(txt);
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('📋 Đã sao chép!', 'ok')).catch(() => fallbackCopy(txt));
+  else fallbackCopy(txt);
 }
-
 function fallbackCopy(txt) {
-  const ta = document.createElement('textarea');
-  ta.value = txt;
-  ta.style.position = 'fixed';
-  ta.style.left = '-9999px';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); toast('📋 Đã sao chép!', 'ok'); }
-  catch (e) { toast('Không sao chép được', 'err'); }
+  const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('📋 Đã sao chép!', 'ok'); } catch (e) { toast('Không sao chép được', 'err'); }
   document.body.removeChild(ta);
 }
-
 function openResult() {
   const txt = document.getElementById('bmResultContent').textContent.trim();
-  const urlMatch = txt.match(/https?:\/\/[^\s]+/i);
-  if (urlMatch) window.open(urlMatch[0], '_blank');
-  else toast('Không tìm thấy link để mở', 'err');
+  const m = txt.match(/https?:\/\/[^\s]+/i);
+  if (m) window.open(m[0], '_blank'); else toast('Không tìm thấy link', 'err');
 }
-
 function closeBypass() {
   document.getElementById('bypassModal').classList.remove('open');
-  currentItem = null;
-  verifiedSteps = [];
-  clearActiveBypassState();
+  currentItem = null; verifiedSteps = []; clearActiveBypassState();
 }
 
 // ===== ADMIN =====
 function aTab(t) {
   curAdminTab = t;
   document.querySelectorAll('.atab').forEach((b, i) => {
-    b.classList.toggle('active', ['dash', 'items', 'users', 'orders', 'logs', 'settings'][i] === t);
+    b.classList.toggle('active', ['dash','items','users','orders','logs','settings'][i] === t);
   });
+  if (t === 'users') usersPage = 1;
+  if (t === 'orders') ordersPage = 1;
   renderAdminBody(t);
 }
-
 function renderAdminBody(t) {
   const body = document.getElementById('adminBody');
   if (t === 'dash') renderDash(body);
@@ -1593,8 +1415,6 @@ function renderDash(body) {
   const orders = getOrdersArr();
   const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
   const weekOrders = orders.filter(o => isWeek(o.createdAt)).length;
-
-  // Top items
   const itemCount = {};
   orders.forEach(o => { itemCount[o.itemName] = (itemCount[o.itemName] || 0) + 1; });
   const topItems = Object.entries(itemCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
@@ -1609,14 +1429,10 @@ function renderDash(body) {
       <div class="stat-card"><div class="stat-n">${banned}</div><div class="stat-l">🚫 Đang khóa</div></div>
     </div>
     ${banned ? `<div class="alert alert-err show" style="margin-bottom:12px">🚫 ${banned} tài khoản đang bị khóa</div>` : ''}
-    
-    <div class="sec-title" style="margin-bottom:10px">🏆 Top nội dung được vượt nhiều</div>
-    ${topItems.length ? `<div class="tbl-wrap"><table class="dtbl">
-      <thead><tr><th>#</th><th>Nội dung</th><th>Lượt</th></tr></thead>
-      <tbody>${topItems.map((t,i) => `<tr><td>${i+1}</td><td>${esc(t[0])}</td><td><strong>${t[1]}</strong></td></tr>`).join('')}</tbody>
-    </table></div>` : '<div style="color:var(--sub);font-size:12px;margin-bottom:14px">Chưa có dữ liệu</div>'}
-
-    <div class="sec-title" style="margin-bottom:10px">📋 Lịch sử gần nhất</div>
+    <div class="sec-title">🏆 Top nội dung</div>
+    ${topItems.length ? `<div class="tbl-wrap"><table class="dtbl"><thead><tr><th>#</th><th>Nội dung</th><th>Lượt</th></tr></thead>
+      <tbody>${topItems.map((t,i) => `<tr><td>${i+1}</td><td>${esc(t[0])}</td><td><strong>${t[1]}</strong></td></tr>`).join('')}</tbody></table></div>` : '<div style="color:var(--sub);font-size:12px;margin-bottom:14px">Chưa có dữ liệu</div>'}
+    <div class="sec-title">📋 Gần nhất</div>
     ${renderOrderTable(orders.slice(0, 8))}
   `;
 }
@@ -1634,15 +1450,15 @@ function renderItemsAdmin(body) {
     <div id="itemAdminList">
       ${items.length ? items.map(item => `
         <div class="item-manage-row">
-          <div style="font-size:22px;flex-shrink:0">${item.icon || '📦'}</div>
+          ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px">${item.icon||'📦'}</div>`}
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)}</div>
-            <div class="imr-sub">${item.rounds || 1} lượt • ${item.category ? esc(item.category) + ' • ' : ''}${esc(item.desc || '')}</div>
-            <div style="margin-top:4px"><span class="bdg ${item.active !== false ? 'bdg-ok' : 'bdg-no'}">${item.active !== false ? 'Bật' : 'Tắt'}</span></div>
+            <div class="imr-sub">${item.rounds||1} lượt • max ${item.maxTimes!==undefined?item.maxTimes:1} lần/user • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
+            <div style="margin-top:4px"><span class="bdg ${item.active!==false?'bdg-ok':'bdg-no'}">${item.active!==false?'Bật':'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
             <button class="btn btn-ghost btn-xs" onclick="openItemModal('${item.id}')">✏️</button>
-            <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active !== false ? '⏸' : '▶'}</button>
+            <button class="btn btn-ghost btn-xs" onclick="toggleItem('${item.id}')">${item.active!==false?'⏸':'▶'}</button>
             <button class="btn btn-red btn-xs" onclick="deleteItem('${item.id}')">🗑</button>
           </div>
         </div>
@@ -1652,73 +1468,102 @@ function renderItemsAdmin(body) {
 }
 
 function clearAllItems() {
-  if (!confirm('Xóa TOÀN BỘ nội dung trên server? Không thể hoàn tác.')) return;
-  const ids = Object.keys(localItems || {});
-  ids.forEach(id => {
-    if (localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false };
-  });
+  if (!confirm('Xóa TOÀN BỘ nội dung?')) return;
+  Object.keys(localItems || {}).forEach(id => { if (localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false }; });
   const s = { ...getSettings(), seededDemo: true };
-  localSettings = s;
-  Promise.all([
-    saveItems(localItems),
-    saveSettings(s),
-    db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(() => {})
-  ]).then(() => {
-    addLog('clear_all_items', 'Xóa toàn bộ nội dung');
-    aTab('items');
-    renderItemGrid();
-    toast('🗑 Đã xóa hết trên server.', 'ok');
-  }).catch(e => fbErr(e, 'clearAllItems'));
+  Promise.all([saveItems(localItems), saveSettings(s), db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(()=>{})]).then(() => {
+    addLog('clear_all_items', ''); aTab('items'); renderItemGrid(); toast('🗑 Đã xóa hết', 'ok');
+  });
 }
 
 function renderUsersAdmin(body) {
-  const users = getUsersArr().filter(u => u.role !== 'admin');
+  const allUsers = getUsersArr().filter(u => u.role !== 'admin');
+  const totalPages = Math.max(1, Math.ceil(allUsers.length / PAGE_SIZE));
+  if (usersPage > totalPages) usersPage = totalPages;
+  const pageUsers = allUsers.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE);
   const orders = getOrdersArr();
+
   body.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="sec-title" style="margin-bottom:0">👥 DANH SÁCH KHÁCH</div>
-      <span style="font-size:12px;color:var(--sub)">${users.length} thành viên</span>
+      <div class="sec-title" style="margin-bottom:0">👥 KHÁCH HÀNG</div>
+      <span style="font-size:12px;color:var(--sub)">${allUsers.length} thành viên</span>
     </div>
     <input class="srch-inp" placeholder="🔍 Tìm kiếm..." oninput="filterUserTable(this.value)"/>
     <div class="tbl-wrap">
       <table class="dtbl">
-        <thead><tr><th>Tên</th><th>Username</th><th>Lượt</th><th>Trạng thái</th><th></th></tr></thead>
+        <thead><tr><th>Tên</th><th>Username</th><th>Lượt</th><th>TT</th><th></th></tr></thead>
         <tbody id="userTbody">
-          ${users.length ? users.map(u => `
+          ${pageUsers.length ? pageUsers.map(u => `
             <tr>
-              <td>${u.avatar || '👤'} <strong>${esc(u.display)}</strong></td>
+              <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong>${u.banReason?`<br><span style="font-size:9px;color:var(--red)">${esc(u.banReason)}</span>`:''}</td>
               <td style="color:var(--sub)">@${esc(u.username)}</td>
               <td>${orders.filter(o => o.user === u.username).length}</td>
-              <td><span class="bdg ${u.banned ? 'bdg-no' : 'bdg-ok'}">${u.banned ? 'Khóa' : 'OK'}</span></td>
+              <td><span class="bdg ${u.banned?'bdg-no':'bdg-ok'}">${u.banned?'Khóa':'OK'}</span></td>
               <td style="white-space:nowrap">
-                <button class="btn btn-xs ${u.banned ? 'btn-green' : 'btn-red'}" onclick="toggleBan('${u.username}')">
-                  ${u.banned ? 'Mở' : 'Khóa'}
-                </button>
-                <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')" title="Reset mật khẩu">🔑</button>
+                <button class="btn btn-xs ${u.banned?'btn-green':'btn-red'}" onclick="${u.banned?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${u.banned?'Mở':'Khóa'}</button>
+                <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
               </td>
             </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:20px">Chưa có thành viên</td></tr>'}
         </tbody>
       </table>
     </div>
+    ${renderPagination(usersPage, totalPages, 'usersPage')}
   `;
 }
-
 function filterUserTable(q) {
   const tbody = document.getElementById('userTbody');
   if (!tbody) return;
   const lower = (q || '').toLowerCase();
-  tbody.querySelectorAll('tr').forEach(r => {
-    r.style.display = r.textContent.toLowerCase().includes(lower) ? '' : 'none';
-  });
+  tbody.querySelectorAll('tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(lower) ? '' : 'none'; });
+}
+function renderPagination(page, total, type) {
+  if (total <= 1) return '';
+  let html = '<div class="pagination">';
+  html += `<button class="page-btn" ${page<=1?'disabled':''} onclick="goPage('${type}',${page-1})">‹</button>`;
+  for (let i = 1; i <= total; i++) {
+    if (total > 7 && Math.abs(i - page) > 2 && i !== 1 && i !== total) {
+      if (i === 2 || i === total - 1) html += '<span style="color:var(--sub);padding:0 4px">…</span>';
+      continue;
+    }
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="goPage('${type}',${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" ${page>=total?'disabled':''} onclick="goPage('${type}',${page+1})">›</button></div>`;
+  return html;
+}
+function goPage(type, p) {
+  if (type === 'usersPage') { usersPage = p; aTab('users'); }
+  else if (type === 'ordersPage') { ordersPage = p; aTab('orders'); }
 }
 
+function openBanModal(username) {
+  banTargetUser = username;
+  document.getElementById('banUserName').value = username;
+  document.getElementById('banReason').value = '';
+  document.getElementById('banModal').classList.add('open');
+}
+function closeBanModal() { document.getElementById('banModal').classList.remove('open'); banTargetUser = null; }
+function confirmBan() {
+  if (!banTargetUser) return;
+  const reason = (document.getElementById('banReason').value || '').trim() || 'Vi phạm quy định';
+  const u = (localUsers || {})[banTargetUser];
+  if (!u || u.role === 'admin') return;
+  u.banned = true;
+  u.banReason = reason;
+  updateUser(banTargetUser, u).then(() => {
+    addLog('ban_user', banTargetUser + ' — ' + reason);
+    closeBanModal();
+    toast('🚫 Đã khóa @' + banTargetUser, 'ok');
+    aTab('users');
+  });
+}
 function toggleBan(username) {
   const u = (localUsers || {})[username];
   if (!u || u.role === 'admin') return;
   u.banned = !u.banned;
+  if (!u.banned) delete u.banReason;
   updateUser(username, u).then(() => {
     addLog(u.banned ? 'ban_user' : 'unban_user', username);
-    toast(u.banned ? '🚫 Đã khóa tài khoản' : '✅ Đã mở khóa', 'ok');
+    toast(u.banned ? '🚫 Đã khóa' : '✅ Đã mở khóa', 'ok');
     aTab('users');
   });
 }
@@ -1729,33 +1574,34 @@ function openResetPass(username) {
   document.getElementById('rpNewPass').value = '';
   document.getElementById('resetPassModal').classList.add('open');
 }
-function closeResetPass() {
-  document.getElementById('resetPassModal').classList.remove('open');
-  resetTargetUser = null;
-}
+function closeResetPass() { document.getElementById('resetPassModal').classList.remove('open'); resetTargetUser = null; }
 async function doResetUserPass() {
   if (!resetTargetUser) return;
   const np = document.getElementById('rpNewPass').value;
-  if (np.length < 6) { toast('❌ Mật khẩu ≥ 6 ký tự', 'err'); return; }
+  if (np.length < 6) { toast('❌ ≥ 6 ký tự', 'err'); return; }
   const u = (localUsers || {})[resetTargetUser];
-  if (!u) { toast('Không tìm thấy user', 'err'); return; }
+  if (!u) { toast('Không tìm thấy', 'err'); return; }
   const { hash, salt } = await hashPassword(np);
   const updated = { ...u, passwordHash: hash, passwordSalt: salt };
   delete updated.password;
   await updateUser(resetTargetUser, updated);
   addLog('reset_pass', resetTargetUser);
   closeResetPass();
-  toast('✅ Đã reset mật khẩu cho @' + resetTargetUser, 'ok');
+  toast('✅ Đã reset @' + resetTargetUser, 'ok');
 }
 
 function renderOrdersAdmin(body) {
-  const orders = getOrdersArr();
+  const all = getOrdersArr();
+  const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  if (ordersPage > totalPages) ordersPage = totalPages;
+  const pageOrders = all.slice((ordersPage - 1) * PAGE_SIZE, ordersPage * PAGE_SIZE);
+
   body.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div class="sec-title" style="margin-bottom:0">📋 LỊCH SỬ VƯỢT LINK</div>
+      <div class="sec-title" style="margin-bottom:0">📋 LỊCH SỬ</div>
       <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:12px;color:var(--sub)">${orders.length} lượt</span>
-        <button class="btn btn-ghost btn-xs" onclick="exportOrdersCSV()">📥 Xuất CSV</button>
+        <span style="font-size:12px;color:var(--sub)">${all.length} lượt</span>
+        <button class="btn btn-ghost btn-xs" onclick="exportOrdersCSV()">📥 CSV</button>
       </div>
     </div>
     <div class="filter-row">
@@ -1764,10 +1610,10 @@ function renderOrdersAdmin(body) {
       <button class="fbtn" onclick="filterOrders('week',this)">Tuần này</button>
       <button class="fbtn" onclick="filterOrders('month',this)">Tháng này</button>
     </div>
-    <div id="orderTableWrap">${renderOrderTable(orders)}</div>
+    <div id="orderTableWrap">${renderOrderTable(pageOrders)}</div>
+    ${renderPagination(ordersPage, totalPages, 'ordersPage')}
   `;
 }
-
 function renderOrderTable(orders) {
   if (!orders.length) return '<div class="empty-state"><div class="empty-icon">📋</div><div>Chưa có dữ liệu</div></div>';
   return `<div class="tbl-wrap"><table class="dtbl">
@@ -1775,13 +1621,12 @@ function renderOrderTable(orders) {
     <tbody>${orders.map(o => `
       <tr>
         <td><strong>${esc(o.display)}</strong><br><span style="color:var(--sub);font-size:10px">@${esc(o.user)}</span></td>
-        <td style="font-size:11px;color:var(--sub);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.itemName || '')}</td>
-        <td><span class="bdg ${o.status === 'success' ? 'bdg-ok' : 'bdg-no'}">${o.status === 'success' ? '✅' : '❌'}</span></td>
+        <td style="font-size:11px;color:var(--sub);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.itemName||'')}</td>
+        <td><span class="bdg ${o.status==='success'?'bdg-ok':'bdg-no'}">${o.status==='success'?'✅':'❌'}</span></td>
         <td style="font-size:10px;color:var(--sub);white-space:nowrap">${fmtDT(o.createdAt)}</td>
       </tr>`).join('')}
     </tbody></table></div>`;
 }
-
 function filterOrders(range, btn) {
   document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1789,38 +1634,25 @@ function filterOrders(range, btn) {
   if (range === 'today') orders = orders.filter(o => isToday(o.createdAt));
   else if (range === 'week') orders = orders.filter(o => isWeek(o.createdAt));
   else if (range === 'month') orders = orders.filter(o => isMonth(o.createdAt));
-  document.getElementById('orderTableWrap').innerHTML = renderOrderTable(orders);
+  document.getElementById('orderTableWrap').innerHTML = renderOrderTable(orders.slice(0, PAGE_SIZE));
 }
-
 function exportOrdersCSV() {
   const orders = getOrdersArr();
   if (!orders.length) { toast('Không có dữ liệu', 'err'); return; }
   let csv = 'ID,User,Display,Item,Status,Time\n';
-  orders.forEach(o => {
-    csv += `"${o.id}","${o.user}","${(o.display||'').replace(/"/g,'""')}","${(o.itemName||'').replace(/"/g,'""')}","${o.status}","${o.createdAt}"\n`;
-  });
+  orders.forEach(o => { csv += `"${o.id}","${o.user}","${(o.display||'').replace(/"/g,'""')}","${(o.itemName||'').replace(/"/g,'""')}","${o.status}","${o.createdAt}"\n`; });
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'vuotlink_orders_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'vuotlink_orders_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
   toast('📥 Đã xuất CSV!', 'ok');
 }
 
 function renderLogsAdmin(body) {
   const logs = getLogsArr();
   body.innerHTML = `
-    <div class="sec-title" style="margin-bottom:12px">📝 NHẬT KÝ HOẠT ĐỘNG ADMIN</div>
+    <div class="sec-title" style="margin-bottom:12px">📝 NHẬT KÝ ADMIN</div>
     <div class="tbl-wrap">
-      ${logs.length ? logs.map(l => `
-        <div class="log-item">
-          <span class="log-time">${fmtDT(l.ts)}</span> · 
-          <strong style="color:var(--text)">${esc(l.by)}</strong> · 
-          ${esc(l.action)} ${l.detail ? '→ ' + esc(l.detail) : ''}
-        </div>
-      `).join('') : '<div class="empty-state"><div class="empty-icon">📝</div><div>Chưa có log</div></div>'}
+      ${logs.length ? logs.map(l => `<div class="log-item"><span class="log-time">${fmtDT(l.ts)}</span> · <strong style="color:var(--text)">${esc(l.by)}</strong> · ${esc(l.action)} ${l.detail ? '→ ' + esc(l.detail) : ''}</div>`).join('') : '<div class="empty-state"><div class="empty-icon">📝</div><div>Chưa có log</div></div>'}
     </div>
   `;
 }
@@ -1828,109 +1660,94 @@ function renderLogsAdmin(body) {
 function renderSettings(body) {
   const s = getSettings();
   body.innerHTML = `
-    <div class="sec-title" style="margin-bottom:12px">⚙️ CÀI ĐẶT HỆ THỐNG</div>
-
+    <div class="sec-title" style="margin-bottom:12px">⚙️ CÀI ĐẶT</div>
     <div class="settings-row">
-      <div class="settings-label">💬 Số Zalo Admin (Liên hệ)</div>
-      <input class="inp" id="setZalo" value="${esc(s.zaloAdmin || '')}" placeholder="VD: 0912345678"/>
-      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('zaloAdmin','setZalo')">💾 Lưu số Zalo</button>
+      <div class="settings-label">💬 Số Zalo Admin</div>
+      <input class="inp" id="setZalo" value="${esc(s.zaloAdmin||'')}" placeholder="0912345678"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('zaloAdmin','setZalo')">💾 Lưu</button>
     </div>
-
     <div class="settings-row">
       <div class="settings-label">🔑 API Key Link4M</div>
-      <input class="inp" id="setKey" value="${esc(s.link4mKey || '')}" placeholder="API key Link4M"/>
+      <input class="inp" id="setKey" value="${esc(s.link4mKey||'')}"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu</button>
     </div>
-
     <div class="settings-row">
-      <div class="settings-label">📦 Số lượt vượt mặc định khi tạo nội dung mới</div>
-      <input class="inp" id="setRounds" type="number" min="1" max="20" value="${s.roundsDefault || 2}" style="width:100px"/>
+      <div class="settings-label">📦 Lượt vượt mặc định</div>
+      <input class="inp" id="setRounds" type="number" min="1" max="20" value="${s.roundsDefault||2}" style="width:100px"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('roundsDefault','setRounds',true)">💾 Lưu</button>
     </div>
-
     <div class="settings-row">
-      <div class="settings-label">⏳ Cooldown giữa 2 lần "Lấy Link" (giây)</div>
-      <input class="inp" id="setCooldown" type="number" min="5" max="120" value="${s.cooldownSec || 25}" style="width:100px"/>
+      <div class="settings-label">🔁 Số lần vượt tối đa mặc định / user (0 = không giới hạn)</div>
+      <input class="inp" id="setMaxTimes" type="number" min="0" max="100" value="${s.maxTimesDefault!==undefined?s.maxTimesDefault:1}" style="width:100px"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('maxTimesDefault','setMaxTimes',true)">💾 Lưu</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">⏳ Cooldown Lấy Link (giây)</div>
+      <input class="inp" id="setCooldown" type="number" min="5" max="120" value="${s.cooldownSec||25}" style="width:100px"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('cooldownSec','setCooldown',true)">💾 Lưu</button>
     </div>
-
+    <div class="settings-row">
+      <div class="toggle-row">
+        <div class="settings-label" style="margin:0">Ẩn nội dung đã vượt đủ</div>
+        <label class="toggle"><input type="checkbox" id="setHideCompleted" ${s.hideCompleted!==false?'checked':''} onchange="saveHideCompleted(this.checked)"/><span class="toggle-slider"></span></label>
+      </div>
+    </div>
     <div class="settings-row">
       <div class="settings-label">🛡️ Đổi mật khẩu Admin</div>
       <input class="inp" id="setOldPass" type="password" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px"/>
-      <input class="inp" id="setNewPass" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" style="margin-bottom:8px"/>
-      <input class="inp" id="setNewPass2" type="password" placeholder="Xác nhận mật khẩu mới"/>
-      <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi Mật Khẩu</button>
+      <input class="inp" id="setNewPass" type="password" placeholder="Mật khẩu mới" style="margin-bottom:8px"/>
+      <input class="inp" id="setNewPass2" type="password" placeholder="Xác nhận"/>
+      <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi</button>
     </div>
-
     <div class="settings-row">
-      <div class="settings-label">☁️ Trạng thái server</div>
-      <div style="font-size:13px;color:var(--green)">● Firestore Online — project: shopvip-139ea</div>
-      <div style="font-size:11px;color:var(--sub);margin-top:4px">Collection: vlp_data · Version 2.5</div>
+      <div class="settings-label">☁️ Server</div>
+      <div style="font-size:13px;color:var(--green)">● Firestore Online — shopvip-139ea</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v2.5 đã nâng cấp:</b><br>
-        • Profile user (đổi tên + avatar)<br>
-        • Lịch sử vượt link cá nhân<br>
-        • Tìm kiếm + lọc theo danh mục<br>
-        • Cooldown chống spam Lấy Link<br>
-        • Soft-delete item<br>
-        • Admin activity log<br>
-        • Reset mật khẩu user<br>
-        • Xuất CSV lịch sử<br>
-        • Bắt buộc đổi pass admin mặc định<br>
-        • Dashboard thống kê chi tiết hơn
+        <b>v3:</b> Ảnh từ album (nén tự động) · Giới hạn số lần vượt · Ẩn item đã lấy · Lý do khóa · Phân trang · UI Gaming
       </div>
     </div>
   `;
 }
-
 function saveSetting(key, inputId, isNum) {
   let val = document.getElementById(inputId).value;
-  if (isNum) val = parseInt(val) || (key === 'cooldownSec' ? 25 : 2);
-  else val = (val || '').trim();
-  const s = { ...getSettings() };
-  s[key] = val;
-  saveSettings(s).then(() => {
-    toast('✅ Đã lưu lên server!', 'ok');
-    addLog('update_setting', key + ' = ' + val);
-  }).catch(e => {
-    toast('❌ Lưu thất bại', 'err');
-  });
+  if (isNum) val = parseInt(val);
+  if (isNum && isNaN(val)) val = key === 'cooldownSec' ? 25 : key === 'maxTimesDefault' ? 1 : 2;
+  else if (!isNum) val = (val || '').trim();
+  const s = { ...getSettings() }; s[key] = val;
+  saveSettings(s).then(() => { toast('✅ Đã lưu!', 'ok'); addLog('update_setting', key); });
   if (key === 'zaloAdmin') updateContactBtn();
 }
-
+function saveHideCompleted(checked) {
+  const s = { ...getSettings(), hideCompleted: checked };
+  saveSettings(s).then(() => { toast('✅ Đã lưu', 'ok'); renderItemGrid(); });
+}
 async function changeAdminPass() {
   const old = document.getElementById('setOldPass').value;
   const np = document.getElementById('setNewPass').value;
   const np2 = document.getElementById('setNewPass2').value;
   const admin = (localUsers || {})[ADMIN_USER];
   if (!admin) { toast('Không tìm thấy admin', 'err'); return; }
-
-  let ok = false;
-  if (admin.passwordHash && admin.passwordSalt) {
-    ok = await verifyPassword(old, admin.passwordHash, admin.passwordSalt);
-  } else if (admin.password) {
-    ok = admin.password === old;
-  }
-  if (!ok) { toast('❌ Mật khẩu hiện tại sai!', 'err'); return; }
-  if (np.length < 6) { toast('❌ Mật khẩu mới ít nhất 6 ký tự', 'err'); return; }
-  if (np !== np2) { toast('❌ Xác nhận mật khẩu không khớp', 'err'); return; }
-
+  let ok = admin.passwordHash ? await verifyPassword(old, admin.passwordHash, admin.passwordSalt) : (admin.password === old);
+  if (!ok) { toast('❌ Mật khẩu sai', 'err'); return; }
+  if (np.length < 6) { toast('❌ ≥ 6 ký tự', 'err'); return; }
+  if (np !== np2) { toast('❌ Không khớp', 'err'); return; }
   const { hash, salt } = await hashPassword(np);
   const updated = { ...admin, passwordHash: hash, passwordSalt: salt, mustChangePass: false };
   delete updated.password;
   await updateUser(ADMIN_USER, updated);
   if (me && me.username === ADMIN_USER) me = updated;
-
-  document.getElementById('setOldPass').value = '';
-  document.getElementById('setNewPass').value = '';
-  document.getElementById('setNewPass2').value = '';
-  addLog('change_pass', 'Admin đổi mật khẩu');
-  toast('✅ Đã đổi mật khẩu (đã hash)!', 'ok');
+  document.getElementById('setOldPass').value = ''; document.getElementById('setNewPass').value = ''; document.getElementById('setNewPass2').value = '';
+  addLog('change_pass', 'Admin'); toast('✅ Đã đổi mật khẩu!', 'ok');
 }
 
 // ===== ITEM MODAL =====
 function openItemModal(id) {
   editItemId = id || null;
+  selectedImageData = null;
+  document.getElementById('imImagePreview').classList.remove('show');
+  document.getElementById('imRemoveImg').style.display = 'none';
+  document.getElementById('imImagePreviewImg').src = '';
+
   if (id) {
     const item = (localItems || {})[id];
     if (!item) return;
@@ -1940,10 +1757,17 @@ function openItemModal(id) {
     document.getElementById('imCategory').value = item.category || '';
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
-    document.getElementById('imContent').value = '⏳ Đang tải nội dung...';
+    document.getElementById('imMaxTimes').value = item.maxTimes !== undefined ? item.maxTimes : 1;
+    document.getElementById('imContent').value = '⏳ Đang tải...';
     document.getElementById('imContent').disabled = true;
+    if (item.image) {
+      selectedImageData = item.image;
+      document.getElementById('imImagePreviewImg').src = item.image;
+      document.getElementById('imImagePreview').classList.add('show');
+      document.getElementById('imRemoveImg').style.display = '';
+    }
     fetchSecretContent(id).then(content => {
-      document.getElementById('imContent').value = (content !== null ? content : (item.content || ''));
+      document.getElementById('imContent').value = content !== null ? content : (item.content || '');
       document.getElementById('imContent').disabled = false;
     });
   } else {
@@ -1953,55 +1777,45 @@ function openItemModal(id) {
     document.getElementById('imCategory').value = '';
     document.getElementById('imIcon').value = '📦';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
+    document.getElementById('imMaxTimes').value = getSettings().maxTimesDefault !== undefined ? getSettings().maxTimesDefault : 1;
     document.getElementById('imContent').value = '';
     document.getElementById('imContent').disabled = false;
   }
   document.getElementById('imErr').classList.remove('show');
   document.getElementById('itemModal').classList.add('open');
 }
-
-function closeItemModal() {
-  document.getElementById('itemModal').classList.remove('open');
-  editItemId = null;
-}
+function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editItemId = null; selectedImageData = null; }
 
 function buildLink4mUrl(destinationUrl) {
   const key = (getSettings().link4mKey || '').trim();
-  if (!key) throw new Error('Chưa lưu API Key Link4M trong Cài đặt');
+  if (!key) throw new Error('Chưa lưu API Key Link4M');
   return 'https://link4m.co/st?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(destinationUrl);
 }
-
 function genVerifyCode(len) {
   len = len || 8;
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let s = '';
-  const arr = new Uint8Array(len);
-  crypto.getRandomValues(arr);
+  let s = ''; const arr = new Uint8Array(len); crypto.getRandomValues(arr);
   for (let i = 0; i < len; i++) s += chars[arr[i] % chars.length];
   return s;
 }
-function pendingCodeKey(itemId, idx) {
-  return 'vlp_pending_v2_' + itemId + '_' + idx;
-}
+function pendingCodeKey(itemId, idx) { return 'vlp_pending_v2_' + itemId + '_' + idx; }
 
 function checkRevealCode() {
   const params = new URLSearchParams(location.search);
   const code = params.get('vlpcode');
   if (!code) return;
   const overlay = document.createElement('div');
-  overlay.id = 'vlpRevealOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#07080c;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:"Exo 2",sans-serif;color:#dde6f0';
-  overlay.innerHTML =
-    '<div style="font-size:15px;color:#00e676;margin-bottom:8px;font-weight:700">✅ Bạn đã vượt link thành công!</div>' +
-    '<div style="font-size:13px;color:#4e6378;margin-bottom:18px">Copy mã bên dưới rồi quay lại tab web ban đầu, dán vào ô xác nhận:</div>' +
-    '<div id="vlpRevealCodeTxt" style="font-size:34px;font-weight:800;letter-spacing:5px;color:#f5c542;background:#111620;border:1px solid #1a2232;border-radius:14px;padding:20px 30px;margin-bottom:20px">' + esc(code) + '</div>' +
-    '<button id="vlpRevealCopyBtn" style="padding:13px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#00d4ff,#007fa8);color:#040810;font-weight:700;font-size:14px;cursor:pointer">📋 Copy mã</button>';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#05060a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:"Exo 2",sans-serif;color:#e8f0fa';
+  overlay.innerHTML = '<div style="font-size:15px;color:#00e676;margin-bottom:8px;font-weight:700">✅ Vượt link thành công!</div>' +
+    '<div style="font-size:13px;color:#5a6f88;margin-bottom:18px">Copy mã rồi quay lại tab cũ dán vào:</div>' +
+    '<div id="vlpRevealCodeTxt" style="font-size:34px;font-weight:800;letter-spacing:5px;color:#f5c542;background:#0e1320;border:1px solid #1a2438;border-radius:14px;padding:20px 30px;margin-bottom:20px">' + esc(code) + '</div>' +
+    '<button id="vlpRevealCopyBtn" style="padding:13px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#00e5ff,#0090b8);color:#040810;font-weight:700;font-size:14px;cursor:pointer">📋 Copy mã</button>';
   document.body.appendChild(overlay);
-  document.getElementById('vlpRevealCopyBtn').addEventListener('click', function () {
-    navigator.clipboard.writeText(code).then(function () {
+  document.getElementById('vlpRevealCopyBtn').addEventListener('click', function() {
+    navigator.clipboard.writeText(code).then(() => {
       const t = document.getElementById('vlpRevealCodeTxt');
-      if (t) { t.textContent = '✅ Đã copy!'; setTimeout(function () { t.textContent = code; }, 1200); }
-    }).catch(function () {});
+      if (t) { t.textContent = '✅ Đã copy!'; setTimeout(() => t.textContent = code, 1200); }
+    }).catch(()=>{});
   });
 }
 checkRevealCode();
@@ -2012,35 +1826,34 @@ function saveItem() {
   const category = (document.getElementById('imCategory').value || '').trim();
   const icon = (document.getElementById('imIcon').value || '').trim() || '📦';
   const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
+  const maxTimes = Math.max(0, Math.min(100, parseInt(document.getElementById('imMaxTimes').value) || 0));
   const content = (document.getElementById('imContent').value || '').trim();
 
-  if (!name) { showAlert('imErr', '⚠️ Vui lòng nhập tên!', 'err'); return; }
-  if (!content) { showAlert('imErr', '⚠️ Vui lòng nhập nội dung thật!', 'err'); return; }
+  if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
+  if (!content) { showAlert('imErr', '⚠️ Nhập nội dung thật!', 'err'); return; }
 
   let itemId = editItemId;
+  const imageField = selectedImageData || null;
+
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, category, icon, rounds });
+    updateItem(itemId, { ...rest, name, desc, category, icon, rounds, maxTimes, image: imageField });
     addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
     updateItem(itemId, {
-      id: itemId, name, desc, category, icon, rounds,
-      active: true,
-      deleted: false,
-      addedBy: me.username,
-      createdAt: new Date().toISOString()
+      id: itemId, name, desc, category, icon, rounds, maxTimes, image: imageField,
+      active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
     });
     addLog('add_item', name);
   }
   saveSecretContent(itemId, content).then(() => {
     closeItemModal();
-    toast('✅ Đã lưu lên server!', 'ok');
+    toast('✅ Đã lưu!', 'ok');
     aTab('items');
   });
 }
-
 function toggleItem(id) {
   const item = (localItems || {})[id];
   if (!item) return;
@@ -2050,48 +1863,29 @@ function toggleItem(id) {
   aTab('items');
   toast(item.active !== false ? '✅ Đã bật' : '⏸ Đã tắt');
 }
-
 function deleteItem(id) {
-  if (!confirm('Xóa nội dung này? (soft-delete, có thể khôi phục nếu cần)')) return;
+  if (!confirm('Xóa nội dung này?')) return;
   const item = (localItems || {})[id];
   deleteSecretContent(id);
   removeItem(id).then(() => {
     addLog('delete_item', item ? item.name : id);
-    if (!Object.keys(localItems || {}).filter(k => !localItems[k].deleted).length) {
-      const s = { ...getSettings(), seededDemo: true };
-      saveSettings(s);
-    }
     aTab('items');
-    toast('🗑 Đã xóa trên server', 'ok');
+    toast('🗑 Đã xóa', 'ok');
   });
 }
 
 // ===== UTILS =====
 function esc(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function fmtDate(iso) {
-  try { return new Date(iso).toLocaleDateString('vi-VN'); } catch (e) { return '—'; }
-}
+function fmtDate(iso) { try { return new Date(iso).toLocaleDateString('vi-VN'); } catch(e){ return '—'; } }
 function fmtDT(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  } catch (e) { return '—'; }
+  try { const d = new Date(iso); return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' }); }
+  catch(e){ return '—'; }
 }
-function isToday(iso) {
-  const d = new Date(iso), n = new Date();
-  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-}
-function isWeek(iso) { return (Date.now() - new Date(iso).getTime()) < 7 * 86400000; }
-function isMonth(iso) {
-  const d = new Date(iso), n = new Date();
-  return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-}
+function isToday(iso) { const d=new Date(iso),n=new Date(); return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
+function isWeek(iso) { return (Date.now() - new Date(iso).getTime()) < 7*86400000; }
+function isMonth(iso) { const d=new Date(iso),n=new Date(); return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
 
 let toastTmr = null;
 function toast(msg, type) {
@@ -2102,19 +1896,10 @@ function toast(msg, type) {
   toastTmr = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ===== INIT =====
-document.getElementById('bypassModal').addEventListener('click', function (e) {
-  if (e.target === this) closeBypass();
-});
-document.getElementById('itemModal').addEventListener('click', function (e) {
-  if (e.target === this) closeItemModal();
-});
-document.getElementById('liPass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('liUser').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('liPass').focus();
-});
+document.getElementById('bypassModal').addEventListener('click', function(e){ if(e.target===this) closeBypass(); });
+document.getElementById('itemModal').addEventListener('click', function(e){ if(e.target===this) closeItemModal(); });
+document.getElementById('liPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('liUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('liPass').focus(); });
 </script>
 </body>
 </html>
