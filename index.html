@@ -1018,14 +1018,16 @@ function setVisitProof(sid) {
   try { localStorage.setItem(visitProofKey(sid), '1'); } catch(e) {}
   // Ghi Firebase để tab chính đọc được (cùng máy / multi-tab)
   try {
-    db.collection(COL).doc('visit_' + sid).set({ ok: true, at: new Date().toISOString() }).catch(()=>{});
+    const writeProof = (tries) => db.collection(COL).doc('visit_' + sid).set({ ok: true, at: new Date().toISOString() })
+      .catch(e => { if (tries > 1) setTimeout(() => writeProof(tries - 1), 900); });
+    writeProof(4);
   } catch(e) {}
 }
 async function hasVisitProofAsync(sid) {
   if (!sid) return false;
   if (hasVisitProof(sid)) return true;
   try {
-    const snap = await db.collection(COL).doc('visit_' + sid).get();
+    const snap = await fsGetWithRetry(db.collection(COL).doc('visit_' + sid));
     if (snap.exists && snap.data() && snap.data().ok) {
       setVisitProof(sid); // cache local
       return true;
@@ -1134,6 +1136,17 @@ function hasUserCompleted(username, itemId) {
   return countUserCompletions(username, itemId) > 0;
 }
 
+// Đọc Firestore có tự động thử lại — tránh mất nội dung khi vừa quay lại tab
+// từ trang quảng cáo/Link4M (mạng có thể bị treo/ngắt tạm thời lúc đó).
+function fsGetWithRetry(ref, tries, delayMs) {
+  tries = tries || 4;
+  delayMs = delayMs || 900;
+  return ref.get().catch(e => {
+    if (tries <= 1) throw e;
+    return new Promise(res => setTimeout(res, delayMs)).then(() => fsGetWithRetry(ref, tries - 1, Math.round(delayMs * 1.5)));
+  });
+}
+
 function fbErr(e, label) {
   console.error(label, e);
   const msg = String((e && e.message) || e || '');
@@ -1194,7 +1207,7 @@ function fetchItemFiles(itemId) {
   if (cached && cached.attachedFiles && cached.attachedFiles.length && cached.attachedFiles[0].data) {
     return Promise.resolve(cached.attachedFiles);
   }
-  return db.collection(COL).doc('itemFiles').get().then(snap => {
+  return fsGetWithRetry(db.collection(COL).doc('itemFiles')).then(snap => {
     if (!snap.exists) return [];
     const data = snap.data();
     return (data && data[itemId]) || [];
@@ -1253,7 +1266,7 @@ function saveSecretContent(itemId, content) {
   return db.collection(COL).doc('itemSecrets').set({ data: { [itemId]: content } }, { merge: true }).catch(e => fbErr(e, 'saveSecretContent'));
 }
 function fetchSecretContent(itemId) {
-  return db.collection(COL).doc('itemSecrets').get().then(snap => {
+  return fsGetWithRetry(db.collection(COL).doc('itemSecrets')).then(snap => {
     const data = (snap.exists && snap.data() && snap.data().data) || {};
     return data[itemId] !== undefined ? data[itemId] : null;
   }).catch(e => { fbErr(e, 'fetchSecretContent'); return null; });
