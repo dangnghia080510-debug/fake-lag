@@ -670,6 +670,7 @@ const LS_ORDERS = 'vlp_orders_v2';
 const LS_SETTINGS = 'vlp_settings_v2';
 const LS_LOGS = 'vlp_logs_v1';
 const LS_KEYS = 'vlp_keys_v1';
+const LS_REVIEWS = 'vlp_reviews_v1';
 const THEME_K = 'vlp_theme_v1';
 const ACTIVE_BYPASS_KEY = 'vlp_active_bypass_v2';
 const RATE_KEY = 'vlp_rate_v1';
@@ -688,11 +689,11 @@ function getDeviceId() {
 
 function isUserBanned(u) {
   if (!u) return true;
+  if (u.banPermanent && u.banned) return true;
   if (u.banUntil) {
     const t = new Date(u.banUntil).getTime();
     if (t > Date.now()) return true;
-    // hết hạn → coi như mở (sẽ clear async khi login/snapshot)
-    if (u.banned) return false;
+    if (u.banned && !u.banPermanent) return false;
   }
   return !!u.banned;
 }
@@ -790,7 +791,7 @@ async function autoBanTooFast(username, seconds) {
     banDuration: 7 * 86400,
     suspicious: true,
     flags: flags.slice(0, 30),
-    rankHidden: true // ẩn xếp hạng luôn
+    rankHidden: true
   };
   await updateUser(username, updated);
   addLog('auto_ban_too_fast', username + ' — ' + seconds + 's');
@@ -799,6 +800,74 @@ async function autoBanTooFast(username, seconds) {
     showBanLive(reason + ' — Khóa 7 ngày');
   }
 }
+
+/** Khóa VĨNH VIỄN vì bypass / không chứng minh vượt Link4M */
+async function permanentBanFraud(username, reason) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return;
+  const r = reason || 'Gian lận: bypass link / không vượt Link4M hợp lệ';
+  const flags = Array.isArray(u.flags) ? [...u.flags] : [];
+  flags.unshift({ flag: 'fraud_bypass', detail: r, at: new Date().toISOString() });
+  const updated = {
+    ...u,
+    banned: true,
+    banReason: r,
+    banPermanent: true,
+    suspicious: true,
+    flags: flags.slice(0, 30),
+    rankHidden: true
+  };
+  delete updated.banUntil;
+  delete updated.banDuration;
+  await updateUser(username, updated);
+  addLog('permanent_ban_fraud', username + ' — ' + r);
+  if (me && me.username === username) {
+    me = updated;
+    showBanLive(r + ' — Khóa VĨNH VIỄN');
+  }
+}
+
+function visitProofKey(sid) { return 'vlp_visit_' + sid; }
+function hasVisitProof(sid) {
+  if (!sid) return false;
+  try { if (localStorage.getItem(visitProofKey(sid)) === '1') return true; } catch(e) {}
+  return false;
+}
+function setVisitProof(sid) {
+  if (!sid) return;
+  try { localStorage.setItem(visitProofKey(sid), '1'); } catch(e) {}
+  // Ghi Firebase để tab chính đọc được (cùng máy / multi-tab)
+  try {
+    db.collection(COL).doc('visit_' + sid).set({ ok: true, at: new Date().toISOString() }).catch(()=>{});
+  } catch(e) {}
+}
+async function hasVisitProofAsync(sid) {
+  if (!sid) return false;
+  if (hasVisitProof(sid)) return true;
+  try {
+    const snap = await db.collection(COL).doc('visit_' + sid).get();
+    if (snap.exists && snap.data() && snap.data().ok) {
+      setVisitProof(sid); // cache local
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+/** Kiểm tra mọi lượt đã có proof mở trang đích (sau Link4M) — async */
+async function checkAllRoundsVisited(itemId, rounds) {
+  const missing = [];
+  for (let i = 0; i < rounds; i++) {
+    try {
+      const sidStore = localStorage.getItem('vlp_sid_' + itemId + '_' + i);
+      if (!sidStore) { missing.push(i + 1); continue; }
+      const ok = await hasVisitProofAsync(sidStore);
+      if (!ok) missing.push(i + 1);
+    } catch(e) { missing.push(i + 1); }
+  }
+  return missing;
+}
+
 
 function attachDevice(username) {
   const u = (localUsers || {})[username];
@@ -819,7 +888,7 @@ function countAccountsOnDevice(deviceId) {
 }
 
 
-let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null, localKeys = null;
+let localUsers = null, localItems = null, localOrders = null, localSettings = null, localLogs = null, localKeys = null, localReviews = null;
 let firebaseReady = false, me = null, currentItem = null, verifiedSteps = [];
 let editItemId = null, curAdminTab = 'dash', isBusy = false;
 let currentCatFilter = 'all', currentUserTab = 'items';
@@ -931,6 +1000,31 @@ function saveSettings(obj) {
 }
 function saveLogs(obj) { localLogs = obj || {}; lsSet(LS_LOGS, { data: localLogs }); return db.collection(COL).doc('logs').set({ data: localLogs }).catch(e => fbErr(e, 'saveLogs')); }
 function saveKeys(obj) { localKeys = obj || {}; lsSet(LS_KEYS, { data: localKeys }); return db.collection(COL).doc('redeemKeys').set({ data: localKeys }).catch(e => fbErr(e, 'saveKeys')); }
+function saveReviews(obj) {
+  localReviews = obj || {};
+  lsSet(LS_REVIEWS, { data: localReviews });
+  return db.collection(COL).doc('reviews').get().then(snap => {
+    const remote = (snap.exists && snap.data() && snap.data().data) || {};
+    localReviews = { ...remote, ...localReviews };
+    lsSet(LS_REVIEWS, { data: localReviews });
+    return db.collection(COL).doc('reviews').set({ data: localReviews });
+  }).catch(e => fbErr(e, 'saveReviews'));
+}
+function getReviewsForItem(itemId) {
+  const all = Object.values(localReviews || {}).filter(r => r.itemId === itemId);
+  all.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  return all;
+}
+function getItemRating(itemId) {
+  const list = getReviewsForItem(itemId);
+  if (!list.length) return { avg: 0, count: 0 };
+  const sum = list.reduce((s, r) => s + (r.stars || 0), 0);
+  return { avg: Math.round((sum / list.length) * 10) / 10, count: list.length };
+}
+function userReviewForItem(username, itemId) {
+  return Object.values(localReviews || {}).find(r => r.user === username && r.itemId === itemId) || null;
+}
+
 function getKeysArr() {
   const arr = Object.values(localKeys || {});
   arr.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
@@ -955,10 +1049,22 @@ function deleteSecretContent(itemId) {
 }
 
 function updateUser(username, data) {
-  if (!localUsers) localUsers = {};
-  localUsers[username] = data;
-  lsSet(LS_USERS, { data: localUsers });
-  return saveUsers(localUsers);
+  if (!username) return Promise.resolve();
+  // Luôn get remote trước → gộp → ghi. Không bao giờ ghi đè mất user khác.
+  return db.collection(COL).doc('users').get().then(snap => {
+    const remote = (snap.exists && snap.data() && snap.data().data) || {};
+    const base = { ...remote, ...(localUsers || {}) };
+    base[username] = data;
+    localUsers = base;
+    lsSet(LS_USERS, { data: localUsers });
+    return db.collection(COL).doc('users').set({ data: localUsers });
+  }).catch(e => {
+    // offline fallback
+    if (!localUsers) localUsers = {};
+    localUsers[username] = data;
+    lsSet(LS_USERS, { data: localUsers });
+    return db.collection(COL).doc('users').set({ data: localUsers }).catch(err => fbErr(err || e, 'updateUser'));
+  });
 }
 function updateItem(id, data) { if (!localItems) localItems = {}; localItems[id] = data; return saveItems(localItems); }
 function removeItem(id) {
@@ -993,7 +1099,7 @@ function addLog(action, detail) {
 }
 
 function checkFirebaseReady() {
-  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && localLogs !== null && localKeys !== null && !firebaseReady) {
+  if (localUsers !== null && localItems !== null && localOrders !== null && localSettings !== null && localLogs !== null && localKeys !== null && localReviews !== null && !firebaseReady) {
     firebaseReady = true;
     document.getElementById('connOverlay').classList.add('hidden');
     tryAutoLogin();
@@ -1050,7 +1156,20 @@ function watchDoc(docName, lsKey, lsFallback, onData) {
 function startListeners() {
   watchDoc('users', LS_USERS, {}, (val) => {
     const first = localUsers === null;
-    localUsers = val || {};
+    const incoming = val || {};
+    const prev = localUsers || {};
+    // Bảo vệ: nếu snapshot nhỏ hơn local đáng kể → merge, không xóa user
+    if (!first && Object.keys(prev).length > Object.keys(incoming).length + 1) {
+      console.warn('users snapshot smaller — merge keep local', Object.keys(prev).length, Object.keys(incoming).length);
+      localUsers = { ...incoming, ...prev };
+      // đẩy lại bản đủ lên server
+      db.collection(COL).doc('users').set({ data: localUsers }).catch(()=>{});
+    } else {
+      localUsers = { ...prev, ...incoming };
+      // nếu incoming có đủ key hơn thì tin incoming
+      if (Object.keys(incoming).length >= Object.keys(prev).length) localUsers = incoming;
+    }
+    lsSet(LS_USERS, { data: localUsers });
     if (first) ensureDefaults().then(() => checkFirebaseReady());
     if (me && localUsers[me.username]) {
       const updated = localUsers[me.username];
@@ -1111,6 +1230,12 @@ function startListeners() {
     localKeys = val || {};
     if (first) checkFirebaseReady();
     if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'keys') renderAdminBody('keys');
+  });
+  watchDoc('reviews', LS_REVIEWS, {}, (val) => {
+    const first = localReviews === null;
+    localReviews = val || {};
+    if (first) checkFirebaseReady();
+    if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
   });
 }
 startListeners();
@@ -1753,7 +1878,8 @@ function renderItemGrid() {
     const imgHtml = item.image
       ? `<img class="product-img" src="${item.image}" alt="" loading="lazy"/>`
       : `<div class="product-img-placeholder"><span class="ph-icon">${icon}</span><span class="ph-text">CHƯA CÓ ẢNH</span></div>`;
-    const statText = item._totalDone > 0 ? `👥 ${item._totalDone}` : '';
+    const rating = getItemRating(item.id);
+    const statText = (item._totalDone > 0 ? `👥 ${item._totalDone}` : '') + (rating.count ? ` · ⭐ ${rating.avg} (${rating.count})` : '');
     const coming = isComingSoon(item);
     const cdMs = coming ? (new Date(item.unlockAt).getTime() - Date.now()) : 0;
     const comingBadge = coming ? '<span class="coming-badge">SẮP RA MẮT</span>' : '';
@@ -1765,6 +1891,7 @@ function renderItemGrid() {
     } else {
       actionHtml = `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`;
     }
+    actionHtml += `<button class="btn btn-ghost btn-xs" style="width:100%;margin-top:6px" onclick="event.stopPropagation();openItemReviews('${item.id}')">⭐ Đánh giá</button>`;
     return `
       <div class="product-card ${item._done ? 'done' : ''}" onclick="${(item._done || coming) ? '' : `openBypass('${item.id}')`}">
         <div class="product-img-wrap">
@@ -1947,14 +2074,16 @@ async function openLink(idx) {
   let fromServer = !!code;
   if (!code) code = genVerifyCode(8);
 
+  const sid = 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify({
     code, user: me.username, itemId: item.id, round: idx,
     exp: Date.now() + 30 * 60 * 1000,
     fromServer,
-    startedAt: Date.now()
+    startedAt: Date.now(),
+    sid
   }));
-  // lưu mốc bắt đầu item để đo tốc độ vượt
   try {
+    localStorage.setItem('vlp_sid_' + item.id + '_' + idx, sid);
     const stKey = 'vlp_start_' + item.id + '_' + me.username;
     if (!localStorage.getItem(stKey)) localStorage.setItem(stKey, String(Date.now()));
   } catch(e) {}
@@ -1964,6 +2093,8 @@ async function openLink(idx) {
     '?vlpcode=' + encodeURIComponent(code) +
     '&vlpitem=' + encodeURIComponent(item.id) +
     '&vlpround=' + idx +
+    '&vlpsid=' + encodeURIComponent(sid) +
+    '&vlpuser=' + encodeURIComponent(me.username) +
     (fromServer ? '&vlpserver=1' : '');
   try {
     window.open(buildLink4mUrl(revealUrl), '_blank');
@@ -1998,29 +2129,45 @@ function verifyCode(idx) {
     payload = JSON.parse(raw);
     if (payload.exp && Date.now() > payload.exp) { localStorage.removeItem(key); toast('⚠️ Mã hết hạn', 'err'); return; }
     if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) { toast('❌ Mã không hợp lệ', 'err'); return; }
-    // Chống dán mã quá nhanh sau khi bấm Lấy Link (tối thiểu 8s/lượt)
-    if (payload.startedAt && (Date.now() - payload.startedAt) < 8000) {
+    // Chống dán mã quá nhanh sau khi bấm Lấy Link (tối thiểu 12s/lượt)
+    if (payload.startedAt && (Date.now() - payload.startedAt) < 12000) {
       toast('⏳ Đợi thêm vài giây rồi dán mã (chống bot)', 'err');
       return;
     }
+    if (!payload.sid) {
+      toast('❌ Mã phiên không hợp lệ — bấm Lấy Link lại', 'err'); return;
+    }
     expected = (payload.code || '').toUpperCase();
+    // visit proof: sync trước, nếu thiếu sẽ check Firebase async bên dưới
+    window.__pendingVerify = { idx, val, expected, key, payload, itemId: currentItem.id };
   } catch (e) { toast('❌ Lỗi dữ liệu mã', 'err'); return; }
   if (val !== expected) { toast('❌ Mã không đúng!', 'err'); return; }
 
-  localStorage.removeItem(key);
-  verifiedSteps[idx] = true;
-  inp.value = '✅ Đã xác nhận'; inp.classList.add('verified'); inp.disabled = true;
-  const btn = document.getElementById('verifyBtn_' + idx);
-  if (btn) { btn.disabled = true; btn.className = 'btn btn-green btn-sm'; }
-  const snum = document.getElementById('snum_' + idx);
-  if (snum) { snum.textContent = '✓'; snum.className = 'step-num done'; }
-  if (idx + 1 < currentItem.rounds) {
-    const nextNum = document.getElementById('snum_' + (idx + 1));
-    if (nextNum) nextNum.className = 'step-num active';
-  }
-  updateProgress();
-  if (verifiedSteps.every(v => v)) { clearActiveBypassState(); setTimeout(showResult, 350); }
-  else { saveActiveBypassState(); toast('✅ Lượt ' + (idx + 1) + ' OK!', 'ok'); }
+  // Xác minh visit proof (local hoặc Firebase)
+  (async function() {
+    const p = window.__pendingVerify;
+    if (!p) return;
+    const ok = await hasVisitProofAsync(p.payload.sid);
+    if (!ok) {
+      toast('❌ Chưa vượt Link4M hợp lệ. Phải mở link, vượt ads, copy mã từ trang đích!', 'err');
+      return;
+    }
+    localStorage.removeItem(p.key);
+    verifiedSteps[p.idx] = true;
+    const inp = document.getElementById('codeinp_' + p.idx);
+    if (inp) { inp.value = '✅ Đã xác nhận'; inp.classList.add('verified'); inp.disabled = true; }
+    const btn = document.getElementById('verifyBtn_' + p.idx);
+    if (btn) { btn.disabled = true; btn.className = 'btn btn-green btn-sm'; }
+    const snum = document.getElementById('snum_' + p.idx);
+    if (snum) { snum.textContent = '✓'; snum.className = 'step-num done'; }
+    if (p.idx + 1 < currentItem.rounds) {
+      const nextNum = document.getElementById('snum_' + (p.idx + 1));
+      if (nextNum) nextNum.className = 'step-num active';
+    }
+    updateProgress();
+    if (verifiedSteps.every(v => v)) { clearActiveBypassState(); setTimeout(showResult, 350); }
+    else { saveActiveBypassState(); toast('✅ Lượt ' + (p.idx + 1) + ' OK!', 'ok'); }
+  })();
 }
 
 function updateProgress() {
@@ -2036,7 +2183,6 @@ function showResult() {
   if (!verifiedSteps.every(Boolean) || verifiedSteps.length !== item.rounds) { toast('❌ Chưa đủ lượt', 'err'); return; }
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
 
-  // Đo thời gian từ lần Lấy Link đầu tiên
   let started = 0, elapsed = 0, tooFast = false;
   try {
     const stKey = 'vlp_start_' + item.id + '_' + me.username;
@@ -2048,12 +2194,12 @@ function showResult() {
     }
   } catch(e) {}
 
-  document.getElementById('bmResultContent').textContent = '⏳ Đang tải...';
+  document.getElementById('bmResultContent').textContent = '⏳ Đang xác minh vượt link (10s)...';
   document.getElementById('bmResult').classList.add('show');
 
   if (tooFast) {
     const sec = Math.round(elapsed / 1000);
-    document.getElementById('bmResultContent').textContent = '🚫 Phát hiện gian lận: hoàn thành trong ' + sec + 's (< 1 phút 20s). Tài khoản bị khóa 7 ngày.';
+    document.getElementById('bmResultContent').textContent = '🚫 Gian lận: hoàn thành trong ' + sec + 's (< 1p20s). Khóa 7 ngày.';
     toast('🚫 Vượt quá nhanh — khóa 7 ngày', 'err');
     autoBanTooFast(me.username, sec).then(() => {
       setTimeout(() => { try { closeBypass(); } catch(e) {} }, 1500);
@@ -2061,23 +2207,46 @@ function showResult() {
     return;
   }
 
-  fetchSecretContent(item.id).then(content => {
-    if (content === null) content = '(Không có nội dung)';
-    // double-check ban trước khi hiện nội dung
+  // Đợi 10s + kiểm tra proof đã mở trang đích Link4M (mọi lượt)
+  let left = 10;
+  const tick = () => {
     if (isUserBanned(me)) {
-      document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa — không nhận nội dung.';
+      document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa.';
       return;
     }
-    document.getElementById('bmResultContent').textContent = content;
-    addOrder({
-      id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
-      user: me.username, display: me.display, itemId: item.id, itemName: item.name,
-      status: 'success', createdAt: new Date().toISOString(),
-      durationMs: elapsed || null
+    document.getElementById('bmResultContent').textContent = '⏳ Hệ thống đang kiểm tra vượt Link4M... ' + left + 's';
+    if (left > 0) { left--; setTimeout(tick, 1000); return; }
+
+    checkAllRoundsVisited(item.id, item.rounds || 1).then(missing => {
+    if (missing.length) {
+      document.getElementById('bmResultContent').textContent = '🚫 Không xác minh được vượt Link4M (thiếu proof lượt: ' + missing.join(', ') + '). Tài khoản bị KHÓA VĨNH VIỄN vì gian lận/bypass.';
+      toast('🚫 Bypass phát hiện — khóa vĩnh viễn', 'err');
+      permanentBanFraud(me.username, 'Không chứng minh vượt Link4M (thiếu visit proof lượt ' + missing.join(',') + ')');
+      return;
+    }
+
+    fetchSecretContent(item.id).then(content => {
+      if (content === null) content = '(Không có nội dung)';
+      if (isUserBanned(me)) {
+        document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa — không nhận nội dung.';
+        return;
+      }
+      document.getElementById('bmResultContent').textContent = content;
+      addOrder({
+        id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
+        user: me.username, display: me.display, itemId: item.id, itemName: item.name,
+        status: 'success', createdAt: new Date().toISOString(),
+        durationMs: elapsed || null,
+        verifiedLink4m: true
+      });
+      // hiện form đánh giá
+      showReviewForm(item.id, item.name);
+      toast('🎉 Hoàn thành! Đã xác minh vượt link.', 'ok');
+      setTimeout(() => renderItemGrid(), 500);
     });
-    toast('🎉 Hoàn thành!', 'ok');
-    setTimeout(() => renderItemGrid(), 500);
-  });
+    }); // end checkAllRoundsVisited
+  };
+  tick();
 }
 
 function copyResult() {
@@ -2099,7 +2268,73 @@ function openResult() {
 function closeBypass() {
   document.getElementById('bypassModal').classList.remove('open');
   currentItem = null; verifiedSteps = []; clearActiveBypassState();
+  const rf = document.getElementById('reviewFormBox');
+  if (rf) rf.remove();
 }
+
+let pendingReviewStars = 0;
+function showReviewForm(itemId, itemName) {
+  let box = document.getElementById('reviewFormBox');
+  if (box) box.remove();
+  if (!me || !hasUserCompleted(me.username, itemId)) return;
+  if (userReviewForItem(me.username, itemId)) return; // đã đánh giá
+  box = document.createElement('div');
+  box.id = 'reviewFormBox';
+  box.style.cssText = 'margin-top:14px;padding:14px;background:#0e1320;border:1px solid var(--border);border-radius:12px';
+  box.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px">⭐ Đánh giá: ' + esc(itemName || '') + '</div>' +
+    '<div id="starPick" style="font-size:22px;letter-spacing:4px;margin-bottom:8px;cursor:pointer">' +
+    [1,2,3,4,5].map(n => '<span data-s="'+n+'" onclick="pickStar('+n+')" style="opacity:.35">★</span>').join('') +
+    '</div>' +
+    '<textarea id="reviewComment" class="inp" rows="2" placeholder="Bình luận (tuỳ chọn)..." style="width:100%;min-height:56px;margin-bottom:8px"></textarea>' +
+    '<button class="btn btn-cyan btn-sm" onclick="submitReview(\''+itemId+'\')">Gửi đánh giá</button>';
+  const result = document.getElementById('bmResult');
+  if (result) result.appendChild(box);
+  pendingReviewStars = 0;
+}
+function pickStar(n) {
+  pendingReviewStars = n;
+  const el = document.getElementById('starPick');
+  if (!el) return;
+  el.querySelectorAll('span').forEach(s => {
+    const v = parseInt(s.getAttribute('data-s'), 10);
+    s.style.opacity = v <= n ? '1' : '.35';
+    s.style.color = v <= n ? '#f5c542' : '';
+  });
+}
+async function submitReview(itemId) {
+  if (!me) return;
+  if (!hasUserCompleted(me.username, itemId)) { toast('Chỉ người đã vượt mới đánh giá', 'err'); return; }
+  if (userReviewForItem(me.username, itemId)) { toast('Bạn đã đánh giá rồi', 'err'); return; }
+  if (pendingReviewStars < 1 || pendingReviewStars > 5) { toast('Chọn số sao 1–5', 'err'); return; }
+  const comment = ((document.getElementById('reviewComment') || {}).value || '').trim().slice(0, 300);
+  const id = 'rv' + Date.now() + Math.random().toString(36).slice(2, 5);
+  if (!localReviews) localReviews = {};
+  localReviews[id] = {
+    id, itemId, user: me.username, display: me.display || me.username,
+    stars: pendingReviewStars, comment, createdAt: new Date().toISOString()
+  };
+  await saveReviews(localReviews);
+  toast('⭐ Cảm ơn đánh giá!', 'ok');
+  const box = document.getElementById('reviewFormBox');
+  if (box) box.innerHTML = '<div style="color:var(--green);font-size:13px">✅ Đã gửi đánh giá ' + pendingReviewStars + ' sao</div>';
+  renderItemGrid();
+}
+
+function openItemReviews(itemId) {
+  const item = (localItems || {})[itemId];
+  const list = getReviewsForItem(itemId);
+  const rating = getItemRating(itemId);
+  let html = '<div class="modal-bg open" id="reviewsModal" onclick="if(event.target===this)this.remove()"><div class="modal-box" style="max-height:80vh;overflow:auto">';
+  html += '<div class="modal-hd"><div class="modal-title">⭐ ' + esc((item&&item.name)||'Đánh giá') + '</div><button class="modal-close" onclick="document.getElementById(\'reviewsModal\').remove()">✕</button></div>';
+  html += '<div style="font-size:13px;color:var(--sub);margin-bottom:12px">' + (rating.count ? (rating.avg + '★ · ' + rating.count + ' đánh giá') : 'Chưa có đánh giá') + '</div>';
+  if (me && hasUserCompleted(me.username, itemId) && !userReviewForItem(me.username, itemId)) {
+    html += '<div style="margin-bottom:12px"><button class="btn btn-cyan btn-sm" onclick="document.getElementById(\'reviewsModal\').remove();openBypass(\''+itemId+'\')">Đánh giá sau khi vượt</button></div>';
+  }
+  html += list.length ? list.map(r => '<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-weight:700;font-size:13px">' + esc(r.display||r.user) + ' <span style="color:#f5c542">' + '★'.repeat(r.stars||0) + '</span></div>' + (r.comment ? '<div style="font-size:12px;color:var(--sub);margin-top:4px">' + esc(r.comment) + '</div>' : '') + '<div style="font-size:10px;color:var(--sub);margin-top:4px">' + esc((r.createdAt||'').slice(0,16).replace('T',' ')) + '</div></div>').join('') : '<div class="empty-state"><div>Chưa có bình luận</div></div>';
+  html += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 
 // ===== ADMIN =====
 function aTab(t, resetPage) {
@@ -2679,10 +2914,19 @@ function checkRevealCode() {
   const params = new URLSearchParams(location.search);
   const code = params.get('vlpcode');
   if (!code) return;
+  const sid = params.get('vlpsid') || '';
+  const itemId = params.get('vlpitem') || '';
+  const round = params.get('vlpround') || '';
+  // Ghi proof đã mở trang đích (sau khi vượt Link4M) — cùng origin localStorage
+  if (sid) setVisitProof(sid);
+  if (itemId !== '' && round !== '') {
+    try { localStorage.setItem('vlp_sid_' + itemId + '_' + round, sid); } catch(e) {}
+  }
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#05060a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:"Exo 2",sans-serif;color:#e8f0fa';
   const fromServer = params.get('vlpserver') === '1';
   overlay.innerHTML = '<div style="font-size:15px;color:#00e676;margin-bottom:8px;font-weight:700">✅ Vượt link thành công!</div>' +
+    '<div style="font-size:12px;color:#5a6f88;margin-bottom:10px">Đã ghi nhận xác minh' + (sid ? ' ✓' : '') + '</div>' +
     '<div style="font-size:13px;color:#5a6f88;margin-bottom:18px">' + (fromServer ? '🔑 Key từ server — copy rồi quay lại tab cũ dán vào:' : 'Copy mã rồi quay lại tab cũ dán vào:') + '</div>' +
     '<div id="vlpRevealCodeTxt" style="font-size:28px;font-weight:800;letter-spacing:2px;color:#f5c542;background:#0e1320;border:1px solid #1a2438;border-radius:14px;padding:20px 24px;margin-bottom:20px;word-break:break-all">' + esc(code) + '</div>' +
     '<button id="vlpRevealCopyBtn" style="padding:13px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#00e5ff,#0090b8);color:#040810;font-weight:700;font-size:14px;cursor:pointer">📋 Copy mã</button>';
