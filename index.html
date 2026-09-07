@@ -109,6 +109,21 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .role-badge{font-size:10px;padding:3px 9px;border-radius:6px;font-weight:700}
 .rb-admin{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#0a0600}
 .rb-user{background:linear-gradient(90deg,var(--cyan),var(--cyan2));color:#040810}
+.rb-vip{background:linear-gradient(90deg,#ff6b35,#ffd04a);color:#0a0600;box-shadow:0 0 12px #ff6b3555;animation:vipGlow 2s ease-in-out infinite}
+@keyframes vipGlow{0%,100%{box-shadow:0 0 10px #ff6b3555}50%{box-shadow:0 0 18px #ffd04a88}}
+.badge-vip{background:linear-gradient(135deg,#ff6b35,#ffd04a);color:#0a0600;font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.4px;z-index:2;position:absolute;top:8px;left:8px;box-shadow:0 0 10px #ff6b3555}
+.product-card.vip-locked{opacity:.75}
+.product-card.vip-locked .product-btn{background:linear-gradient(135deg,#4a5568,#2d3748)!important;box-shadow:none}
+.live-drop-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-120%);background:linear-gradient(135deg,#ff3b5c,#ff6b35);color:#fff;padding:12px 20px;border-radius:14px;z-index:8000;font-weight:800;font-size:14px;box-shadow:0 8px 32px #ff3b5c66;transition:.4s cubic-bezier(.2,.9,.3,1);max-width:90vw;text-align:center;pointer-events:none}
+.live-drop-banner.show{transform:translateX(-50%) translateY(0);pointer-events:auto}
+.stat-bar-wrap{margin-top:8px;height:8px;background:#1a2438;border-radius:6px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width .6s ease}
+.glass-card{background:rgba(17,24,39,.75);backdrop-filter:blur(12px);border:1px solid rgba(42,58,85,.8);border-radius:16px}
+.particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.particle{position:absolute;width:3px;height:3px;background:var(--cyan);border-radius:50%;opacity:.25;animation:floatParticle linear infinite}
+@keyframes floatParticle{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:.3}90%{opacity:.2}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+.product-card{box-shadow:0 4px 20px #00000040}
+.product-card:hover{box-shadow:0 0 28px rgba(0,240,255,.35),0 12px 28px #00000070}
 
 .content-area{flex:1;padding:14px;max-width:680px;margin:0 auto;width:100%}
 .sec-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--cyan);letter-spacing:1.2px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
@@ -395,6 +410,8 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
 </style>
 </head>
 <body>
+<div class="particles" id="particles"></div>
+<div class="live-drop-banner" id="liveDropBanner">🔥 LIVE DROP — Hàng mới vừa ra!</div>
 
 <div id="connOverlay">
   <div class="conn-spin"></div>
@@ -669,6 +686,13 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
         <option value="new">✨ NEW</option>
         <option value="sale">💰 SALE</option>
       </select>
+    </div>
+    <div class="inp-group">
+      <div class="toggle-row">
+        <div class="inp-label" style="margin:0">👑 Chỉ dành cho VIP</div>
+        <label class="toggle"><input type="checkbox" id="imVipOnly"/><span class="toggle-slider"></span></label>
+      </div>
+      <div class="sec-note" style="margin-top:6px">Bật = chỉ user VIP mới thấy và vượt được nội dung này</div>
     </div>
     <div class="inp-group">
       <div class="inp-label">Icon (emoji) — dùng khi chưa có ảnh</div>
@@ -1182,22 +1206,58 @@ function saveUsers(obj) {
 }
 function saveItems(obj) {
   localItems = obj || {};
-  // Lưu items không có trường data của file (chỉ metadata) để tránh vượt 1MB Firestore
+  // Lưu items KHÔNG chứa base64 ảnh / data file — tránh vượt 1MB Firestore
   const itemsSlim = {};
   Object.keys(localItems).forEach(id => {
     const item = localItems[id];
     if (!item) { itemsSlim[id] = item; return; }
-    const { attachedFiles, ...rest } = item;
-    // Giữ attachedFiles metadata (không có data) trong items doc để hiện tên/size
+    const { attachedFiles, image, ...rest } = item;
+    // Chỉ giữ metadata file (không data)
     if (attachedFiles && attachedFiles.length) {
       rest.attachedFiles = attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }));
     } else {
       rest.attachedFiles = attachedFiles || [];
     }
+    // Đánh dấu có ảnh (không nhét base64 vào items doc)
+    if (image && typeof image === 'string' && image.length > 100) {
+      rest.hasImage = true;
+      rest.image = null; // không lưu base64 vào items
+    } else if (image) {
+      rest.image = image; // emoji/icon nhỏ thì giữ
+      rest.hasImage = false;
+    } else {
+      rest.hasImage = !!item.hasImage;
+      rest.image = null;
+    }
     itemsSlim[id] = rest;
   });
-  lsSet(LS_ITEMS, { data: localItems }); // localStorage giữ full data để dùng offline
+  lsSet(LS_ITEMS, { data: localItems }); // localStorage giữ full (có base64) để offline
   return db.collection(COL).doc('items').set({ data: itemsSlim }).catch(e => fbErr(e, 'saveItems'));
+}
+
+function saveItemImage(itemId, imageData) {
+  if (!imageData) {
+    return db.collection(COL).doc('itemImages').set({ [itemId]: null }, { merge: true }).catch(e => fbErr(e, 'saveItemImage'));
+  }
+  // Mỗi ảnh 1 field — nếu quá lớn vẫn lỗi, nên đã nén sẵn
+  return db.collection(COL).doc('itemImages').set({ [itemId]: imageData }, { merge: true }).catch(e => fbErr(e, 'saveItemImage'));
+}
+
+function fetchItemImage(itemId) {
+  const cached = localItems && localItems[itemId];
+  if (cached && cached.image && typeof cached.image === 'string' && cached.image.length > 100) {
+    return Promise.resolve(cached.image);
+  }
+  return fsGetWithRetry(db.collection(COL).doc('itemImages')).then(snap => {
+    if (!snap.exists) return null;
+    const data = snap.data();
+    const img = data && data[itemId];
+    if (img && localItems && localItems[itemId]) {
+      localItems[itemId].image = img; // cache lại local
+      lsSet(LS_ITEMS, { data: localItems });
+    }
+    return img || null;
+  }).catch(() => null);
 }
 
 function saveItemFiles(itemId, files) {
@@ -1432,7 +1492,29 @@ function startListeners() {
   });
   watchDoc('items', LS_ITEMS, {}, (val) => {
     const first = localItems === null;
-    localItems = val || {};
+    const incoming = val || {};
+    const prev = localItems || {};
+    // Giữ base64 ảnh / file data local nếu snapshot slim (không có image data)
+    const merged = {};
+    const allIds = new Set([...Object.keys(incoming), ...Object.keys(prev)]);
+    allIds.forEach(id => {
+      const inc = incoming[id];
+      const old = prev[id];
+      if (!inc) { if (old) merged[id] = old; return; }
+      merged[id] = { ...inc };
+      if (old && old.image && (!inc.image || inc.image.length < 100)) {
+        merged[id].image = old.image;
+        merged[id].hasImage = true;
+      }
+      if (old && old.attachedFiles && old.attachedFiles.length && old.attachedFiles[0].data) {
+        if (!inc.attachedFiles || !inc.attachedFiles.length || !inc.attachedFiles[0].data) {
+          merged[id].attachedFiles = old.attachedFiles;
+        }
+      }
+      if (inc.hasImage && !merged[id].image) merged[id].hasImage = true;
+    });
+    localItems = merged;
+    lsSet(LS_ITEMS, { data: localItems });
     if (first) checkFirebaseReady();
     if (document.getElementById('mainPage').classList.contains('active')) renderItemGrid();
     if (document.getElementById('adminPage').classList.contains('active') && curAdminTab === 'items') renderAdminBody('items');
@@ -1502,9 +1584,9 @@ function setCooldown(itemId, round) {
   lsSet(COOLDOWN_KEY, data);
 }
 
-// ===== IMAGE LOAD (giới hạn upload tối đa 1MB, tự nén + resize để luôn fit) =====
+// ===== IMAGE LOAD (giới hạn upload tối đa 1MB, tự nén + resize; ảnh lưu riêng itemImages) =====
 const MAX_IMG_UPLOAD_BYTES = 1 * 1024 * 1024; // 1MB — giới hạn file gốc khi chọn ảnh
-const MAX_IMG_ENCODED_BYTES = 250 * 1024; // ~250KB base64 sau nén — nhiều item cùng ảnh vẫn không vượt 1MB/doc chung
+const MAX_IMG_ENCODED_BYTES = 180 * 1024; // ~180KB base64 sau nén — an toàn cho itemImages doc
 
 function compressImage(file, maxEncoded) {
   const targetEncoded = maxEncoded || MAX_IMG_ENCODED_BYTES;
@@ -1720,9 +1802,11 @@ function tryAutoLogin() {
 async function forceChangeAdminPass() {
   const np = document.getElementById('forceNewPass').value;
   const np2 = document.getElementById('forceNewPass2').value;
-  if (np.length < 6) { toast('❌ ≥ 6 ký tự', 'err'); return; }
+  if (np.length < 8) { toast('❌ Mật khẩu admin ≥ 8 ký tự', 'err'); return; }
   if (np !== np2) { toast('❌ Không khớp', 'err'); return; }
-  if (np === DEFAULT_ADMIN_PASS) { toast('❌ Không dùng mật khẩu mặc định', 'err'); return; }
+  if (np === DEFAULT_ADMIN_PASS || np.toLowerCase() === 'admin123' || np.toLowerCase() === 'password') {
+    toast('❌ Không dùng mật khẩu yếu / mặc định', 'err'); return;
+  }
   const { hash, salt } = await hashPassword(np);
   const updated = { ...me, passwordHash: hash, passwordSalt: salt, mustChangePass: false };
   delete updated.password;
@@ -1749,6 +1833,9 @@ function enterMain() {
   if (me.role === 'admin') {
     rb.textContent = '⭐ ADMIN'; rb.className = 'role-badge rb-admin';
     document.getElementById('btnAdmin').style.display = '';
+  } else if (me.vip) {
+    rb.textContent = '👑 VIP'; rb.className = 'role-badge rb-vip';
+    document.getElementById('btnAdmin').style.display = 'none';
   } else {
     rb.textContent = '👤 THÀNH VIÊN'; rb.className = 'role-badge rb-user';
     document.getElementById('btnAdmin').style.display = 'none';
@@ -1757,6 +1844,7 @@ function enterMain() {
   updateContactBtn();
   restoreActiveBypassIfAny();
   initNotifListener();
+  initParticles();
 }
 function switchUserTab(tab) {
   currentUserTab = tab;
@@ -2232,12 +2320,42 @@ function renderItemGrid() {
     return;
   }
 
+  // Preload ảnh thiếu từ itemImages (async, cập nhật DOM sau)
+  active.forEach(item => {
+    if ((!item.image || item.image.length < 100) && item.hasImage) {
+      fetchItemImage(item.id).then(img => {
+        if (!img) return;
+        const imgEl = document.querySelector('.product-card[data-id="' + item.id + '"] .product-img, .product-card[data-id="' + item.id + '"] .product-img-placeholder');
+        if (imgEl && imgEl.tagName === 'IMG') {
+          imgEl.src = img;
+        } else if (imgEl) {
+          const wrap = imgEl.parentElement;
+          if (wrap) {
+            const newImg = document.createElement('img');
+            newImg.className = 'product-img';
+            newImg.src = img;
+            newImg.alt = '';
+            newImg.loading = 'lazy';
+            wrap.replaceChild(newImg, imgEl);
+          }
+        }
+      });
+    }
+  });
+
   grid.innerHTML = active.map(item => {
+    const isVipUser = me && (me.role === 'admin' || me.vip === true);
+    const needVip = !!item.vipOnly;
+    const vipLocked = needVip && !isVipUser;
     const badge = item._done ? '' : (item.badge === 'hot' ? '<span class="product-badge badge-hot">HOT</span>' : item.badge === 'sale' ? '<span class="product-badge badge-sale">SALE</span>' : item.badge === 'new' ? '<span class="product-badge badge-new">NEW</span>' : '');
+    const vipBadge = needVip ? '<span class="badge-vip">👑 VIP</span>' : '';
     const icon = item.icon || '🎮';
-    const imgHtml = item.image
+    const hasRealImg = item.image && typeof item.image === 'string' && item.image.length > 100;
+    const imgHtml = hasRealImg
       ? `<img class="product-img" src="${item.image}" alt="" loading="lazy"/>`
-      : `<div class="product-img-placeholder"><span class="ph-icon">${icon}</span><span class="ph-text">CHƯA CÓ ẢNH</span></div>`;
+      : (item.hasImage
+        ? `<div class="product-img-placeholder"><span class="ph-icon">⏳</span><span class="ph-text">ĐANG TẢI ẢNH</span></div>`
+        : `<div class="product-img-placeholder"><span class="ph-icon">${icon}</span><span class="ph-text">CHƯA CÓ ẢNH</span></div>`);
     const rating = getItemRating(item.id);
     const statText = (item._totalDone > 0 ? `👥 ${item._totalDone}` : '') + (rating.count ? ` · ⭐ ${rating.avg} (${rating.count})` : '');
     const coming = isComingSoon(item);
@@ -2246,16 +2364,20 @@ function renderItemGrid() {
     let actionHtml = '';
     if (coming) {
       actionHtml = `<div class="coming-cd" data-unlock="${item.unlockAt}">🕒 ${formatCountdown(cdMs)}</div><button class="product-btn locked" disabled>🔒 CHƯA MỞ</button>`;
+    } else if (vipLocked) {
+      actionHtml = `<button class="product-btn locked" disabled>👑 CHỈ VIP</button>`;
     } else if (item._userDone) {
       actionHtml = `<button class="product-btn" style="background:linear-gradient(135deg,var(--green),var(--green2));color:#010e05" onclick="event.stopPropagation();reopenHistoryItem('${item.id}','${esc(item.name)}')">📋 XEM LẠI</button>`;
     } else {
       actionHtml = `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`;
     }
     actionHtml += `<button class="btn btn-ghost btn-xs" style="width:100%;margin-top:6px" onclick="event.stopPropagation();openItemReviews('${item.id}')">⭐ Đánh giá</button>`;
+    const clickAction = (coming || vipLocked) ? '' : (item._userDone ? `reopenHistoryItem('${item.id}','${esc(item.name)}')` : `openBypass('${item.id}')`);
     return `
-      <div class="product-card" onclick="${coming ? '' : item._userDone ? `reopenHistoryItem('${item.id}','${esc(item.name)}')` : `openBypass('${item.id}')`}">
+      <div class="product-card ${vipLocked ? 'vip-locked' : ''}" data-id="${item.id}" onclick="${clickAction}">
         <div class="product-img-wrap">
           ${imgHtml}
+          ${vipBadge}
           ${comingBadge}
           ${badge}
         </div>
@@ -2294,6 +2416,10 @@ function openBypass(id) {
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   currentItem = (localItems || {})[id];
   if (!currentItem || currentItem.active === false || currentItem.deleted) return;
+  if (currentItem.vipOnly && me.role !== 'admin' && !me.vip) {
+    toast('👑 Nội dung chỉ dành cho thành viên VIP', 'err');
+    return;
+  }
   if (isComingSoon(currentItem)) {
     toast('🔒 Nội dung chưa mở — ' + formatCountdown(new Date(currentItem.unlockAt).getTime() - Date.now()), 'err');
     return;
@@ -2304,7 +2430,7 @@ function openBypass(id) {
   verifiedSteps = new Array(rounds).fill(false);
 
   document.getElementById('bmTitle').textContent = '⚡ ' + currentItem.name;
-  document.getElementById('bmInfo').textContent = `Hoàn thành đủ ${rounds} lượt vượt link để nhận nội dung.`;
+  document.getElementById('bmInfo').textContent = `Hoàn thành đủ ${rounds} lượt vượt link để nhận nội dung. Không giới hạn số lần vượt mỗi ngày.`;
   document.getElementById('bmInfo').className = 'alert alert-info show';
   document.getElementById('bmResult').classList.remove('show');
   updateProgress();
@@ -2758,29 +2884,67 @@ function renderAdminBody(t) {
 }
 
 function renderDash(body) {
-  const users = getUsersArr().filter(u => u.role !== 'admin').length;
-  const banned = getUsersArr().filter(u => isUserBanned(u)).length;
+  const allUsers = getUsersArr().filter(u => u.role !== 'admin');
+  const users = allUsers.length;
+  const vipCount = allUsers.filter(u => u.vip).length;
+  const banned = allUsers.filter(u => isUserBanned(u)).length;
+  const suspicious = allUsers.filter(u => u.suspicious || (u.flags && u.flags.length)).length;
   const items = getItemsArr().filter(i => i.active !== false).length;
+  const vipItems = getItemsArr().filter(i => i.active !== false && i.vipOnly).length;
   const orders = getOrdersArr();
   const todayOrders = orders.filter(o => isToday(o.createdAt)).length;
   const weekOrders = orders.filter(o => isWeek(o.createdAt)).length;
   const itemCount = {};
   orders.forEach(o => { itemCount[o.itemName] = (itemCount[o.itemName] || 0) + 1; });
-  const topItems = Object.entries(itemCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const topItems = Object.entries(itemCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  const maxTop = topItems.length ? topItems[0][1] : 1;
+  // last 7 days chart data
+  const dayCounts = [];
+  for (let d = 6; d >= 0; d--) {
+    const day = new Date(); day.setHours(0,0,0,0); day.setDate(day.getDate() - d);
+    const next = new Date(day); next.setDate(next.getDate() + 1);
+    const cnt = orders.filter(o => {
+      const t = new Date(o.createdAt).getTime();
+      return t >= day.getTime() && t < next.getTime();
+    }).length;
+    dayCounts.push({ label: day.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit' }), cnt });
+  }
+  const maxDay = Math.max(1, ...dayCounts.map(x => x.cnt));
 
   body.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-gold btn-sm" onclick="triggerLiveDrop()">🔥 LIVE DROP</button>
+      <button class="btn btn-cyan btn-sm" onclick="exportFullBackup()">💾 Backup JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportOrdersCSV()">📥 Orders CSV</button>
+    </div>
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-n">${users}</div><div class="stat-l">👥 Thành viên</div></div>
-      <div class="stat-card s-gold"><div class="stat-n">${items}</div><div class="stat-l">📦 Nội dung</div></div>
+      <div class="stat-card s-gold"><div class="stat-n">${vipCount}</div><div class="stat-l">👑 VIP</div></div>
       <div class="stat-card s-green"><div class="stat-n">${orders.length}</div><div class="stat-l">📋 Tổng lượt</div></div>
       <div class="stat-card s-red"><div class="stat-n">${todayOrders}</div><div class="stat-l">🗓️ Hôm nay</div></div>
       <div class="stat-card s-purple"><div class="stat-n">${weekOrders}</div><div class="stat-l">📅 Tuần này</div></div>
-      <div class="stat-card"><div class="stat-n">${banned}</div><div class="stat-l">🚫 Đang khóa</div></div>
+      <div class="stat-card"><div class="stat-n">${items}<span style="font-size:12px;color:var(--sub)"> / ${vipItems} VIP</span></div><div class="stat-l">📦 Nội dung</div></div>
+      <div class="stat-card s-red"><div class="stat-n">${banned}</div><div class="stat-l">🚫 Đang khóa</div></div>
+      <div class="stat-card s-gold"><div class="stat-n">${suspicious}</div><div class="stat-l">⚠ Nghi vấn</div></div>
     </div>
     ${banned ? `<div class="alert alert-err show" style="margin-bottom:12px">🚫 ${banned} tài khoản đang bị khóa</div>` : ''}
+    <div class="sec-title">📈 Lượt vượt 7 ngày gần đây</div>
+    <div class="glass-card" style="padding:14px;margin-bottom:14px">
+      ${dayCounts.map(d => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:52px;font-size:11px;color:var(--sub);flex-shrink:0">${esc(d.label)}</div>
+          <div class="stat-bar-wrap" style="flex:1"><div class="stat-bar-fill" style="width:${Math.round(d.cnt/maxDay*100)}%"></div></div>
+          <div style="width:28px;text-align:right;font-size:12px;font-weight:700;color:var(--cyan)">${d.cnt}</div>
+        </div>`).join('')}
+    </div>
     <div class="sec-title">🏆 Top nội dung</div>
-    ${topItems.length ? `<div class="tbl-wrap"><table class="dtbl"><thead><tr><th>#</th><th>Nội dung</th><th>Lượt</th></tr></thead>
-      <tbody>${topItems.map((t,i) => `<tr><td>${i+1}</td><td>${esc(t[0])}</td><td><strong>${t[1]}</strong></td></tr>`).join('')}</tbody></table></div>` : '<div style="color:var(--sub);font-size:12px;margin-bottom:14px">Chưa có dữ liệu</div>'}
+    ${topItems.length ? `<div class="tbl-wrap"><table class="dtbl"><thead><tr><th>#</th><th>Nội dung</th><th>Lượt</th><th></th></tr></thead>
+      <tbody>${topItems.map((t,i) => `<tr>
+        <td>${i+1}</td>
+        <td>${esc(t[0])}</td>
+        <td><strong>${t[1]}</strong></td>
+        <td style="width:40%"><div class="stat-bar-wrap"><div class="stat-bar-fill" style="width:${Math.round(t[1]/maxTop*100)}%"></div></div></td>
+      </tr>`).join('')}</tbody></table></div>` : '<div style="color:var(--sub);font-size:12px;margin-bottom:14px">Chưa có dữ liệu</div>'}
     <div class="sec-title">📋 Gần nhất</div>
     ${renderOrderTable(orders.slice(0, 8))}
   `;
@@ -2809,7 +2973,7 @@ function renderItemsAdmin(body) {
         const badgeLabel = item.badge === 'hot' ? '🔥 HOT' : item.badge === 'new' ? '✨ NEW' : item.badge === 'sale' ? '💰 SALE' : '';
         return `
         <div class="item-manage-row">
-          ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,#121a2e,#0a101c)">${item.icon||'🎮'}</div>`}
+          ${(item.image && item.image.length > 100) ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : (item.hasImage ? `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:linear-gradient(145deg,#121a2e,#0a101c)">⏳</div>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,#121a2e,#0a101c)">${item.icon||'🎮'}</div>`)}
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)} ${badgeLabel ? `<span style="font-size:10px;color:var(--gold)">${badgeLabel}</span>` : ''}</div>
             <div class="imr-sub">${item.rounds||1} lượt vượt • 👥 ${totalDone}${item.attachedFiles&&item.attachedFiles.length?' • 📎 '+item.attachedFiles.length+' file':''} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
@@ -2862,7 +3026,13 @@ function clearAllItems() {
   if (!confirm('Xóa TOÀN BỘ nội dung?')) return;
   Object.keys(localItems || {}).forEach(id => { if (localItems[id]) localItems[id] = { ...localItems[id], deleted: true, active: false }; });
   const s = { ...getSettings(), seededDemo: true };
-  Promise.all([saveItems(localItems), saveSettings(s), db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(()=>{})]).then(() => {
+  Promise.all([
+    saveItems(localItems),
+    saveSettings(s),
+    db.collection(COL).doc('itemSecrets').set({ data: {} }).catch(()=>{}),
+    db.collection(COL).doc('itemImages').set({}).catch(()=>{}),
+    db.collection(COL).doc('itemFiles').set({}).catch(()=>{})
+  ]).then(() => {
     addLog('clear_all_items', ''); aTab('items'); renderItemGrid(); toast('🗑 Đã xóa hết', 'ok');
   });
 }
@@ -2957,8 +3127,9 @@ function renderUsersAdmin(body) {
               <td>${u.avatar||'👤'} <strong>${esc(u.display)}</strong>${u.banReason?`<br><span style="font-size:9px;color:var(--red)">${esc(u.banReason)}</span>`:''}</td>
               <td style="color:var(--sub)">@${esc(u.username)}</td>
               <td>${orders.filter(o => o.user === u.username).length}</td>
-              <td><span class="bdg ${isUserBanned(u)?'bdg-no':'bdg-ok'}">${isUserBanned(u)?'Khóa':'OK'}</span>${u.suspicious?' <span class="bdg bdg-no" title="Nghi vấn">⚠</span>':''}${isRankExcluded(u.username)?' <span class="bdg" style="background:#333;color:#aaa">Ẩn hạng</span>':''}${formatBanUntil(u)?`<br><span style="font-size:9px;color:var(--red)">${esc(formatBanUntil(u))}</span>`:''}</td>
+              <td><span class="bdg ${isUserBanned(u)?'bdg-no':'bdg-ok'}">${isUserBanned(u)?'Khóa':'OK'}</span>${u.vip?' <span class="bdg" style="background:linear-gradient(90deg,#ff6b35,#ffd04a);color:#0a0600">VIP</span>':''}${u.suspicious?' <span class="bdg bdg-no" title="Nghi vấn">⚠</span>':''}${isRankExcluded(u.username)?' <span class="bdg" style="background:#333;color:#aaa">Ẩn hạng</span>':''}${formatBanUntil(u)?`<br><span style="font-size:9px;color:var(--red)">${esc(formatBanUntil(u))}</span>`:''}</td>
               <td style="white-space:nowrap">
+                <button class="btn btn-xs ${u.vip?'btn-gold':'btn-ghost'}" onclick="toggleVip('${u.username}')" title="VIP">${u.vip?'👑':'+VIP'}</button>
                 <button class="btn btn-xs ${isUserBanned(u)?'btn-green':'btn-red'}" onclick="${isUserBanned(u)?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${isUserBanned(u)?'Mở':'Khóa'}</button>
                 <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
                 <button class="btn btn-xs ${isRankExcluded(u.username)?'btn-green':'btn-ghost'}" onclick="${isRankExcluded(u.username)?`adminIncludeRank('${u.username}')`:`adminExcludeRank('${u.username}')`}" title="Xếp hạng">${isRankExcluded(u.username)?'Hiện hạng':'Ẩn hạng'}</button>
@@ -3231,7 +3402,8 @@ function renderSettings(body) {
       <div class="settings-label">☁️ Server</div>
       <div style="font-size:13px;color:var(--green)">● Firestore Online — shopvip-139ea</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v4:</b> Thông báo realtime · File đính kèm · Xem lại nội dung · Sort filter · Export CSV · UI Gaming
+        <b>v5:</b> VIP · Live Drop · Backup JSON · Thống kê 7 ngày · Ảnh riêng · Không giới hạn lượt vượt/ngày<br>
+        ⚠ Bảo mật: đổi pass admin mạnh (≥8 ký tự), siết Firestore Rules, không chia sẻ API Key.
       </div>
     </div>
   `;
@@ -3284,6 +3456,8 @@ function openItemModal(id) {
     document.getElementById('imDesc').value = item.desc || '';
     document.getElementById('imCategory').value = item.category || '';
     document.getElementById('imBadge').value = item.badge || '';
+    const vipCb = document.getElementById('imVipOnly');
+    if (vipCb) vipCb.checked = !!item.vipOnly;
     document.getElementById('imIcon').value = item.icon || '';
     document.getElementById('imRounds').value = item.rounds || 2;
     const ua = item.unlockAt ? new Date(item.unlockAt) : null;
@@ -3293,15 +3467,38 @@ function openItemModal(id) {
     } else document.getElementById('imUnlockAt').value = '';
     document.getElementById('imContent').value = '⏳ Đang tải...';
     document.getElementById('imContent').disabled = true;
-    if (item.image) {
+    // Ảnh: local có base64 thì dùng luôn; không thì fetch từ itemImages
+    if (item.image && typeof item.image === 'string' && item.image.length > 100) {
       selectedImageData = item.image;
       document.getElementById('imImagePreviewImg').src = item.image;
       document.getElementById('imImagePreview').classList.add('show');
       document.getElementById('imRemoveImg').style.display = '';
+    } else if (item.hasImage) {
+      document.getElementById('imImagePreviewImg').src = '';
+      document.getElementById('imImagePreview').classList.add('show');
+      document.getElementById('imRemoveImg').style.display = '';
+      fetchItemImage(id).then(img => {
+        if (img) {
+          selectedImageData = img;
+          document.getElementById('imImagePreviewImg').src = img;
+        } else {
+          document.getElementById('imImagePreview').classList.remove('show');
+          document.getElementById('imRemoveImg').style.display = 'none';
+        }
+      });
     }
     // Load existing attached files into pending list
     if (item.attachedFiles && item.attachedFiles.length) {
       imPendingFiles = item.attachedFiles.map(f => ({ name: f.name, size: f.size||0, type: f.type||'', data: f.data }));
+      // Nếu thiếu data, fetch từ itemFiles
+      if (!imPendingFiles.some(f => f.data)) {
+        fetchItemFiles(id).then(full => {
+          if (full && full.length) {
+            imPendingFiles = full.map(f => ({ name: f.name, size: f.size||0, type: f.type||'', data: f.data }));
+            renderImFileList();
+          }
+        });
+      }
       renderImFileList();
     }
     // Load existing link buttons
@@ -3319,6 +3516,8 @@ function openItemModal(id) {
     document.getElementById('imDesc').value = '';
     document.getElementById('imCategory').value = '';
     document.getElementById('imBadge').value = '';
+    const vipCb = document.getElementById('imVipOnly');
+    if (vipCb) vipCb.checked = false;
     document.getElementById('imIcon').value = '🎮';
     document.getElementById('imRounds').value = getSettings().roundsDefault || 2;
     document.getElementById('imUnlockAt').value = '';
@@ -3379,6 +3578,7 @@ function saveItem() {
   const desc = (document.getElementById('imDesc').value || '').trim();
   const category = (document.getElementById('imCategory').value || '').trim();
   const badge = (document.getElementById('imBadge').value || '').trim();
+  const vipOnly = !!(document.getElementById('imVipOnly') && document.getElementById('imVipOnly').checked);
   const icon = (document.getElementById('imIcon').value || '').trim() || '🎮';
   const rounds = Math.max(1, Math.min(20, parseInt(document.getElementById('imRounds').value) || 1));
   const unlockRaw = document.getElementById('imUnlockAt').value;
@@ -3386,54 +3586,79 @@ function saveItem() {
   const content = (document.getElementById('imContent').value || '').trim();
 
   let itemId = editItemId;
-  const imageField = selectedImageData || null;
+  const imageField = selectedImageData || null; // null = xóa ảnh khi sửa nếu user đã bấm Xóa ảnh
   const attachedFiles = imPendingFiles.map(f => ({ name: f.name, size: f.size, type: f.type, data: f.data }));
   const linkBtns = getLinkBtnsData();
 
   if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
   if (!content && !attachedFiles.length && !linkBtns.length) { showAlert('imErr', '⚠️ Nhập hướng dẫn, thêm nút link hoặc đính kèm ít nhất 1 file!', 'err'); return; }
 
-  // Kiểm tra tổng kích thước trước khi lưu
+  // Kiểm tra tổng kích thước file đính kèm (tối đa ~1MB encoded/file, tổng an toàn)
   const totalFileSize = attachedFiles.reduce((s, f) => s + (f.data ? f.data.length : 0), 0);
-  if (totalFileSize > 700 * 1024) {
-    showAlert('imErr', '⚠️ Tổng dung lượng file đính kèm quá lớn! Hãy giảm bớt file.', 'err');
+  if (totalFileSize > 900 * 1024) {
+    showAlert('imErr', '⚠️ Tổng dung lượng file đính kèm quá lớn (giới hạn ~1MB)! Hãy giảm bớt file.', 'err');
+    return;
+  }
+  if (imageField && imageField.length > MAX_IMG_ENCODED_BYTES + 50 * 1024) {
+    showAlert('imErr', '⚠️ Ảnh sau nén vẫn quá lớn. Chọn ảnh nhỏ hơn hoặc ảnh ít chi tiết hơn.', 'err');
     return;
   }
 
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    localItems[itemId] = { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles, linkBtns };
+    // selectedImageData: ảnh mới / ảnh đang preview; null nếu user bấm Xóa ảnh
+    const imgToSave = selectedImageData;
+    localItems[itemId] = {
+      ...rest,
+      name, desc, category, badge, vipOnly, icon, rounds, unlockAt,
+      image: imgToSave,
+      hasImage: !!imgToSave,
+      attachedFiles, linkBtns
+    };
     updateItem(itemId, localItems[itemId]);
-    if (attachedFiles.length) saveItemFiles(itemId, attachedFiles);
+    const fileP = attachedFiles.length ? saveItemFiles(itemId, attachedFiles) : saveItemFiles(itemId, []);
+    const imgP = saveItemImage(itemId, imgToSave);
     addLog('edit_item', name);
+    Promise.all([fileP, imgP, saveSecretContent(itemId, content || '')]).then(() => {
+      closeItemModal();
+      toast('✅ Đã lưu!', 'ok');
+      aTab('items');
+      renderItemGrid();
+    }).catch(e => {
+      toast('❌ Lỗi lưu: ' + (e.message || 'thử lại'), 'err');
+    });
+    return;
   } else {
     itemId = 'itm' + Date.now();
     const existing = getItemsArr();
     const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
     const newItem = {
-      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles, linkBtns,
+      id: itemId, name, desc, category, badge, vipOnly, icon, rounds, unlockAt,
+      image: imageField, hasImage: !!imageField, attachedFiles, linkBtns,
       sortOrder: minSort - 1,
       active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
     };
     localItems[itemId] = newItem;
     updateItem(itemId, newItem);
-    if (attachedFiles.length) saveItemFiles(itemId, attachedFiles);
+    const fileP = attachedFiles.length ? saveItemFiles(itemId, attachedFiles) : Promise.resolve();
+    const imgP = imageField ? saveItemImage(itemId, imageField) : Promise.resolve();
     addLog('add_item', name);
-  }
-  // Gửi thông báo tự động khi thêm item mới
-  if (!editItemId) {
+    // Gửi thông báo tự động khi thêm item mới
     db.collection(COL).doc(NOTIF_COL_DOC).get().then(snap => {
       const existing2 = (snap.exists && snap.data() && snap.data().msgs) || [];
       const nn = { id: 'n' + Date.now(), icon: '🆕', title: 'Nội dung mới: ' + name, msg: desc || 'Vào xem ngay!', itemId, at: new Date().toISOString(), by: me ? me.username : 'admin' };
       db.collection(COL).doc(NOTIF_COL_DOC).set({ msgs: [...existing2, nn].slice(-50) }).catch(()=>{});
     }).catch(()=>{});
+    Promise.all([fileP, imgP, saveSecretContent(itemId, content || '')]).then(() => {
+      closeItemModal();
+      toast('✅ Đã lưu!', 'ok');
+      aTab('items');
+      renderItemGrid();
+    }).catch(e => {
+      toast('❌ Lỗi lưu: ' + (e.message || 'thử lại'), 'err');
+    });
   }
-  saveSecretContent(itemId, content || '').then(() => {
-    closeItemModal();
-    toast('✅ Đã lưu!', 'ok');
-    aTab('items');
-  });
 }
 function toggleItem(id) {
   const item = (localItems || {})[id];
@@ -3448,12 +3673,110 @@ function deleteItem(id) {
   if (!confirm('Xóa nội dung này?')) return;
   const item = (localItems || {})[id];
   deleteSecretContent(id);
+  saveItemImage(id, null).catch(()=>{});
+  saveItemFiles(id, []).catch(()=>{});
   removeItem(id).then(() => {
     addLog('delete_item', item ? item.name : id);
     aTab('items');
     toast('🗑 Đã xóa', 'ok');
   });
 }
+
+// ===== VIP / LIVE DROP / BACKUP / UI =====
+function toggleVip(username) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return;
+  const updated = { ...u, vip: !u.vip };
+  if (!updated.vip) delete updated.vip;
+  updateUser(username, updated).then(() => {
+    addLog(updated.vip ? 'set_vip' : 'unset_vip', username);
+    toast(updated.vip ? '👑 Đã cấp VIP @' + username : 'Đã gỡ VIP @' + username, 'ok');
+    aTab('users', false);
+  });
+}
+
+async function triggerLiveDrop() {
+  const title = '🔥 LIVE DROP';
+  const msg = 'Hàng mới vừa mở — vào lấy ngay trước khi hết!';
+  try {
+    const snap = await db.collection(COL).doc(NOTIF_COL_DOC).get();
+    const existing = (snap.exists && snap.data() && snap.data().msgs) || [];
+    const nn = { id: 'n' + Date.now(), icon: '🔥', title, msg, live: true, at: new Date().toISOString(), by: me ? me.username : 'admin' };
+    await db.collection(COL).doc(NOTIF_COL_DOC).set({ msgs: [...existing, nn].slice(-50) });
+    // Broadcast live banner flag
+    await db.collection(COL).doc('live_drop').set({ active: true, title, msg, at: new Date().toISOString() });
+    addLog('live_drop', title);
+    toast('🔥 Đã phát LIVE DROP tới tất cả user!', 'ok');
+    showLiveDropBanner(title + ' — ' + msg);
+  } catch (e) {
+    toast('❌ Không gửi được LIVE DROP', 'err');
+  }
+}
+
+function showLiveDropBanner(text) {
+  const el = document.getElementById('liveDropBanner');
+  if (!el) return;
+  el.textContent = text || '🔥 LIVE DROP — Hàng mới vừa ra!';
+  el.classList.add('show');
+  clearTimeout(window.__liveDropT);
+  window.__liveDropT = setTimeout(() => el.classList.remove('show'), 8000);
+}
+
+function initLiveDropListener() {
+  if (window.__liveDropListened) return;
+  window.__liveDropListened = true;
+  db.collection(COL).doc('live_drop').onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (!d || !d.active || !d.at) return;
+    // chỉ hiện nếu trong 2 phút gần đây
+    if (Date.now() - new Date(d.at).getTime() > 120000) return;
+    const key = 'vlp_live_seen_' + d.at;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    showLiveDropBanner((d.title || '🔥 LIVE DROP') + (d.msg ? ' — ' + d.msg : ''));
+  }, () => {});
+}
+
+function exportFullBackup() {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    users: localUsers || {},
+    items: localItems || {},
+    orders: localOrders || {},
+    settings: localSettings || {},
+    logs: localLogs || {},
+    keys: localKeys || {},
+    reviews: localReviews || {}
+  };
+  // Không export secret content / images / files (quá lớn) — admin tự biết
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vuotlink_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  toast('💾 Đã tải backup JSON (users/items/orders/settings...)', 'ok');
+  addLog('export_backup', '');
+}
+
+function initParticles() {
+  const box = document.getElementById('particles');
+  if (!box || box.childElementCount > 0) return;
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (8 + Math.random() * 14) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.opacity = 0.15 + Math.random() * 0.25;
+    p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+    if (Math.random() > 0.5) p.style.background = 'var(--purple)';
+    box.appendChild(p);
+  }
+}
+
+// gọi listener live drop sớm
+try { initLiveDropListener(); } catch(e) {}
 
 // ===== UTILS =====
 function esc(s) {
@@ -3641,10 +3964,10 @@ function getTotalPendingFilesSize() {
 function handleItemFileSelect(ev) {
   const files = ev && ev.target && ev.target.files;
   if (!files || !files.length) return;
-  const maxBytesPerFile = 500 * 1024; // 500KB per file (base64 ~= 1.37x, so ~685KB encoded)
-  const maxTotalEncoded = 600 * 1024; // tổng base64 tối đa ~600KB để an toàn với Firestore 1MB limit
+  const maxBytesPerFile = 1 * 1024 * 1024; // 1MB per file (user request)
+  const maxTotalEncoded = 950 * 1024; // tổng base64 ~950KB — gần giới hạn 1MB Firestore/doc
   Array.from(files).forEach(file => {
-    if (file.size > maxBytesPerFile) { toast('⚠️ ' + file.name + ' quá lớn (> 500KB)', 'err'); return; }
+    if (file.size > maxBytesPerFile) { toast('⚠️ ' + file.name + ' quá lớn (> 1MB)', 'err'); return; }
     if (imPendingFiles.length >= 5) { toast('⚠️ Tối đa 5 file', 'err'); return; }
     const reader = new FileReader();
     reader.onload = e => {
