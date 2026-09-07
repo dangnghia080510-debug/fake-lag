@@ -374,6 +374,19 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
 .sort-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(195,91,255,.1)}
 
 /* ===== CHAT RATE LIMIT fix ===== */
+/* ===== LINK BUTTONS ADMIN ===== */
+.im-link-row{display:flex;gap:6px;align-items:center;background:#070a11;border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+.im-link-row .im-link-name{flex:1;min-width:80px;padding:7px 10px;background:#040608;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:12px;outline:none}
+.im-link-row .im-link-url{flex:2;min-width:120px;padding:7px 10px;background:#040608;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:12px;outline:none}
+.im-link-row .im-link-name:focus,.im-link-row .im-link-url:focus{border-color:var(--cyan)}
+.im-link-rm{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 2px;flex-shrink:0}
+
+/* ===== RESULT LINK BUTTONS (user view) ===== */
+.result-link-btns{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.result-link-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#040810;font-family:'Exo 2',sans-serif;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:.4px;box-shadow:var(--glow-cyan);text-decoration:none;transition:.18s}
+.result-link-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.result-link-btn:active{transform:scale(.97)}
+
 
 </style>
 </head>
@@ -614,10 +627,10 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
     </div>
     <div class="result-area" id="bmResult">
       <div class="result-label">✅ Hoàn thành! Nội dung của bạn:</div>
-      <div class="result-content" id="bmResultContent"></div>
-      <div class="copy-row">
+      <div class="result-content" id="bmResultContent" style="display:none"></div>
+      <div id="bmResultLinkBtns"></div>
+      <div class="copy-row" id="bmCopyRow" style="display:none">
         <button class="btn btn-green btn-sm" style="flex:1" onclick="copyResult()">📋 Sao chép</button>
-        <button class="btn btn-cyan btn-sm" style="flex:1" onclick="openResult()">🔗 Mở link</button>
       </div>
     </div>
     <button class="btn btn-ghost btn-full" style="margin-top:10px;font-size:12px" onclick="closeBypass()">Đóng</button>
@@ -675,22 +688,25 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       <input class="inp" id="imUnlockAt" type="datetime-local"/>
     </div>
     <div class="inp-group">
-      <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
-      <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt... (để trống nếu chỉ dùng file)"></textarea>
+      <div class="inp-label">📝 Nội dung hướng dẫn (text — hiện cho user đọc)</div>
+      <textarea class="inp" id="imContent" rows="4" placeholder="Nhập hướng dẫn, mô tả chi tiết... (để trống nếu không cần)"></textarea>
     </div>
     <div class="inp-group">
-      <div class="inp-label">📎 File đính kèm (PDF, ZIP, APK, MP4... — tối đa 800KB/file)</div>
+      <div class="inp-label">🔗 Nút mở link (user chỉ thấy tên nút, không thấy URL)</div>
+      <div class="sec-note" style="margin-bottom:8px">Tối đa 20 nút. Bấm ➕ để thêm nút mới.</div>
+      <div id="imLinkBtns" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%" onclick="addLinkBtn()" id="imAddLinkBtn">➕ Thêm nút link</button>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">📎 File đính kèm (PDF, ZIP, APK... — tối đa 500KB/file)</div>
       <input type="file" id="imFileInput" style="display:none" multiple onchange="handleItemFileSelect(event)"/>
       <div class="file-attach-zone">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('imFileInput').click()">📂 Chọn file</button>
-          <span style="font-size:11px;color:var(--sub);align-self:center">Hỗ trợ mọi loại file. Ảnh/video sẽ nén tự động.</span>
+          <span style="font-size:11px;color:var(--sub);align-self:center">Hỗ trợ mọi loại file.</span>
         </div>
         <div class="file-attach-list" id="imFileList"></div>
       </div>
-    </div>
-    <div class="sec-note">
-      ℹ️ Có thể vừa nhập text vừa đính kèm file. File được mã hoá base64, lưu kèm nội dung — hiện lên sau khi vượt link đủ lượt.
     </div>
     <button class="btn btn-gold btn-full" style="margin-top:12px" onclick="saveItem()">💾 LƯU</button>
   </div>
@@ -1145,7 +1161,45 @@ function saveUsers(obj) {
     return db.collection(COL).doc('users').set({ data: localUsers });
   }).catch(e => fbErr(e, 'saveUsers'));
 }
-function saveItems(obj) { localItems = obj || {}; lsSet(LS_ITEMS, { data: localItems }); return db.collection(COL).doc('items').set({ data: localItems }).catch(e => fbErr(e, 'saveItems')); }
+function saveItems(obj) {
+  localItems = obj || {};
+  // Lưu items không có trường data của file (chỉ metadata) để tránh vượt 1MB Firestore
+  const itemsSlim = {};
+  Object.keys(localItems).forEach(id => {
+    const item = localItems[id];
+    if (!item) { itemsSlim[id] = item; return; }
+    const { attachedFiles, ...rest } = item;
+    // Giữ attachedFiles metadata (không có data) trong items doc để hiện tên/size
+    if (attachedFiles && attachedFiles.length) {
+      rest.attachedFiles = attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }));
+    } else {
+      rest.attachedFiles = attachedFiles || [];
+    }
+    itemsSlim[id] = rest;
+  });
+  lsSet(LS_ITEMS, { data: localItems }); // localStorage giữ full data để dùng offline
+  return db.collection(COL).doc('items').set({ data: itemsSlim }).catch(e => fbErr(e, 'saveItems'));
+}
+
+function saveItemFiles(itemId, files) {
+  if (!files || !files.length) {
+    return db.collection(COL).doc('itemFiles').set({ [itemId]: [] }, { merge: true }).catch(e => fbErr(e, 'saveItemFiles'));
+  }
+  return db.collection(COL).doc('itemFiles').set({ [itemId]: files }, { merge: true }).catch(e => fbErr(e, 'saveItemFiles'));
+}
+
+function fetchItemFiles(itemId) {
+  // Thử lấy từ localStorage trước (có full data)
+  const cached = localItems && localItems[itemId];
+  if (cached && cached.attachedFiles && cached.attachedFiles.length && cached.attachedFiles[0].data) {
+    return Promise.resolve(cached.attachedFiles);
+  }
+  return db.collection(COL).doc('itemFiles').get().then(snap => {
+    if (!snap.exists) return [];
+    const data = snap.data();
+    return (data && data[itemId]) || [];
+  }).catch(() => []);
+}
 function saveOrders(obj) { localOrders = obj || {}; lsSet(LS_ORDERS, { data: localOrders }); return db.collection(COL).doc('orders').set({ data: localOrders }).catch(e => fbErr(e, 'saveOrders')); }
 function saveSettings(obj) {
   localSettings = obj || localSettings || {};
@@ -2454,23 +2508,42 @@ function showResult() {
         document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa — không nhận nội dung.';
         return;
       }
-      // Nội dung text
-      document.getElementById('bmResultContent').textContent = (content !== null && content !== '') ? content : '';
-      if (content === null || content === '') document.getElementById('bmResultContent').style.display = 'none';
-      else document.getElementById('bmResultContent').style.display = '';
+      const curItem = (localItems||{})[item.id] || item;
+      // Nội dung hướng dẫn (text)
+      const rcEl = document.getElementById('bmResultContent');
+      if (content !== null && content !== '') {
+        rcEl.textContent = content;
+        rcEl.style.display = '';
+        document.getElementById('bmCopyRow').style.display = '';
+      } else {
+        rcEl.style.display = 'none';
+        document.getElementById('bmCopyRow').style.display = 'none';
+      }
+      // Nút link
+      const linkBtnsEl = document.getElementById('bmResultLinkBtns');
+      if (curItem.linkBtns && curItem.linkBtns.length) {
+        linkBtnsEl.innerHTML = renderResultLinkBtns(curItem.linkBtns);
+      } else { linkBtnsEl.innerHTML = ''; }
       // File đính kèm
       const existingFilesDom = document.getElementById('bmResultFiles');
       if (existingFilesDom) existingFilesDom.remove();
-      const curItem = (localItems||{})[item.id] || item;
       if (curItem.attachedFiles && curItem.attachedFiles.length) {
         const filesDiv = document.createElement('div');
         filesDiv.id = 'bmResultFiles';
-        filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles);
-        document.getElementById('bmResult').insertBefore(filesDiv, document.getElementById('bmResult').querySelector('.copy-row'));
+        document.getElementById('bmResult').appendChild(filesDiv);
+        const hasData = curItem.attachedFiles.some(f => f.data);
+        if (!hasData) {
+          filesDiv.innerHTML = '<div style="color:var(--sub);font-size:12px;padding:8px">⏳ Đang tải file...</div>';
+          fetchItemFiles(item.id).then(fullFiles => {
+            if (fullFiles && fullFiles.length) {
+              if (localItems[item.id]) localItems[item.id].attachedFiles = fullFiles;
+              filesDiv.innerHTML = renderResultFiles(fullFiles);
+            } else { filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles); }
+          });
+        } else { filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles); }
       }
-      if (content === null && (!curItem.attachedFiles || !curItem.attachedFiles.length)) {
-        document.getElementById('bmResultContent').textContent = '(Không có nội dung)';
-        document.getElementById('bmResultContent').style.display = '';
+      if (!content && (!curItem.linkBtns || !curItem.linkBtns.length) && (!curItem.attachedFiles || !curItem.attachedFiles.length)) {
+        rcEl.textContent = '(Không có nội dung)'; rcEl.style.display = '';
       }
       addOrder({
         id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
@@ -3114,10 +3187,12 @@ function openItemModal(id) {
   editItemId = id || null;
   selectedImageData = null;
   imPendingFiles = [];
+  imPendingLinkBtns = [];
   document.getElementById('imImagePreview').classList.remove('show');
   document.getElementById('imRemoveImg').style.display = 'none';
   document.getElementById('imImagePreviewImg').src = '';
   renderImFileList();
+  renderImLinkBtns();
 
   if (id) {
     const item = (localItems || {})[id];
@@ -3147,6 +3222,11 @@ function openItemModal(id) {
       imPendingFiles = item.attachedFiles.map(f => ({ name: f.name, size: f.size||0, type: f.type||'', data: f.data }));
       renderImFileList();
     }
+    // Load existing link buttons
+    if (item.linkBtns && item.linkBtns.length) {
+      imPendingLinkBtns = item.linkBtns.map(b => ({ label: b.label||'', url: b.url||'' }));
+      renderImLinkBtns();
+    }
     fetchSecretContent(id).then(content => {
       document.getElementById('imContent').value = content !== null ? content : (item.content || '');
       document.getElementById('imContent').disabled = false;
@@ -3166,7 +3246,7 @@ function openItemModal(id) {
   document.getElementById('imErr').classList.remove('show');
   document.getElementById('itemModal').classList.add('open');
 }
-function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editItemId = null; selectedImageData = null; imPendingFiles = []; renderImFileList(); }
+function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editItemId = null; selectedImageData = null; imPendingFiles = []; imPendingLinkBtns = []; renderImFileList(); renderImLinkBtns(); }
 
 function buildLink4mUrl(destinationUrl) {
   const key = (getSettings().link4mKey || '').trim();
@@ -3223,28 +3303,40 @@ function saveItem() {
   const unlockAt = unlockRaw ? new Date(unlockRaw).toISOString() : null;
   const content = (document.getElementById('imContent').value || '').trim();
 
-  if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
-  if (!content && !imPendingFiles.length) { showAlert('imErr', '⚠️ Nhập nội dung hoặc đính kèm ít nhất 1 file!', 'err'); return; }
-
   let itemId = editItemId;
   const imageField = selectedImageData || null;
-  // Gom file đính kèm (chỉ lưu metadata + base64 data nhỏ gọn)
   const attachedFiles = imPendingFiles.map(f => ({ name: f.name, size: f.size, type: f.type, data: f.data }));
+  const linkBtns = getLinkBtnsData();
+
+  if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
+  if (!content && !attachedFiles.length && !linkBtns.length) { showAlert('imErr', '⚠️ Nhập hướng dẫn, thêm nút link hoặc đính kèm ít nhất 1 file!', 'err'); return; }
+
+  // Kiểm tra tổng kích thước trước khi lưu
+  const totalFileSize = attachedFiles.reduce((s, f) => s + (f.data ? f.data.length : 0), 0);
+  if (totalFileSize > 700 * 1024) {
+    showAlert('imErr', '⚠️ Tổng dung lượng file đính kèm quá lớn! Hãy giảm bớt file.', 'err');
+    return;
+  }
 
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles });
+    localItems[itemId] = { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles, linkBtns };
+    updateItem(itemId, localItems[itemId]);
+    if (attachedFiles.length) saveItemFiles(itemId, attachedFiles);
     addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
     const existing = getItemsArr();
     const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
-    updateItem(itemId, {
-      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles,
+    const newItem = {
+      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles, linkBtns,
       sortOrder: minSort - 1,
       active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
-    });
+    };
+    localItems[itemId] = newItem;
+    updateItem(itemId, newItem);
+    if (attachedFiles.length) saveItemFiles(itemId, attachedFiles);
     addLog('add_item', name);
   }
   // Gửi thông báo tự động khi thêm item mới
@@ -3460,15 +3552,25 @@ function fmtFileSize(bytes) {
   return (bytes/1024/1024).toFixed(2) + ' MB';
 }
 
+function getTotalPendingFilesSize() {
+  return imPendingFiles.reduce((sum, f) => sum + (f.data ? f.data.length : 0), 0);
+}
+
 function handleItemFileSelect(ev) {
   const files = ev && ev.target && ev.target.files;
   if (!files || !files.length) return;
-  const maxBytes = 800 * 1024; // 800KB per file
+  const maxBytesPerFile = 500 * 1024; // 500KB per file (base64 ~= 1.37x, so ~685KB encoded)
+  const maxTotalEncoded = 600 * 1024; // tổng base64 tối đa ~600KB để an toàn với Firestore 1MB limit
   Array.from(files).forEach(file => {
-    if (file.size > maxBytes) { toast('⚠️ ' + file.name + ' quá lớn (> 800KB)', 'err'); return; }
+    if (file.size > maxBytesPerFile) { toast('⚠️ ' + file.name + ' quá lớn (> 500KB)', 'err'); return; }
     if (imPendingFiles.length >= 5) { toast('⚠️ Tối đa 5 file', 'err'); return; }
     const reader = new FileReader();
     reader.onload = e => {
+      const encodedSize = e.target.result ? e.target.result.length : 0;
+      if (getTotalPendingFilesSize() + encodedSize > maxTotalEncoded) {
+        toast('⚠️ Tổng file quá lớn! Hãy giảm số file hoặc dùng file nhỏ hơn.', 'err');
+        return;
+      }
       imPendingFiles.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
       renderImFileList();
       toast('✅ Đã thêm: ' + file.name, 'ok');
@@ -3531,20 +3633,101 @@ async function reopenHistoryItem(itemId, itemName) {
   document.getElementById('bmProgFill').style.width = '100%';
   document.getElementById('bmProgText').textContent = 'Đã hoàn thành';
   const resultContent = document.getElementById('bmResultContent');
-  resultContent.textContent = content !== null ? content : '';
-  // Hiển thị file nếu có
+  // Nội dung hướng dẫn
+  if (content !== null && content !== '') {
+    resultContent.textContent = content;
+    resultContent.style.display = '';
+    document.getElementById('bmCopyRow').style.display = '';
+  } else {
+    resultContent.style.display = 'none';
+    document.getElementById('bmCopyRow').style.display = 'none';
+  }
+  // Nút link
+  const linkBtnsEl = document.getElementById('bmResultLinkBtns');
+  if (item && item.linkBtns && item.linkBtns.length) {
+    linkBtnsEl.innerHTML = renderResultLinkBtns(item.linkBtns);
+  } else { linkBtnsEl.innerHTML = ''; }
+  // File đính kèm
   const existingFiles = document.getElementById('bmResultFiles');
   if (existingFiles) existingFiles.remove();
   if (item && item.attachedFiles && item.attachedFiles.length) {
     const filesDiv = document.createElement('div');
     filesDiv.id = 'bmResultFiles';
-    filesDiv.innerHTML = renderResultFiles(item.attachedFiles);
     document.getElementById('bmResult').appendChild(filesDiv);
+    const hasData = item.attachedFiles.some(f => f.data);
+    if (!hasData) {
+      filesDiv.innerHTML = '<div style="color:var(--sub);font-size:12px;padding:8px">⏳ Đang tải file...</div>';
+      fetchItemFiles(itemId).then(fullFiles => {
+        if (fullFiles && fullFiles.length) {
+          if (localItems[itemId]) localItems[itemId].attachedFiles = fullFiles;
+          filesDiv.innerHTML = renderResultFiles(fullFiles);
+        } else { filesDiv.innerHTML = renderResultFiles(item.attachedFiles); }
+      });
+    } else { filesDiv.innerHTML = renderResultFiles(item.attachedFiles); }
   }
   document.getElementById('bmResult').classList.add('show');
   document.getElementById('bypassModal').classList.add('open');
   currentItem = item || { id: itemId, name: itemName, rounds: 1 };
   verifiedSteps = [];
+}
+
+
+// ============================================================
+// LINK BUTTONS SYSTEM
+// ============================================================
+let imPendingLinkBtns = []; // [{label, url}]
+
+function addLinkBtn() {
+  if (imPendingLinkBtns.length >= 20) { toast('⚠️ Tối đa 20 nút link', 'err'); return; }
+  imPendingLinkBtns.push({ label: '', url: '' });
+  renderImLinkBtns();
+  // focus vào input tên nút vừa thêm
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.im-link-name');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+
+function removeImLinkBtn(idx) {
+  imPendingLinkBtns.splice(idx, 1);
+  renderImLinkBtns();
+}
+
+function syncImLinkBtns() {
+  // đọc giá trị hiện tại từ DOM vào mảng
+  document.querySelectorAll('.im-link-row').forEach((row, i) => {
+    if (!imPendingLinkBtns[i]) return;
+    const nameEl = row.querySelector('.im-link-name');
+    const urlEl = row.querySelector('.im-link-url');
+    if (nameEl) imPendingLinkBtns[i].label = nameEl.value;
+    if (urlEl) imPendingLinkBtns[i].url = urlEl.value;
+  });
+}
+
+function renderImLinkBtns() {
+  const el = document.getElementById('imLinkBtns');
+  if (!el) return;
+  const addBtn = document.getElementById('imAddLinkBtn');
+  if (addBtn) addBtn.style.display = imPendingLinkBtns.length >= 20 ? 'none' : '';
+  if (!imPendingLinkBtns.length) { el.innerHTML = '<div style="font-size:11px;color:var(--sub);padding:4px 0">Chưa có nút nào. Bấm ➕ để thêm.</div>'; return; }
+  el.innerHTML = imPendingLinkBtns.map((b, i) => `
+    <div class="im-link-row">
+      <input class="im-link-name" placeholder="Tên nút (VD: Tải về)" value="${esc(b.label)}" oninput="imPendingLinkBtns[${i}].label=this.value" maxlength="40"/>
+      <input class="im-link-url" placeholder="https://..." value="${esc(b.url)}" oninput="imPendingLinkBtns[${i}].url=this.value" type="url"/>
+      <button class="im-link-rm" onclick="removeImLinkBtn(${i})" title="Xóa">✕</button>
+    </div>`).join('');
+}
+
+function getLinkBtnsData() {
+  syncImLinkBtns();
+  return imPendingLinkBtns.filter(b => b.url && b.url.trim());
+}
+
+function renderResultLinkBtns(linkBtns) {
+  if (!linkBtns || !linkBtns.length) return '';
+  return '<div class="result-link-btns">' +
+    linkBtns.map(b => `<a class="result-link-btn" href="${esc(b.url)}" target="_blank" rel="noopener">🔗 ${esc(b.label || 'Mở Link')}</a>`).join('') +
+    '</div>';
 }
 
 // ============================================================
