@@ -323,6 +323,58 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
 .chat-img-full-overlay{position:fixed;inset:0;background:#000000cc;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
 .chat-img-full-overlay img{max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain}
 
+/* ===== NOTIFICATION BELL ===== */
+.notif-bell{position:relative;cursor:pointer;background:none;border:none;color:var(--sub);font-size:20px;padding:4px 8px;line-height:1;transition:.15s}
+.notif-bell:hover{color:var(--cyan)}
+.notif-dot{position:absolute;top:2px;right:4px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid #0a0d14;display:none}
+.notif-dot.show{display:block}
+.notif-panel{position:fixed;top:54px;right:0;width:min(340px,100vw);max-height:70vh;background:#0c101a;border:1px solid var(--border);border-top:none;border-radius:0 0 16px 16px;z-index:300;overflow-y:auto;box-shadow:0 14px 40px #00000080;display:none}
+.notif-panel.open{display:block}
+.notif-hd{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notif-hd-title{font-size:13px;font-weight:700;color:var(--gold)}
+.notif-hd-mark{font-size:11px;color:var(--cyan);cursor:pointer;background:none;border:none;font-family:'Exo 2',sans-serif}
+.notif-item{padding:11px 14px;border-bottom:1px solid #0a0d14;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:.15s;position:relative}
+.notif-item:hover{background:#111827}
+.notif-item.unread{background:#0a1020}
+.notif-item.unread::before{content:'';display:block;position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan)}
+.notif-icon{font-size:20px;flex-shrink:0;line-height:1.3}
+.notif-body{}
+.notif-title-txt{font-size:13px;font-weight:700;color:var(--text)}
+.notif-msg{font-size:11px;color:var(--sub);margin-top:2px;line-height:1.4}
+.notif-time{font-size:10px;color:var(--sub);margin-top:4px}
+.notif-empty{padding:28px;text-align:center;color:var(--sub);font-size:13px}
+
+/* ===== FILE ATTACHMENT ===== */
+.file-attach-zone{border:1.5px dashed var(--border);border-radius:12px;padding:13px;background:#070a11;margin-top:8px}
+.file-attach-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.file-attach-item{display:flex;align-items:center;gap:10px;background:#0a0d14;border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.file-attach-icon{font-size:22px;flex-shrink:0}
+.file-attach-info{flex:1;min-width:0}
+.file-attach-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-attach-size{font-size:10px;color:var(--sub);margin-top:2px}
+.file-attach-rm{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 4px}
+.result-files{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+.result-file-card{display:flex;align-items:center;gap:10px;background:#0a0d14;border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s;text-decoration:none}
+.result-file-card:hover{border-color:var(--cyan);background:#0b1524}
+.result-file-card .rfc-icon{font-size:24px;flex-shrink:0}
+.result-file-card .rfc-info{flex:1;min-width:0}
+.result-file-card .rfc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-file-card .rfc-size{font-size:10px;color:var(--sub);margin-top:2px}
+.result-file-card .rfc-dl{color:var(--cyan);font-size:18px;flex-shrink:0}
+
+/* ===== HISTORY REOPEN ===== */
+.history-item{cursor:pointer;transition:.15s}
+.history-item:hover{border-color:var(--cyan);background:#0b1524}
+.history-reopen{font-size:11px;color:var(--cyan);font-weight:700;margin-top:5px;display:flex;align-items:center;gap:5px}
+
+/* ===== SORT FILTER ===== */
+.sort-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.sort-label{font-size:11px;color:var(--sub);font-weight:600;white-space:nowrap}
+.sort-btn{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--sub);font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;font-weight:600;transition:.15s}
+.sort-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(195,91,255,.1)}
+
+/* ===== CHAT RATE LIMIT fix ===== */
+
 </style>
 </head>
 <body>
@@ -393,8 +445,13 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       <span class="brand-name">VƯỢT LINK PRO</span>
     </div>
     <div class="nav-right">
+      <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo">🔔<span class="notif-dot" id="notifDot"></span></button>
       <button class="btn btn-ghost btn-sm" id="btnAdmin" style="display:none" onclick="goAdmin()">🛡️ Admin</button>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">🚪</button>
+    </div>
+    <div class="notif-panel" id="notifPanel">
+      <div class="notif-hd"><span class="notif-hd-title">🔔 Thông báo</span><button class="notif-hd-mark" onclick="markAllNotifRead()">Đọc hết</button></div>
+      <div id="notifList"><div class="notif-empty">Không có thông báo</div></div>
     </div>
   </div>
   <div class="user-bar">
@@ -427,6 +484,13 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       </div>
       <div class="search-row">
         <input class="search-inp" id="itemSearch" placeholder="🔍 Tìm nội dung..." oninput="renderItemGrid()"/>
+      </div>
+      <div class="sort-row">
+        <span class="sort-label">Sắp xếp:</span>
+        <button class="sort-btn active" id="sortBtnDefault" onclick="setSortOrder('default')">Mặc định</button>
+        <button class="sort-btn" id="sortBtnNew" onclick="setSortOrder('new')">Mới nhất</button>
+        <button class="sort-btn" id="sortBtnHot" onclick="setSortOrder('hot')">🔥 Hot</button>
+        <button class="sort-btn" id="sortBtnNotDone" onclick="setSortOrder('notdone')">Chưa lấy</button>
       </div>
       <div class="cat-filter" id="catFilter"></div>
       <div class="product-grid" id="itemGrid"></div>
@@ -612,10 +676,21 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
     </div>
     <div class="inp-group">
       <div class="inp-label">Nội dung / Link thật (ẩn đến khi vượt đủ)</div>
-      <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt..."></textarea>
+      <textarea class="inp" id="imContent" placeholder="Link hoặc nội dung sẽ được tiết lộ sau khi vượt đủ lượt... (để trống nếu chỉ dùng file)"></textarea>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">📎 File đính kèm (PDF, ZIP, APK, MP4... — tối đa 800KB/file)</div>
+      <input type="file" id="imFileInput" style="display:none" multiple onchange="handleItemFileSelect(event)"/>
+      <div class="file-attach-zone">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('imFileInput').click()">📂 Chọn file</button>
+          <span style="font-size:11px;color:var(--sub);align-self:center">Hỗ trợ mọi loại file. Ảnh/video sẽ nén tự động.</span>
+        </div>
+        <div class="file-attach-list" id="imFileList"></div>
+      </div>
     </div>
     <div class="sec-note">
-      ℹ️ Ảnh lưu nguyên chất lượng gốc (không giới hạn độ phân giải). Nội dung thật tách riêng, không lộ realtime.
+      ℹ️ Có thể vừa nhập text vừa đính kèm file. File được mã hoá base64, lưu kèm nội dung — hiện lên sau khi vượt link đủ lượt.
     </div>
     <button class="btn btn-gold btn-full" style="margin-top:12px" onclick="saveItem()">💾 LƯU</button>
   </div>
@@ -704,6 +779,29 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       <div style="font-size:11px;color:var(--sub);margin-top:4px">Liên hệ Admin để được hỗ trợ</div>
     </div>
     <button class="btn btn-red btn-full" style="margin-top:6px" onclick="ackBanLive()">Đã hiểu — Đăng xuất</button>
+  </div>
+</div>
+
+<!-- ANNOUNCE MODAL (Admin → gửi thông báo tới tất cả user) -->
+<div class="modal-bg announce-modal" id="announceModal">
+  <div class="modal-box" style="border-color:var(--gold)">
+    <div class="modal-hd">
+      <div class="modal-title">📣 Gửi thông báo</div>
+      <button class="modal-close" onclick="closeAnnounce()">✕</button>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Icon</div>
+      <input class="inp" id="annIcon" value="📢" maxlength="4" style="width:80px"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Tiêu đề</div>
+      <input class="inp" id="annTitle" placeholder="VD: Nội dung mới vừa thêm!"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">Nội dung</div>
+      <textarea class="inp" id="annMsg" rows="3" placeholder="Mô tả chi tiết..."></textarea>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="sendAnnounce()">📣 Gửi tới tất cả</button>
   </div>
 </div>
 
@@ -1559,6 +1657,7 @@ function enterMain() {
   switchUserTab('items');
   updateContactBtn();
   restoreActiveBypassIfAny();
+  initNotifListener();
 }
 function switchUserTab(tab) {
   currentUserTab = tab;
@@ -1928,12 +2027,13 @@ function renderUserHistory() {
     return;
   }
   list.innerHTML = myOrders.map(o => `
-    <div class="history-item">
+    <div class="history-item" onclick="reopenHistoryItem('${o.itemId}','${esc(o.itemName||'Nội dung')}')">
       <div class="history-name">${esc(o.itemName || 'Nội dung')}</div>
       <div class="history-meta">
         <span>${fmtDT(o.createdAt)}</span>
         <span class="bdg bdg-ok">✅ Thành công</span>
       </div>
+      <div class="history-reopen">📋 Xem lại nội dung →</div>
     </div>
   `).join('');
 }
@@ -1964,16 +2064,31 @@ function renderItemGrid() {
   // đếm tổng lượt thành công (không giới hạn số lần user vượt)
   active = active.map(item => {
     const totalDone = getOrdersArr().filter(o => o.itemId === item.id && o.status === 'success').length;
-    return { ...item, _done: false, _totalDone: totalDone };
+    const userDone = me ? hasUserCompleted(me.username, item.id) : false;
+    return { ...item, _done: false, _totalDone: totalDone, _userDone: userDone };
   });
 
-  // sortOrder nhỏ = lên trước; không có thì theo createdAt mới nhất
-  active.sort((a, b) => {
-    const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
-    const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
-    if (sa !== sb) return sa - sb;
-    return (b.createdAt || '').localeCompare(a.createdAt || '');
-  });
+  // sort theo currentSortOrder
+  const so = currentSortOrder || 'default';
+  if (so === 'default') {
+    active.sort((a, b) => {
+      const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
+      const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
+      if (sa !== sb) return sa - sb;
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+  } else if (so === 'new') {
+    active.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  } else if (so === 'hot') {
+    active.sort((a, b) => (b._totalDone || 0) - (a._totalDone || 0));
+  } else if (so === 'notdone') {
+    active.sort((a, b) => {
+      if (a._userDone !== b._userDone) return a._userDone ? 1 : -1;
+      const sa = a.sortOrder !== undefined ? a.sortOrder : 9999;
+      const sb = b.sortOrder !== undefined ? b.sortOrder : 9999;
+      return sa - sb;
+    });
+  }
   renderCatFilter();
 
   if (!active.length) {
@@ -1993,16 +2108,16 @@ function renderItemGrid() {
     const cdMs = coming ? (new Date(item.unlockAt).getTime() - Date.now()) : 0;
     const comingBadge = coming ? '<span class="coming-badge">SẮP RA MẮT</span>' : '';
     let actionHtml = '';
-    if (item._done) {
-      actionHtml = '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--green);font-weight:700">✅ ĐÃ LẤY</div>';
-    } else if (coming) {
+    if (coming) {
       actionHtml = `<div class="coming-cd" data-unlock="${item.unlockAt}">🕒 ${formatCountdown(cdMs)}</div><button class="product-btn locked" disabled>🔒 CHƯA MỞ</button>`;
+    } else if (item._userDone) {
+      actionHtml = `<button class="product-btn" style="background:linear-gradient(135deg,var(--green),var(--green2));color:#010e05" onclick="event.stopPropagation();reopenHistoryItem('${item.id}','${esc(item.name)}')">📋 XEM LẠI</button>`;
     } else {
       actionHtml = `<button class="product-btn" onclick="event.stopPropagation();openBypass('${item.id}')">⚡ VƯỢT LINK</button>`;
     }
     actionHtml += `<button class="btn btn-ghost btn-xs" style="width:100%;margin-top:6px" onclick="event.stopPropagation();openItemReviews('${item.id}')">⭐ Đánh giá</button>`;
     return `
-      <div class="product-card ${item._done ? 'done' : ''}" onclick="${(item._done || coming) ? '' : `openBypass('${item.id}')`}">
+      <div class="product-card" onclick="${coming ? '' : item._userDone ? `reopenHistoryItem('${item.id}','${esc(item.name)}')` : `openBypass('${item.id}')`}">
         <div class="product-img-wrap">
           ${imgHtml}
           ${comingBadge}
@@ -2335,12 +2450,28 @@ function showResult() {
     }
 
     fetchSecretContent(item.id).then(content => {
-      if (content === null) content = '(Không có nội dung)';
       if (isUserBanned(me)) {
         document.getElementById('bmResultContent').textContent = '🚫 Tài khoản bị khóa — không nhận nội dung.';
         return;
       }
-      document.getElementById('bmResultContent').textContent = content;
+      // Nội dung text
+      document.getElementById('bmResultContent').textContent = (content !== null && content !== '') ? content : '';
+      if (content === null || content === '') document.getElementById('bmResultContent').style.display = 'none';
+      else document.getElementById('bmResultContent').style.display = '';
+      // File đính kèm
+      const existingFilesDom = document.getElementById('bmResultFiles');
+      if (existingFilesDom) existingFilesDom.remove();
+      const curItem = (localItems||{})[item.id] || item;
+      if (curItem.attachedFiles && curItem.attachedFiles.length) {
+        const filesDiv = document.createElement('div');
+        filesDiv.id = 'bmResultFiles';
+        filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles);
+        document.getElementById('bmResult').insertBefore(filesDiv, document.getElementById('bmResult').querySelector('.copy-row'));
+      }
+      if (content === null && (!curItem.attachedFiles || !curItem.attachedFiles.length)) {
+        document.getElementById('bmResultContent').textContent = '(Không có nội dung)';
+        document.getElementById('bmResultContent').style.display = '';
+      }
       addOrder({
         id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
         user: me.username, display: me.display, itemId: item.id, itemName: item.name,
@@ -2526,7 +2657,7 @@ function renderItemsAdmin(body) {
           ${item.image ? `<img class="imr-thumb" src="${item.image}" alt=""/>` : `<div class="imr-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,#121a2e,#0a101c)">${item.icon||'🎮'}</div>`}
           <div class="imr-info">
             <div class="imr-name">${esc(item.name)} ${badgeLabel ? `<span style="font-size:10px;color:var(--gold)">${badgeLabel}</span>` : ''}</div>
-            <div class="imr-sub">${item.rounds||1} lượt vượt • 👥 ${totalDone} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
+            <div class="imr-sub">${item.rounds||1} lượt vượt • 👥 ${totalDone}${item.attachedFiles&&item.attachedFiles.length?' • 📎 '+item.attachedFiles.length+' file':''} • ${item.category?esc(item.category)+' • ':''}${esc(item.desc||'')}</div>
             <div style="margin-top:4px"><span class="bdg ${item.active!==false?'bdg-ok':'bdg-no'}">${item.active!==false?'Bật':'Tắt'}</span></div>
           </div>
           <div class="imr-acts">
@@ -2863,6 +2994,20 @@ function exportOrdersCSV() {
   a.download = 'vuotlink_orders_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
   toast('📥 Đã xuất CSV!', 'ok');
 }
+function exportUsersCSV() {
+  const users = getUsersArr().filter(u => u.role !== 'admin');
+  if (!users.length) { toast('Không có user', 'err'); return; }
+  const orders = getOrdersArr();
+  let csv = 'Username,Display,Joined,Status,BanReason,TotalOrders\n';
+  users.forEach(u => {
+    const cnt = orders.filter(o => o.user === u.username).length;
+    csv += `"${u.username}","${(u.display||'').replace(/"/g,'""')}","${u.joined||''}","${isUserBanned(u)?'Khóa':'OK'}","${(u.banReason||'').replace(/"/g,'""')}","${cnt}"\n`;
+  });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'vuotlink_users_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+  toast('📥 Đã xuất Users CSV!', 'ok');
+}
 
 function renderLogsAdmin(body) {
   const logs = getLogsArr();
@@ -2917,10 +3062,21 @@ function renderSettings(body) {
       <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi</button>
     </div>
     <div class="settings-row">
+      <div class="settings-label">📣 Gửi thông báo tới tất cả user</div>
+      <button class="btn btn-gold btn-sm" style="width:100%" onclick="openAnnounce()">📣 Tạo thông báo mới</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">📥 Export dữ liệu</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="exportOrdersCSV()">📋 Export Orders CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportUsersCSV()">👥 Export Users CSV</button>
+      </div>
+    </div>
+    <div class="settings-row">
       <div class="settings-label">☁️ Server</div>
       <div style="font-size:13px;color:var(--green)">● Firestore Online — shopvip-139ea</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v3:</b> Ảnh từ album (nén tự động) · Giới hạn số lần vượt · Lý do khóa · Phân trang · UI Gaming
+        <b>v4:</b> Thông báo realtime · File đính kèm · Xem lại nội dung · Sort filter · Export CSV · UI Gaming
       </div>
     </div>
   `;
@@ -2957,9 +3113,11 @@ async function changeAdminPass() {
 function openItemModal(id) {
   editItemId = id || null;
   selectedImageData = null;
+  imPendingFiles = [];
   document.getElementById('imImagePreview').classList.remove('show');
   document.getElementById('imRemoveImg').style.display = 'none';
   document.getElementById('imImagePreviewImg').src = '';
+  renderImFileList();
 
   if (id) {
     const item = (localItems || {})[id];
@@ -2984,6 +3142,11 @@ function openItemModal(id) {
       document.getElementById('imImagePreview').classList.add('show');
       document.getElementById('imRemoveImg').style.display = '';
     }
+    // Load existing attached files into pending list
+    if (item.attachedFiles && item.attachedFiles.length) {
+      imPendingFiles = item.attachedFiles.map(f => ({ name: f.name, size: f.size||0, type: f.type||'', data: f.data }));
+      renderImFileList();
+    }
     fetchSecretContent(id).then(content => {
       document.getElementById('imContent').value = content !== null ? content : (item.content || '');
       document.getElementById('imContent').disabled = false;
@@ -3003,7 +3166,7 @@ function openItemModal(id) {
   document.getElementById('imErr').classList.remove('show');
   document.getElementById('itemModal').classList.add('open');
 }
-function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editItemId = null; selectedImageData = null; }
+function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editItemId = null; selectedImageData = null; imPendingFiles = []; renderImFileList(); }
 
 function buildLink4mUrl(destinationUrl) {
   const key = (getSettings().link4mKey || '').trim();
@@ -3061,29 +3224,38 @@ function saveItem() {
   const content = (document.getElementById('imContent').value || '').trim();
 
   if (!name) { showAlert('imErr', '⚠️ Nhập tên!', 'err'); return; }
-  if (!content) { showAlert('imErr', '⚠️ Nhập nội dung thật!', 'err'); return; }
+  if (!content && !imPendingFiles.length) { showAlert('imErr', '⚠️ Nhập nội dung hoặc đính kèm ít nhất 1 file!', 'err'); return; }
 
   let itemId = editItemId;
   const imageField = selectedImageData || null;
+  // Gom file đính kèm (chỉ lưu metadata + base64 data nhỏ gọn)
+  const attachedFiles = imPendingFiles.map(f => ({ name: f.name, size: f.size, type: f.type, data: f.data }));
 
   if (itemId) {
     const old = (localItems || {})[itemId] || {};
     const { content: _c, ...rest } = old;
-    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField });
+    updateItem(itemId, { ...rest, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles });
     addLog('edit_item', name);
   } else {
     itemId = 'itm' + Date.now();
-    // sortOrder: càng nhỏ càng lên đầu; item mới mặc định lên đầu
     const existing = getItemsArr();
     const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
     updateItem(itemId, {
-      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField,
+      id: itemId, name, desc, category, badge, icon, rounds, unlockAt, image: imageField, attachedFiles,
       sortOrder: minSort - 1,
       active: true, deleted: false, addedBy: me.username, createdAt: new Date().toISOString()
     });
     addLog('add_item', name);
   }
-  saveSecretContent(itemId, content).then(() => {
+  // Gửi thông báo tự động khi thêm item mới
+  if (!editItemId) {
+    db.collection(COL).doc(NOTIF_COL_DOC).get().then(snap => {
+      const existing2 = (snap.exists && snap.data() && snap.data().msgs) || [];
+      const nn = { id: 'n' + Date.now(), icon: '🆕', title: 'Nội dung mới: ' + name, msg: desc || 'Vào xem ngay!', itemId, at: new Date().toISOString(), by: me ? me.username : 'admin' };
+      db.collection(COL).doc(NOTIF_COL_DOC).set({ msgs: [...existing2, nn].slice(-50) }).catch(()=>{});
+    }).catch(()=>{});
+  }
+  saveSecretContent(itemId, content || '').then(() => {
     closeItemModal();
     toast('✅ Đã lưu!', 'ok');
     aTab('items');
@@ -3141,6 +3313,239 @@ document.getElementById('bypassModal').addEventListener('click', function(e){ if
 document.getElementById('itemModal').addEventListener('click', function(e){ if(e.target===this) closeItemModal(); });
 document.getElementById('liPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('liUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('liPass').focus(); });
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notifPanel');
+  const bell = document.getElementById('notifBell');
+  if (panel && bell && !bell.contains(e.target) && !panel.contains(e.target)) panel.classList.remove('open');
+});
+document.getElementById('announceModal').addEventListener('click', function(e){ if(e.target===this) closeAnnounce(); });
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+const NOTIF_COL_DOC = 'vlp_notifications';
+const NOTIF_READ_KEY = 'vlp_notif_read_v1';
+let notifData = [];
+let notifListener = null;
+
+function getReadNotifIds() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_READ_KEY) || '[]'); } catch(e){ return []; }
+}
+function markNotifRead(id) {
+  const arr = getReadNotifIds();
+  if (!arr.includes(id)) { arr.push(id); try { localStorage.setItem(NOTIF_READ_KEY, JSON.stringify(arr.slice(-200))); } catch(e){} }
+}
+function markAllNotifRead() {
+  notifData.forEach(n => markNotifRead(n.id));
+  renderNotifList();
+  updateNotifDot();
+}
+
+function initNotifListener() {
+  if (notifListener) return;
+  notifListener = db.collection(COL).doc(NOTIF_COL_DOC).onSnapshot(snap => {
+    const data = (snap.exists && snap.data() && snap.data().msgs) || [];
+    notifData = data.slice().reverse(); // mới nhất lên đầu
+    renderNotifList();
+    updateNotifDot();
+  }, err => { console.warn('notif listener', err); });
+}
+
+function renderNotifList() {
+  const el = document.getElementById('notifList');
+  if (!el) return;
+  const readIds = getReadNotifIds();
+  if (!notifData.length) { el.innerHTML = '<div class="notif-empty">Không có thông báo</div>'; return; }
+  el.innerHTML = notifData.slice(0, 30).map(n => {
+    const unread = !readIds.includes(n.id);
+    const timeStr = n.at ? new Date(n.at).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+    return `<div class="notif-item ${unread?'unread':''}" onclick="openNotif('${n.id}')">
+      <div class="notif-icon">${n.icon||'📢'}</div>
+      <div class="notif-body">
+        <div class="notif-title-txt">${esc(n.title||'Thông báo')}</div>
+        <div class="notif-msg">${esc(n.msg||'')}</div>
+        <div class="notif-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateNotifDot() {
+  const readIds = getReadNotifIds();
+  const hasUnread = notifData.some(n => !readIds.includes(n.id));
+  const dot = document.getElementById('notifDot');
+  if (dot) dot.classList.toggle('show', hasUnread);
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  if (!panel) return;
+  const wasOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !wasOpen);
+}
+
+function openNotif(id) {
+  markNotifRead(id);
+  renderNotifList();
+  updateNotifDot();
+  const n = notifData.find(x => x.id === id);
+  if (n && n.itemId) {
+    document.getElementById('notifPanel').classList.remove('open');
+    openBypass(n.itemId);
+  }
+}
+
+async function sendAnnounce() {
+  const icon = (document.getElementById('annIcon').value || '📢').trim();
+  const title = (document.getElementById('annTitle').value || '').trim();
+  const msg = (document.getElementById('annMsg').value || '').trim();
+  if (!title) { toast('⚠️ Nhập tiêu đề', 'err'); return; }
+  const snap = await db.collection(COL).doc(NOTIF_COL_DOC).get();
+  const existing = (snap.exists && snap.data() && snap.data().msgs) || [];
+  const newNotif = { id: 'n' + Date.now(), icon, title, msg, at: new Date().toISOString(), by: me ? me.username : 'admin' };
+  const updated = [...existing, newNotif].slice(-50);
+  await db.collection(COL).doc(NOTIF_COL_DOC).set({ msgs: updated });
+  addLog('announce', title);
+  toast('📣 Đã gửi thông báo!', 'ok');
+  closeAnnounce();
+}
+function closeAnnounce() { document.getElementById('announceModal').classList.remove('open'); }
+function openAnnounce() { document.getElementById('announceModal').classList.add('open'); }
+
+// ============================================================
+// SORT ORDER
+// ============================================================
+let currentSortOrder = 'default';
+function setSortOrder(s) {
+  currentSortOrder = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  const map = { default:'sortBtnDefault', new:'sortBtnNew', hot:'sortBtnHot', notdone:'sortBtnNotDone' };
+  const btn = document.getElementById(map[s]);
+  if (btn) btn.classList.add('active');
+  renderItemGrid();
+}
+
+// ============================================================
+// FILE ATTACHMENT SYSTEM
+// ============================================================
+let imPendingFiles = []; // [{name, size, type, data (base64)}]
+
+function getFileIcon(type, name) {
+  if (!type && name) {
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if (['pdf'].includes(ext)) return '📄';
+    if (['zip','rar','7z'].includes(ext)) return '🗜️';
+    if (['apk'].includes(ext)) return '📱';
+    if (['mp4','mkv','avi','mov'].includes(ext)) return '🎬';
+    if (['mp3','flac','m4a','ogg'].includes(ext)) return '🎵';
+    if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+    if (['doc','docx'].includes(ext)) return '📝';
+    if (['xls','xlsx','csv'].includes(ext)) return '📊';
+    if (['ppt','pptx'].includes(ext)) return '📑';
+    if (['txt','md'].includes(ext)) return '📃';
+    if (['exe','msi'].includes(ext)) return '⚙️';
+    return '📎';
+  }
+  if ((type||'').startsWith('image/')) return '🖼️';
+  if ((type||'').startsWith('video/')) return '🎬';
+  if ((type||'').startsWith('audio/')) return '🎵';
+  if (type === 'application/pdf') return '📄';
+  if ((type||'').includes('zip') || (type||'').includes('rar')) return '🗜️';
+  return '📎';
+}
+
+function fmtFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+
+function handleItemFileSelect(ev) {
+  const files = ev && ev.target && ev.target.files;
+  if (!files || !files.length) return;
+  const maxBytes = 800 * 1024; // 800KB per file
+  Array.from(files).forEach(file => {
+    if (file.size > maxBytes) { toast('⚠️ ' + file.name + ' quá lớn (> 800KB)', 'err'); return; }
+    if (imPendingFiles.length >= 5) { toast('⚠️ Tối đa 5 file', 'err'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      imPendingFiles.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+      renderImFileList();
+      toast('✅ Đã thêm: ' + file.name, 'ok');
+    };
+    reader.onerror = () => toast('❌ Lỗi đọc file: ' + file.name, 'err');
+    reader.readAsDataURL(file);
+  });
+  ev.target.value = '';
+}
+
+function renderImFileList() {
+  const el = document.getElementById('imFileList');
+  if (!el) return;
+  if (!imPendingFiles.length) { el.innerHTML = ''; return; }
+  el.innerHTML = imPendingFiles.map((f, i) => `
+    <div class="file-attach-item">
+      <div class="file-attach-icon">${getFileIcon(f.type, f.name)}</div>
+      <div class="file-attach-info">
+        <div class="file-attach-name">${esc(f.name)}</div>
+        <div class="file-attach-size">${fmtFileSize(f.size)}</div>
+      </div>
+      <button class="file-attach-rm" onclick="removeImFile(${i})" title="Xóa">✕</button>
+    </div>`).join('');
+}
+
+function removeImFile(idx) {
+  imPendingFiles.splice(idx, 1);
+  renderImFileList();
+}
+
+// Render files in result modal after bypass success
+function renderResultFiles(files) {
+  if (!files || !files.length) return '';
+  return '<div class="result-files">' + files.map(f => `
+    <a class="result-file-card" href="${f.data}" download="${esc(f.name)}" title="Tải xuống ${esc(f.name)}">
+      <div class="rfc-icon">${getFileIcon(f.type, f.name)}</div>
+      <div class="rfc-info">
+        <div class="rfc-name">${esc(f.name)}</div>
+        <div class="rfc-size">${fmtFileSize(f.size||0)}</div>
+      </div>
+      <div class="rfc-dl">⬇️</div>
+    </a>`).join('') + '</div>';
+}
+
+// ============================================================
+// HISTORY — reopen content
+// ============================================================
+async function reopenHistoryItem(itemId, itemName) {
+  if (!me) return;
+  const content = await fetchSecretContent(itemId);
+  const item = (localItems||{})[itemId];
+  if (content === null && (!item || !item.attachedFiles || !item.attachedFiles.length)) {
+    toast('Nội dung không còn tồn tại', 'err'); return;
+  }
+  // Hiện lại bypass modal ở trạng thái done
+  document.getElementById('bmTitle').textContent = '📋 ' + esc(itemName || 'Nội dung');
+  document.getElementById('bmInfo').textContent = 'Nội dung bạn đã nhận trước đó.';
+  document.getElementById('bmInfo').className = 'alert alert-ok show';
+  document.getElementById('bmSteps').innerHTML = '';
+  document.getElementById('bmProgFill').style.width = '100%';
+  document.getElementById('bmProgText').textContent = 'Đã hoàn thành';
+  const resultContent = document.getElementById('bmResultContent');
+  resultContent.textContent = content !== null ? content : '';
+  // Hiển thị file nếu có
+  const existingFiles = document.getElementById('bmResultFiles');
+  if (existingFiles) existingFiles.remove();
+  if (item && item.attachedFiles && item.attachedFiles.length) {
+    const filesDiv = document.createElement('div');
+    filesDiv.id = 'bmResultFiles';
+    filesDiv.innerHTML = renderResultFiles(item.attachedFiles);
+    document.getElementById('bmResult').appendChild(filesDiv);
+  }
+  document.getElementById('bmResult').classList.add('show');
+  document.getElementById('bypassModal').classList.add('open');
+  currentItem = item || { id: itemId, name: itemName, rounds: 1 };
+  verifiedSteps = [];
+}
 
 // ============================================================
 // COMMUNITY CHAT
@@ -3200,7 +3605,7 @@ function scrollChatToBottom() {
 async function sendChatMsg() {
   if (!me) { toast('Cần đăng nhập', 'err'); return; }
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
-  if (!checkRate('chat', 15, 60000)) { toast('⚠️ Nhắn quá nhanh, đợi 1 phút', 'err'); return; }
+  if (!checkRate('chat', 6, 60000)) { toast('⚠️ Nhắn quá nhanh, đợi 1 phút', 'err'); return; }
   const inp = document.getElementById('chatMsgInput');
   const text = (inp ? inp.value : '').trim();
   if (!text && !chatPendingImg) { toast('Nhập tin nhắn hoặc chọn ảnh', 'err'); return; }
