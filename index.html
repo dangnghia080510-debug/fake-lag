@@ -1926,11 +1926,48 @@ async function redeemKey() {
   document.getElementById('bmSteps').innerHTML = '';
   document.getElementById('bmProgFill').style.width = '100%';
   document.getElementById('bmProgText').textContent = 'Key hợp lệ';
-  document.getElementById('bmResultContent').textContent = content !== null ? content : '(Không có nội dung)';
-  document.getElementById('bmResult').classList.add('show');
-  document.getElementById('bypassModal').classList.add('open');
   currentItem = item;
   verifiedSteps = [];
+
+  const curItem = (localItems || {})[itemId] || item;
+  // Nội dung hướng dẫn (text)
+  const rcEl = document.getElementById('bmResultContent');
+  if (content !== null && content !== '') {
+    rcEl.textContent = content;
+    rcEl.style.display = '';
+    document.getElementById('bmCopyRow').style.display = '';
+  } else {
+    rcEl.style.display = 'none';
+    document.getElementById('bmCopyRow').style.display = 'none';
+  }
+  // Nút link
+  const linkBtnsEl = document.getElementById('bmResultLinkBtns');
+  if (curItem.linkBtns && curItem.linkBtns.length) {
+    linkBtnsEl.innerHTML = renderResultLinkBtns(curItem.linkBtns);
+  } else { linkBtnsEl.innerHTML = ''; }
+  // File đính kèm
+  const existingFilesDom = document.getElementById('bmResultFiles');
+  if (existingFilesDom) existingFilesDom.remove();
+  if (curItem.attachedFiles && curItem.attachedFiles.length) {
+    const filesDiv = document.createElement('div');
+    filesDiv.id = 'bmResultFiles';
+    document.getElementById('bmResult').appendChild(filesDiv);
+    const hasData = curItem.attachedFiles.some(f => f.data);
+    if (!hasData) {
+      filesDiv.innerHTML = '<div style="color:var(--sub);font-size:12px;padding:8px">⏳ Đang tải file...</div>';
+      fetchItemFiles(itemId).then(fullFiles => {
+        if (fullFiles && fullFiles.length) {
+          if (localItems[itemId]) localItems[itemId].attachedFiles = fullFiles;
+          filesDiv.innerHTML = renderResultFiles(fullFiles);
+        } else { filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles); }
+      });
+    } else { filesDiv.innerHTML = renderResultFiles(curItem.attachedFiles); }
+  }
+  if (!content && (!curItem.linkBtns || !curItem.linkBtns.length) && (!curItem.attachedFiles || !curItem.attachedFiles.length)) {
+    rcEl.textContent = '(Không có nội dung)'; rcEl.style.display = '';
+  }
+  document.getElementById('bmResult').classList.add('show');
+  document.getElementById('bypassModal').classList.add('open');
 
   addOrder({
     id: 'ORD' + Date.now() + Math.random().toString(36).slice(2, 6),
