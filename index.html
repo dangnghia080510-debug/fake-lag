@@ -135,6 +135,23 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .product-name{text-shadow:0 0 8px #00e5ff22}
 #authPage .auth-box{border-color:#1a3a55;box-shadow:0 20px 60px #00000080,0 0 40px #00e5ff18}
 .scanline{pointer-events:none;position:fixed;inset:0;z-index:9998;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);opacity:.35}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:250;background:rgba(10,13,20,.96);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
+.bottom-nav button{flex:1;background:none;border:none;color:var(--sub);font-family:'Exo 2',sans-serif;font-size:10px;padding:6px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bottom-nav button span{font-size:18px;line-height:1}
+.bottom-nav button:active{color:var(--cyan)}
+@media(max-width:640px){
+  .bottom-nav{display:flex}
+  #mainPage .content-area{padding-bottom:72px}
+  #mainPage .user-tabs{display:none}
+}
+body.theme-light{--bg:#eef2f8;--panel:#fff;--card:#fff;--border:#c8d4e4;--text:#0a1220;--sub:#5a6f88}
+body.theme-light .topnav,body.theme-light .user-bar,body.theme-light .admin-topbar{background:rgba(255,255,255,.95)}
+body.theme-light .product-card,body.theme-light .product-body{background:#fff}
+body.theme-light .inp,body.theme-light .search-inp{background:#f4f7fb;color:#0a1220}
+.achieve-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:center}
+.achieve-card.locked{opacity:.45}
+.achieve-icon{font-size:28px}
+.wish-btn{position:absolute;bottom:8px;right:8px;z-index:3;background:rgba(0,0,0,.55);border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:14px}
 
 .content-area{flex:1;padding:14px;max-width:680px;margin:0 auto;width:100%}
 .sec-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--cyan);letter-spacing:1.2px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
@@ -424,6 +441,12 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
 <div class="particles" id="particles"></div>
 <div class="scanline"></div>
 <div class="live-drop-banner" id="liveDropBanner">🔥 LIVE DROP — Hàng mới vừa ra!</div>
+<div id="maintOverlay" style="display:none;position:fixed;inset:0;z-index:20000;background:#05060aee;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+  <div style="font-size:48px;margin-bottom:12px">🛠️</div>
+  <div style="font-family:Orbitron,sans-serif;font-size:18px;color:var(--gold);margin-bottom:10px">BẢO TRÌ</div>
+  <div id="maintMsg" style="color:var(--sub);font-size:14px;max-width:320px;line-height:1.5">Hệ thống đang bảo trì</div>
+</div>
+<canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:10000;display:none"></canvas>
 
 <div id="connOverlay">
   <div class="conn-spin"></div>
@@ -478,6 +501,10 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
         <div class="inp-label">Xác nhận mật khẩu</div>
         <input class="inp" id="riPass2" type="password" placeholder="nhập lại mật khẩu"/>
       </div>
+      <div class="inp-group">
+        <div class="inp-label">🤖 Captcha: <span id="captchaQ">?</span></div>
+        <input class="inp" id="riCaptcha" type="number" placeholder="Nhập kết quả..."/>
+      </div>
       <button class="btn btn-green btn-full" id="btnReg" onclick="doRegister()">🚀 TẠO TÀI KHOẢN</button>
     </div>
   </div>
@@ -511,12 +538,31 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
     <span class="role-badge" id="uRoleBadge"></span>
   </div>
   <div class="content-area">
-    <div class="user-tabs">
+    <div class="user-tabs" id="userTabsRow">
       <button class="utab active" id="utabItems" onclick="switchUserTab('items')">🎮 Nội dung</button>
       <button class="utab" id="utabRank" onclick="switchUserTab('rank')">🏆 Xếp hạng</button>
       <button class="utab" id="utabHistory" onclick="switchUserTab('history')">📋 Lịch sử</button>
+      <button class="utab" id="utabWish" onclick="switchUserTab('wish')">⭐ Wishlist</button>
+      <button class="utab" id="utabAchieve" onclick="switchUserTab('achieve')">🏅 Huy hiệu</button>
       <button class="utab" id="utabProfile" onclick="switchUserTab('profile')">👤 Tài khoản</button>
       <button class="utab" id="utabChat" onclick="switchUserTab('chat')">💬 Chat</button>
+      <button class="utab" id="utabDm" onclick="switchUserTab('dm')">📩 Admin</button>
+    </div>
+    <div id="userTabWish" style="display:none">
+      <div class="sec-title">⭐ WISHLIST</div>
+      <div id="wishList"></div>
+    </div>
+    <div id="userTabAchieve" style="display:none">
+      <div class="sec-title">🏅 HUY HIỆU</div>
+      <div id="achieveList"></div>
+    </div>
+    <div id="userTabDm" style="display:none">
+      <div class="sec-title">📩 CHAT RIÊNG VỚI ADMIN</div>
+      <div class="chat-msgs" id="dmMsgs" style="height:45vh;overflow-y:auto;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="dmInput" placeholder="Nhắn admin..." style="flex:1"/>
+        <button class="btn btn-cyan btn-sm" onclick="sendDm()">Gửi</button>
+      </div>
     </div>
 
     <div id="userTabItems">
@@ -534,6 +580,14 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       </div>
       <div class="search-row">
         <input class="search-inp" id="itemSearch" placeholder="🔍 Tìm nội dung..." oninput="renderItemGrid()"/>
+      </div>
+      <div class="sort-row">
+        <span class="sort-label">Lọc:</span>
+        <button class="sort-btn active" id="filtAll" onclick="setAdvFilter('all')">Tất cả</button>
+        <button class="sort-btn" id="filtVip" onclick="setAdvFilter('vip')">👑 VIP</button>
+        <button class="sort-btn" id="filtFree" onclick="setAdvFilter('free')">Free</button>
+        <button class="sort-btn" id="filtSlot" onclick="setAdvFilter('slot')">Còn slot</button>
+        <button class="sort-btn" id="filtHot" onclick="setAdvFilter('hot')">🔥 Hot</button>
       </div>
       <div class="sort-row">
         <span class="sort-label">Sắp xếp:</span>
@@ -742,6 +796,19 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
       <input class="inp" id="imUnlockAt" type="datetime-local"/>
     </div>
     <div class="inp-group">
+      <div class="inp-label">⏳ Hết hạn lúc (để trống = không hết hạn)</div>
+      <input class="inp" id="imExpiresAt" type="datetime-local"/>
+    </div>
+    <div class="inp-group">
+      <div class="inp-label">📋 Template nhanh</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost btn-xs" onclick="applyItemTemplate('tiktok')">TikTok</button>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="applyItemTemplate('netflix')">Netflix</button>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="applyItemTemplate('game')">Game</button>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="previewItemAsUser()">👁 Preview</button>
+      </div>
+    </div>
+    <div class="inp-group">
       <div class="inp-label">📝 Nội dung hướng dẫn (text — hiện cho user đọc)</div>
       <textarea class="inp" id="imContent" rows="4" placeholder="Nhập hướng dẫn, mô tả chi tiết... (để trống nếu không cần)"></textarea>
     </div>
@@ -875,6 +942,13 @@ body.theme-gold{--cyan:#ffd04a;--cyan2:#e0a820;--gold:#00f0ff;--purple:#ffb020;-
   </div>
 </div>
 
+<nav class="bottom-nav" id="bottomNav">
+  <button type="button" onclick="switchUserTab('items')"><span>🎮</span><small>Nội dung</small></button>
+  <button type="button" onclick="switchUserTab('rank')"><span>🏆</span><small>Rank</small></button>
+  <button type="button" onclick="switchUserTab('wish')"><span>⭐</span><small>Wish</small></button>
+  <button type="button" onclick="switchUserTab('chat')"><span>💬</span><small>Chat</small></button>
+  <button type="button" onclick="switchUserTab('profile')"><span>👤</span><small>Tôi</small></button>
+</nav>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1439,7 +1513,18 @@ function checkFirebaseReady() {
   }
 }
 
-const DEFAULT_SETTINGS = { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {} };
+const APP_VERSION = '5.2.0';
+const DEFAULT_SETTINGS = {
+  siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641',
+  seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1,
+  licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {},
+  guideText: '', maintenanceMode: false, maintenanceMsg: 'Hệ thống đang bảo trì, quay lại sau!',
+  appVersion: APP_VERSION, discordWebhook: '',
+  hideTabRank: false, hideTabChat: false, hideTabHistory: false,
+  soundEnabled: true, confettiEnabled: true, darkMode: true,
+  maxAccPerDevice: 3, weeklyRewardText: 'Top 1 tuần: Key VIP',
+  pointsPerComplete: 10
+};
 
 async function ensureDefaults() {
   if (!localUsers) localUsers = {};
@@ -1803,19 +1888,33 @@ async function doRegister() {
   if (p.length < 6) { showAlert('regErr', '⚠️ Mật khẩu ≥ 6 ký tự', 'err'); return; }
   if (p !== p2) { showAlert('regErr', '⚠️ Xác nhận không khớp', 'err'); return; }
   if ((localUsers || {})[u]) { showAlert('regErr', '❌ Username đã tồn tại', 'err'); return; }
+  const cap = parseInt((document.getElementById('riCaptcha') || {}).value, 10);
+  if (isNaN(cap) || cap !== captchaA + captchaB) {
+    showAlert('regErr', '❌ Captcha sai — thử lại', 'err');
+    refreshCaptcha();
+    return;
+  }
 
   isBusy = true;
   document.getElementById('btnReg').disabled = true;
   try {
     const { hash, salt } = await hashPassword(p);
     const did = getDeviceId();
+    const maxDev = getSettings().maxAccPerDevice || 3;
+    const nDev = countAccountsOnDevice(did) + 1;
+    if (nDev > maxDev + 1) {
+      showAlert('regErr', '❌ Máy này đã tạo quá nhiều tài khoản', 'err');
+      return;
+    }
     const nu = { username: u, passwordHash: hash, passwordSalt: salt, display: name, role: 'user', avatar: '👤', joined: new Date().toISOString(), banned: false, deviceIds: [did], lastDeviceId: did };
     await updateUser(u, nu);
-    const nDev = countAccountsOnDevice(did);
-    if (nDev >= 3) await flagUser(u, 'multi_device', 'Đăng ký acc thứ ' + nDev + ' trên cùng máy');
+    if (nDev >= maxDev) await flagUser(u, 'multi_device', 'Đăng ký acc thứ ' + nDev + ' trên cùng máy');
+    if (nDev > maxDev) {
+      await flagUser(u, 'multi_device_ban', 'Vượt giới hạn ' + maxDev + ' acc/máy');
+    }
     showAlert('regOk', '✅ Thành công! Đang đăng nhập...', 'ok');
     setTimeout(() => { me = nu; localStorage.setItem(SESSION_K, JSON.stringify({ username: u, exp: Date.now() + 7 * 86400000 })); enterMain(); }, 700);
-  } finally { isBusy = false; document.getElementById('btnReg').disabled = false; }
+  } finally { isBusy = false; document.getElementById('btnReg').disabled = false; refreshCaptcha(); }
 }
 
 function doLogout() {
@@ -1873,7 +1972,8 @@ function showPage(id) {
   document.getElementById(id).classList.add('active');
 }
 function enterMain() {
-  if (me && me.banned) { toast('Tài khoản bị khóa', 'err'); doLogout(); return; }
+  if (me && isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); doLogout(); return; }
+  if (checkMaintenance()) return;
   showPage('mainPage');
   document.getElementById('uAva').textContent = me.avatar || '👤';
   document.getElementById('uName').textContent = me.display;
@@ -1881,6 +1981,9 @@ function enterMain() {
   const rb = document.getElementById('uRoleBadge');
   if (me.role === 'admin') {
     rb.textContent = '⭐ ADMIN'; rb.className = 'role-badge rb-admin';
+    document.getElementById('btnAdmin').style.display = '';
+  } else if (me.role === 'mod') {
+    rb.textContent = '🛡️ MOD'; rb.className = 'role-badge rb-admin';
     document.getElementById('btnAdmin').style.display = '';
   } else if (me.vip) {
     rb.textContent = '👑 VIP'; rb.className = 'role-badge rb-vip';
@@ -1895,28 +1998,42 @@ function enterMain() {
   initNotifListener();
   initParticles();
   updateUserGuide();
+  applyTabVisibility();
+  applyLightMode();
+  checkAppVersion();
+  const bn = document.getElementById('bottomNav');
+  if (bn) bn.style.display = '';
 }
 function switchUserTab(tab) {
+  if (!document.getElementById('mainPage').classList.contains('active')) return;
   currentUserTab = tab;
-  document.getElementById('userTabItems').style.display = tab === 'items' ? '' : 'none';
-  const rankEl = document.getElementById('userTabRank');
-  if (rankEl) rankEl.style.display = tab === 'rank' ? '' : 'none';
-  document.getElementById('userTabHistory').style.display = tab === 'history' ? '' : 'none';
-  document.getElementById('userTabProfile').style.display = tab === 'profile' ? '' : 'none';
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? (id === 'userTabChat' ? 'flex' : '') : 'none'; };
+  show('userTabItems', tab === 'items');
+  show('userTabRank', tab === 'rank');
+  show('userTabHistory', tab === 'history');
+  show('userTabProfile', tab === 'profile');
+  show('userTabWish', tab === 'wish');
+  show('userTabAchieve', tab === 'achieve');
+  show('userTabDm', tab === 'dm');
   const chatEl = document.getElementById('userTabChat');
   if (chatEl) { chatEl.style.display = tab === 'chat' ? 'flex' : 'none'; chatEl.classList.toggle('chat-active', tab === 'chat'); }
-  document.getElementById('utabItems').classList.toggle('active', tab === 'items');
-  const ur = document.getElementById('utabRank');
-  if (ur) ur.classList.toggle('active', tab === 'rank');
-  document.getElementById('utabHistory').classList.toggle('active', tab === 'history');
-  document.getElementById('utabProfile').classList.toggle('active', tab === 'profile');
-  const uc = document.getElementById('utabChat');
-  if (uc) uc.classList.toggle('active', tab === 'chat');
+  ['items','rank','history','profile','chat','wish','achieve','dm'].forEach(t => {
+    const b = document.getElementById('utab' + t.charAt(0).toUpperCase() + t.slice(1));
+    // ids: utabItems, utabRank...
+  });
+  const tabBtn = { items: 'utabItems', rank: 'utabRank', history: 'utabHistory', profile: 'utabProfile', chat: 'utabChat', wish: 'utabWish', achieve: 'utabAchieve', dm: 'utabDm' };
+  Object.keys(tabBtn).forEach(k => {
+    const b = document.getElementById(tabBtn[k]);
+    if (b) b.classList.toggle('active', k === tab);
+  });
   if (tab === 'items') renderItemGrid();
   if (tab === 'rank') renderRankList();
   if (tab === 'history') renderUserHistory();
   if (tab === 'profile') { fillProfileForm(); highlightTheme(); }
   if (tab === 'chat') { initChat(); }
+  if (tab === 'wish') renderWishList();
+  if (tab === 'achieve') renderAchieveList();
+  if (tab === 'dm') loadDmMsgs();
 }
 
 function setTheme(name) {
@@ -2238,8 +2355,8 @@ function contactAdmin() {
   toast('Đang mở Zalo...');
 }
 function goAdmin() {
-  if (!me || me.role !== 'admin') { toast('Không có quyền!', 'err'); return; }
-  document.getElementById('adminDName').textContent = me.display;
+  if (!me || !isStaff(me)) { toast('Không có quyền!', 'err'); return; }
+  document.getElementById('adminDName').textContent = me.display + (me.role==='mod'?' (MOD)':'');
   document.getElementById('adminAvaIcon').textContent = me.avatar || '👑';
   showPage('adminPage');
   aTab('dash');
@@ -2339,8 +2456,18 @@ function renderItemGrid() {
   active = active.map(item => {
     const totalDone = getOrdersArr().filter(o => o.itemId === item.id && o.status === 'success').length;
     const userDone = me ? hasUserCompleted(me.username, item.id) : false;
-    return { ...item, _done: false, _totalDone: totalDone, _userDone: userDone };
+    const expired = item.expiresAt && new Date(item.expiresAt).getTime() < Date.now();
+    return { ...item, _done: false, _totalDone: totalDone, _userDone: userDone, _expired: !!expired };
   });
+  // lọc nâng cao
+  if (currentAdvFilter === 'vip') active = active.filter(i => i.vipOnly);
+  else if (currentAdvFilter === 'free') active = active.filter(i => !i.vipOnly);
+  else if (currentAdvFilter === 'slot') active = active.filter(i => {
+    const m = parseInt(i.maxClaims, 10) || 0;
+    return m === 0 || (i._totalDone || 0) < m;
+  });
+  else if (currentAdvFilter === 'hot') active = active.filter(i => i.badge === 'hot');
+  active = active.filter(i => !i._expired);
 
   // sort theo currentSortOrder
   const so = currentSortOrder || 'default';
@@ -2433,6 +2560,7 @@ function renderItemGrid() {
           ${vipBadge}
           ${comingBadge}
           ${badge}
+          <button type="button" class="wish-btn" onclick="event.stopPropagation();toggleWish('${item.id}')" title="Wishlist">${getWishlist().includes(item.id)?'💛':'🤍'}</button>
         </div>
         <div class="product-body">
           <div class="product-name">${esc(item.name)}</div>
@@ -2475,6 +2603,10 @@ function openBypass(id) {
   }
   if (isComingSoon(currentItem)) {
     toast('🔒 Nội dung chưa mở — ' + formatCountdown(new Date(currentItem.unlockAt).getTime() - Date.now()), 'err');
+    return;
+  }
+  if (currentItem.expiresAt && new Date(currentItem.expiresAt).getTime() < Date.now()) {
+    toast('⏳ Nội dung đã hết hạn', 'err');
     return;
   }
   const maxClaims = parseInt(currentItem.maxClaims, 10) || 0;
@@ -2844,6 +2976,8 @@ function showResult() {
       saveLastResultSnapshot(item.id);
       showReviewForm(item.id, item.name);
       toast('🎉 Hoàn thành! Copy nội dung / key ngay — chỉ hiện 1 lần.', 'ok');
+      try { playSuccessSound(); launchConfetti(); } catch(e) {}
+      try { notifyDiscordWebhook('✅ **' + (me.display||me.username) + '** vừa vượt: ' + (item.name||'')); } catch(e) {}
       setTimeout(() => renderItemGrid(), 500);
     }).catch(e => {
       console.error(e);
@@ -3214,7 +3348,9 @@ function renderUsersAdmin(body) {
               <td>${orders.filter(o => o.user === u.username).length}</td>
               <td><span class="bdg ${isUserBanned(u)?'bdg-no':'bdg-ok'}">${isUserBanned(u)?'Khóa':'OK'}</span>${u.vip?' <span class="bdg" style="background:linear-gradient(90deg,#ff6b35,#ffd04a);color:#0a0600">VIP</span>':''}${u.suspicious?' <span class="bdg bdg-no" title="Nghi vấn">⚠</span>':''}${isRankExcluded(u.username)?' <span class="bdg" style="background:#333;color:#aaa">Ẩn hạng</span>':''}${formatBanUntil(u)?`<br><span style="font-size:9px;color:var(--red)">${esc(formatBanUntil(u))}</span>`:''}</td>
               <td style="white-space:nowrap">
+                <button class="btn btn-xs btn-ghost" onclick="openUserStats('${u.username}')">📊</button>
                 <button class="btn btn-xs ${u.vip?'btn-gold':'btn-ghost'}" onclick="toggleVip('${u.username}')" title="VIP">${u.vip?'👑':'+VIP'}</button>
+                <button class="btn btn-xs ${u.role==='mod'?'btn-gold':'btn-ghost'}" onclick="setUserRole('${u.username}','${u.role==='mod'?'user':'mod'}')" title="MOD">${u.role==='mod'?'MOD':'+MOD'}</button>
                 <button class="btn btn-xs ${isUserBanned(u)?'btn-green':'btn-red'}" onclick="${isUserBanned(u)?`toggleBan('${u.username}')`:`openBanModal('${u.username}')`}">${isUserBanned(u)?'Mở':'Khóa'}</button>
                 <button class="btn btn-ghost btn-xs" onclick="openResetPass('${u.username}')">🔑</button>
                 <button class="btn btn-xs ${isRankExcluded(u.username)?'btn-green':'btn-ghost'}" onclick="${isRankExcluded(u.username)?`adminIncludeRank('${u.username}')`:`adminExcludeRank('${u.username}')`}" title="Xếp hạng">${isRankExcluded(u.username)?'Hiện hạng':'Ẩn hạng'}</button>
@@ -3485,22 +3621,67 @@ function renderSettings(body) {
       <button class="btn btn-gold btn-sm" style="margin-top:8px;width:100%" onclick="changeAdminPass()">🔒 Đổi</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">📣 Gửi thông báo tới tất cả user</div>
+      <div class="settings-label">📣 Gửi thông báo</div>
       <button class="btn btn-gold btn-sm" style="width:100%" onclick="openAnnounce()">📣 Tạo thông báo mới</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">📥 Export dữ liệu</div>
+      <div class="settings-label">🛠️ Bảo trì</div>
+      <div class="toggle-row"><span style="font-size:12px">Bật maintenance</span>
+        <label class="toggle"><input type="checkbox" id="setMaint" ${s.maintenanceMode?'checked':''} onchange="saveSettings({...getSettings(),maintenanceMode:this.checked}).then(()=>toast('Đã lưu','ok'))"/><span class="toggle-slider"></span></label>
+      </div>
+      <input class="inp" id="setMaintMsg" value="${esc(s.maintenanceMsg||'')}" placeholder="Tin nhắn bảo trì" style="margin-top:8px"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('maintenanceMsg','setMaintMsg')">💾 Lưu tin bảo trì</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">🔗 Discord Webhook</div>
+      <input class="inp" id="setDiscord" value="${esc(s.discordWebhook||'')}" placeholder="https://discord.com/api/webhooks/..."/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('discordWebhook','setDiscord')">💾 Lưu Webhook</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">👁️ Ẩn tab user</div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Ẩn Rank</span>
+        <label class="toggle"><input type="checkbox" ${s.hideTabRank?'checked':''} onchange="saveSettings({...getSettings(),hideTabRank:this.checked}).then(()=>{toast('OK','ok');applyTabVisibility()})"/><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Ẩn Chat</span>
+        <label class="toggle"><input type="checkbox" ${s.hideTabChat?'checked':''} onchange="saveSettings({...getSettings(),hideTabChat:this.checked}).then(()=>{toast('OK','ok');applyTabVisibility()})"/><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Ẩn History</span>
+        <label class="toggle"><input type="checkbox" ${s.hideTabHistory?'checked':''} onchange="saveSettings({...getSettings(),hideTabHistory:this.checked}).then(()=>{toast('OK','ok');applyTabVisibility()})"/><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">🎨 / 🔊</div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Chế độ sáng</span>
+        <label class="toggle"><input type="checkbox" ${typeof LIGHT_KEY!=='undefined'&&localStorage.getItem(LIGHT_KEY)==='1'?'checked':''} onchange="localStorage.setItem('vlp_light_v1',this.checked?'1':'0');applyLightMode()"/><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Âm thanh vượt xong</span>
+        <label class="toggle"><input type="checkbox" ${localStorage.getItem('vlp_sound_v1')!=='0'?'checked':''} onchange="localStorage.setItem('vlp_sound_v1',this.checked?'1':'0')"/><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row" style="margin:6px 0"><span style="font-size:12px">Confetti</span>
+        <label class="toggle"><input type="checkbox" ${s.confettiEnabled!==false?'checked':''} onchange="saveSettings({...getSettings(),confettiEnabled:this.checked}).then(()=>toast('OK','ok'))"/><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">📥 Export / Import / Báo cáo</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="exportOrdersCSV()">📋 Export Orders CSV</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportUsersCSV()">👥 Export Users CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportOrdersCSV()">📋 Orders CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportUsersCSV()">👥 Users CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportOrdersDateRange()">📅 Báo cáo ngày</button>
+        <button class="btn btn-cyan btn-sm" onclick="exportFullBackup()">💾 Backup JSON</button>
+        <label class="btn btn-gold btn-sm" style="cursor:pointer">📥 Import<input type="file" accept="application/json,.json" style="display:none" onchange="if(this.files[0])importBackupJSON(this.files[0])"/></label>
+        <button class="btn btn-ghost btn-sm" onclick="cleanupOldLogs()">🧹 Dọn log</button>
+        <button class="btn btn-ghost btn-sm" onclick="bulkToggleItems(true)">▶ Bật hết item</button>
+        <button class="btn btn-ghost btn-sm" onclick="bulkToggleItems(false)">⏸ Tắt hết item</button>
       </div>
     </div>
     <div class="settings-row">
-      <div class="settings-label">☁️ Server</div>
-      <div style="font-size:13px;color:var(--green)">● Firestore Online — shopvip-139ea</div>
+      <div class="settings-label">📜 Firestore Rules (mẫu — copy vào Console)</div>
+      <textarea class="inp" rows="5" readonly style="font-size:10px;font-family:monospace">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} { allow read, write: if true; }
+  }
+}</textarea>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">☁️ Server · v5.2</div>
+      <div style="font-size:13px;color:var(--green)">● Firestore Online</div>
       <div class="sec-note" style="margin-top:10px">
-        <b>v5:</b> VIP · Live Drop · Backup JSON · Thống kê 7 ngày · Ảnh riêng · Không giới hạn lượt vượt/ngày<br>
-        ⚠ Bảo mật: đổi pass admin mạnh (≥8 ký tự), siết Firestore Rules, không chia sẻ API Key.
+        Captcha · Maintenance · Import · MOD · Wishlist · Huy hiệu · Confetti · Sound · Discord · Báo cáo · Template · Bulk · DM Admin · Ẩn tab · Light · Multi-acc · Hết hạn item
       </div>
     </div>
   `;
@@ -3694,6 +3875,8 @@ function saveItem() {
   const keyPoolRaw = (document.getElementById('imKeyPool').value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const unlockRaw = document.getElementById('imUnlockAt').value;
   const unlockAt = unlockRaw ? new Date(unlockRaw).toISOString() : null;
+  const expRaw = (document.getElementById('imExpiresAt') || {}).value;
+  const expiresAt = expRaw ? new Date(expRaw).toISOString() : null;
   const content = (document.getElementById('imContent').value || '').trim();
 
   let itemId = editItemId;
@@ -3722,7 +3905,7 @@ function saveItem() {
     const imgToSave = selectedImageData;
     localItems[itemId] = {
       ...rest,
-      name, desc, category, badge, vipOnly, icon, rounds, maxClaims, unlockAt,
+      name, desc, category, badge, vipOnly, icon, rounds, maxClaims, unlockAt, expiresAt,
       image: imgToSave,
       hasImage: !!imgToSave,
       attachedFiles, linkBtns,
@@ -3747,7 +3930,7 @@ function saveItem() {
     const existing = getItemsArr();
     const minSort = existing.length ? Math.min(...existing.map(i => i.sortOrder !== undefined ? i.sortOrder : 9999)) : 10;
     const newItem = {
-      id: itemId, name, desc, category, badge, vipOnly, icon, rounds, maxClaims, unlockAt,
+      id: itemId, name, desc, category, badge, vipOnly, icon, rounds, maxClaims, unlockAt, expiresAt,
       image: imageField, hasImage: !!imageField, attachedFiles, linkBtns,
       keyPoolCount: keyPoolRaw.length,
       sortOrder: minSort - 1,
@@ -3973,6 +4156,366 @@ function updateUserGuide() {
 
 // gọi listener live drop sớm
 try { initLiveDropListener(); } catch(e) {}
+
+// ============================================================
+// v5.2 FEATURE PACK
+// ============================================================
+let captchaA = 0, captchaB = 0, currentAdvFilter = 'all';
+const WISH_KEY = 'vlp_wishlist_v1';
+const SOUND_KEY = 'vlp_sound_v1';
+const LIGHT_KEY = 'vlp_light_v1';
+
+function isStaff(u) {
+  u = u || me;
+  return u && (u.role === 'admin' || u.role === 'mod');
+}
+function canAdminFull(u) {
+  u = u || me;
+  return u && u.role === 'admin';
+}
+
+function refreshCaptcha() {
+  captchaA = 1 + Math.floor(Math.random() * 9);
+  captchaB = 1 + Math.floor(Math.random() * 9);
+  const el = document.getElementById('captchaQ');
+  if (el) el.textContent = captchaA + ' + ' + captchaB + ' = ?';
+}
+try { document.getElementById('tabReg') && document.getElementById('tabReg').addEventListener('click', refreshCaptcha); } catch(e) {}
+setTimeout(refreshCaptcha, 300);
+
+function getWishlist() {
+  try { return JSON.parse(localStorage.getItem(WISH_KEY) || '[]'); } catch(e) { return []; }
+}
+function toggleWish(itemId) {
+  if (!me) return;
+  let arr = getWishlist();
+  if (arr.includes(itemId)) arr = arr.filter(x => x !== itemId);
+  else arr.push(itemId);
+  localStorage.setItem(WISH_KEY, JSON.stringify(arr.slice(-50)));
+  toast(arr.includes(itemId) ? '⭐ Đã thêm wishlist' : 'Đã bỏ wishlist', 'ok');
+  renderItemGrid();
+  if (currentUserTab === 'wish') renderWishList();
+}
+function renderWishList() {
+  const el = document.getElementById('wishList');
+  if (!el) return;
+  const ids = getWishlist();
+  const items = ids.map(id => (localItems || {})[id]).filter(i => i && !i.deleted);
+  if (!items.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div>Chưa có item trong wishlist</div></div>'; return; }
+  el.innerHTML = items.map(i => `
+    <div class="history-item" style="cursor:pointer" onclick="openBypass('${i.id}')">
+      <div class="history-name">${esc(i.name)}</div>
+      <div class="history-meta"><span>${esc(i.category||'')}</span>
+        <button class="btn btn-xs btn-ghost" onclick="event.stopPropagation();toggleWish('${i.id}')">Bỏ ⭐</button>
+      </div>
+    </div>`).join('');
+}
+
+const ACHIEVE_DEFS = [
+  { id: 'first', name: 'Tân binh', desc: 'Vượt link lần đầu', icon: '🌱', check: u => getOrdersArr().filter(o => o.user === u).length >= 1 },
+  { id: 'ten', name: 'Cày thuê', desc: 'Vượt 10 lần', icon: '💪', check: u => getOrdersArr().filter(o => o.user === u).length >= 10 },
+  { id: 'fifty', name: 'Huyền thoại', desc: 'Vượt 50 lần', icon: '🏆', check: u => getOrdersArr().filter(o => o.user === u).length >= 50 },
+  { id: 'vip', name: 'VIP Club', desc: 'Được cấp VIP', icon: '👑', check: u => !!(localUsers[u] && localUsers[u].vip) },
+  { id: 'chatty', name: 'Nói nhiều', desc: 'Có mặt trong chat', icon: '💬', check: () => true }
+];
+function renderAchieveList() {
+  const el = document.getElementById('achieveList');
+  if (!el || !me) return;
+  el.innerHTML = ACHIEVE_DEFS.map(a => {
+    const ok = a.check(me.username);
+    return `<div class="achieve-card ${ok?'':'locked'}"><div class="achieve-icon">${a.icon}</div>
+      <div><div style="font-weight:700">${esc(a.name)} ${ok?'✅':''}</div>
+      <div style="font-size:11px;color:var(--sub)">${esc(a.desc)}</div></div></div>`;
+  }).join('');
+}
+
+function setAdvFilter(f) {
+  currentAdvFilter = f;
+  ['filtAll','filtVip','filtFree','filtSlot','filtHot'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.classList.toggle('active', id === 'filt' + (f === 'all' ? 'All' : f === 'vip' ? 'Vip' : f === 'free' ? 'Free' : f === 'slot' ? 'Slot' : 'Hot'));
+  });
+  renderItemGrid();
+}
+
+function playSuccessSound() {
+  if (localStorage.getItem(SOUND_KEY) === '0') return;
+  if (getSettings().soundEnabled === false) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; g.gain.value = 0.08;
+    o.start(); o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.stop(ctx.currentTime + 0.32);
+  } catch(e) {}
+}
+
+function launchConfetti() {
+  if (getSettings().confettiEnabled === false) return;
+  const c = document.getElementById('confettiCanvas');
+  if (!c) return;
+  c.style.display = 'block';
+  c.width = window.innerWidth; c.height = window.innerHeight;
+  const ctx = c.getContext('2d');
+  const parts = Array.from({ length: 60 }, () => ({
+    x: Math.random() * c.width, y: -20 - Math.random() * 80,
+    vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4,
+    s: 4 + Math.random() * 6, color: ['#00f0ff','#ffd04a','#c35bff','#00f080','#ff4d6a'][Math.floor(Math.random()*5)]
+  }));
+  let frames = 0;
+  const tick = () => {
+    ctx.clearRect(0, 0, c.width, c.height);
+    parts.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.08;
+      ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.s, p.s);
+    });
+    frames++;
+    if (frames < 90) requestAnimationFrame(tick);
+    else { c.style.display = 'none'; ctx.clearRect(0,0,c.width,c.height); }
+  };
+  tick();
+}
+
+async function notifyDiscordWebhook(text) {
+  const url = (getSettings().discordWebhook || '').trim();
+  if (!url || !url.startsWith('http')) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: String(text).slice(0, 1800) })
+    });
+  } catch(e) {}
+}
+
+function checkMaintenance() {
+  const s = getSettings();
+  const ov = document.getElementById('maintOverlay');
+  if (!ov) return false;
+  if (s.maintenanceMode && !(me && isStaff(me))) {
+    ov.style.display = 'flex';
+    const m = document.getElementById('maintMsg');
+    if (m) m.textContent = s.maintenanceMsg || 'Đang bảo trì';
+    return true;
+  }
+  ov.style.display = 'none';
+  return false;
+}
+
+function applyTabVisibility() {
+  const s = getSettings();
+  const map = { utabRank: s.hideTabRank, utabChat: s.hideTabChat, utabHistory: s.hideTabHistory };
+  Object.keys(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = map[id] ? 'none' : '';
+  });
+}
+
+function applyLightMode() {
+  const on = localStorage.getItem(LIGHT_KEY) === '1' || getSettings().darkMode === false;
+  document.body.classList.toggle('theme-light', on);
+}
+
+function checkAppVersion() {
+  const remote = (getSettings().appVersion || APP_VERSION);
+  const local = localStorage.getItem('vlp_seen_ver');
+  if (local && local !== remote) {
+    toast('🔄 Có bản mới v' + remote + ' — F5 để cập nhật', 'ok');
+  }
+  localStorage.setItem('vlp_seen_ver', remote);
+}
+
+function importBackupJSON(file) {
+  if (!canAdminFull()) { toast('Chỉ admin chính', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data || typeof data !== 'object') throw new Error('File không hợp lệ');
+      if (!confirm('Import sẽ ghi đè users/items/orders/settings local lên server. Tiếp tục?')) return;
+      if (data.users) await saveUsers(data.users);
+      if (data.items) await saveItems(data.items);
+      if (data.orders) await saveOrders(data.orders);
+      if (data.settings) await saveSettings({ ...getSettings(), ...data.settings });
+      if (data.keys) await saveKeys(data.keys);
+      if (data.logs) await saveLogs(data.logs);
+      if (data.reviews) await saveReviews(data.reviews);
+      addLog('import_backup', data.exportedAt || '');
+      toast('✅ Import backup xong — reload trang', 'ok');
+      setTimeout(() => location.reload(), 1200);
+    } catch (err) {
+      toast('❌ Import lỗi: ' + (err.message || ''), 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function cleanupOldLogs() {
+  if (!isStaff()) return;
+  const logs = getLogsArr();
+  const keep = logs.slice(0, 80);
+  const obj = {};
+  keep.forEach(l => { obj[l.id] = l; });
+  localLogs = obj;
+  saveLogs(localLogs).then(() => { toast('🧹 Đã dọn log, giữ 80 dòng mới', 'ok'); aTab('logs'); });
+}
+
+function openUserStats(username) {
+  const u = (localUsers || {})[username];
+  if (!u) return;
+  const orders = getOrdersArr().filter(o => o.user === username);
+  const html = `<div class="modal-bg open" id="userStatsModal" onclick="if(event.target===this)this.remove()">
+    <div class="modal-box">
+      <div class="modal-hd"><div class="modal-title">📊 @${esc(username)}</div>
+      <button class="modal-close" onclick="document.getElementById('userStatsModal').remove()">✕</button></div>
+      <div style="font-size:13px;line-height:1.7">
+        <div>Tên: <b>${esc(u.display)}</b> ${u.vip?'👑':''} ${u.role==='mod'?'🛡️ MOD':''}</div>
+        <div>Tham gia: ${fmtDT(u.joined)}</div>
+        <div>Lượt vượt: <b>${orders.length}</b></div>
+        <div>Thiết bị: ${(u.deviceIds||[]).length}</div>
+        <div>Flags: ${(u.flags||[]).length}</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--sub)">Gần đây:</div>
+        ${orders.slice(0,8).map(o => `<div style="font-size:11px">${fmtDT(o.createdAt)} · ${esc(o.itemName||'')}</div>`).join('')||'—'}
+      </div>
+    </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function setUserRole(username, role) {
+  if (!canAdminFull()) { toast('Chỉ admin chính', 'err'); return; }
+  const u = (localUsers || {})[username];
+  if (!u || u.username === ADMIN_USER) return;
+  const updated = { ...u, role: role === 'mod' ? 'mod' : 'user' };
+  updateUser(username, updated).then(() => {
+    addLog('set_role', username + ' → ' + updated.role);
+    toast('Đã đặt ' + username + ' = ' + updated.role, 'ok');
+    aTab('users', false);
+  });
+}
+
+function applyItemTemplate(tpl) {
+  const templates = {
+    tiktok: { name: 'Acc TikTok', desc: 'Acc TikTok chất lượng', category: 'TikTok', badge: 'hot', icon: '🎵', rounds: 2 },
+    netflix: { name: 'Netflix Share', desc: 'Tài khoản xem phim', category: 'Netflix', badge: 'new', icon: '🎬', rounds: 1 },
+    game: { name: 'Acc Game', desc: 'Tài khoản game', category: 'Game', badge: 'sale', icon: '🎮', rounds: 3 }
+  };
+  const t = templates[tpl];
+  if (!t) return;
+  document.getElementById('imName').value = t.name;
+  document.getElementById('imDesc').value = t.desc;
+  document.getElementById('imCategory').value = t.category;
+  document.getElementById('imBadge').value = t.badge;
+  document.getElementById('imIcon').value = t.icon;
+  document.getElementById('imRounds').value = t.rounds;
+  toast('Đã áp template ' + tpl, 'ok');
+}
+
+function bulkToggleItems(enable) {
+  if (!isStaff()) return;
+  Object.keys(localItems || {}).forEach(id => {
+    if (localItems[id] && !localItems[id].deleted) {
+      localItems[id] = { ...localItems[id], active: !!enable };
+    }
+  });
+  saveItems(localItems).then(() => {
+    addLog(enable ? 'bulk_enable' : 'bulk_disable', '');
+    toast(enable ? 'Đã bật tất cả item' : 'Đã tắt tất cả item', 'ok');
+    aTab('items');
+    renderItemGrid();
+  });
+}
+
+function previewItemAsUser() {
+  const name = document.getElementById('imName').value;
+  const desc = document.getElementById('imDesc').value;
+  const content = document.getElementById('imContent').value;
+  alert('PREVIEW\n\nTên: ' + name + '\nMô tả: ' + desc + '\n\nNội dung:\n' + (content || '(trống)'));
+}
+
+// DM with admin
+async function sendDm() {
+  if (!me) return;
+  if (isUserBanned(me)) return;
+  const text = (document.getElementById('dmInput').value || '').trim();
+  if (!text) return;
+  if (!checkRate('dm', 8, 60000)) { toast('Gửi quá nhanh', 'err'); return; }
+  const msg = { user: me.username, display: me.display, text, at: new Date().toISOString(), to: 'admin' };
+  try {
+    const snap = await db.collection(COL).doc('admin_dm').get();
+    const data = (snap.exists && snap.data() && snap.data().msgs) || [];
+    const thread = data.filter(m => m.user === me.username || m.to === me.username);
+    // store all DMs in one doc keyed by threads — simplified: append global with user field
+    await db.collection(COL).doc('admin_dm').set({ msgs: [...data, msg].slice(-200) });
+    document.getElementById('dmInput').value = '';
+    loadDmMsgs();
+  } catch(e) { toast('Gửi DM lỗi', 'err'); }
+}
+function loadDmMsgs() {
+  const el = document.getElementById('dmMsgs');
+  if (!el || !me) return;
+  db.collection(COL).doc('admin_dm').onSnapshot(snap => {
+    const data = (snap.exists && snap.data() && snap.data().msgs) || [];
+    const mine = isStaff(me)
+      ? data.slice(-40)
+      : data.filter(m => m.user === me.username || m.to === me.username).slice(-40);
+    el.innerHTML = mine.length ? mine.map(m => `<div style="margin:6px 0;font-size:13px"><b style="color:var(--cyan)">${esc(m.display||m.user)}</b>: ${esc(m.text)}
+      <div style="font-size:10px;color:var(--sub)">${fmtDT(m.at)}</div></div>`).join('') : '<div class="chat-empty">Chưa có tin nhắn</div>';
+    el.scrollTop = el.scrollHeight;
+  }, () => {});
+}
+
+async function adminDeleteChatMsg(idx) {
+  if (!isStaff()) return;
+  try {
+    const snap = await db.collection(COL).doc('community_chat').get();
+    let msgs = (snap.exists && snap.data() && snap.data().msgs) || [];
+    if (idx < 0 || idx >= msgs.length) return;
+    msgs.splice(idx, 1);
+    await db.collection(COL).doc('community_chat').set({ msgs });
+    toast('Đã xóa tin', 'ok');
+  } catch(e) { toast('Xóa lỗi', 'err'); }
+}
+
+function muteChatUser(username) {
+  if (!isStaff()) return;
+  const u = (localUsers || {})[username];
+  if (!u) return;
+  updateUser(username, { ...u, chatMuted: true }).then(() => toast('Đã cấm chat @' + username, 'ok'));
+}
+
+function exportOrdersDateRange() {
+  const from = prompt('Từ ngày (YYYY-MM-DD)', new Date(Date.now()-7*864e5).toISOString().slice(0,10));
+  const to = prompt('Đến ngày (YYYY-MM-DD)', new Date().toISOString().slice(0,10));
+  if (!from || !to) return;
+  const t0 = new Date(from).getTime();
+  const t1 = new Date(to).getTime() + 864e5;
+  const orders = getOrdersArr().filter(o => {
+    const t = new Date(o.createdAt).getTime();
+    return t >= t0 && t < t1;
+  });
+  let csv = 'ID,User,Item,Status,Time\n';
+  orders.forEach(o => { csv += `"${o.id}","${o.user}","${(o.itemName||'').replace(/"/g,'')}","${o.status}","${o.createdAt}"\n`; });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], { type: 'text/csv' }));
+  a.download = 'report_' + from + '_' + to + '.csv';
+  a.click();
+  toast('📥 Đã xuất ' + orders.length + ' dòng', 'ok');
+}
+
+function getFirestoreRulesSample() {
+  return `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // CẢNH BÁO: mở toàn bộ chỉ để demo. Production nên siết theo auth.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+// Gợi ý production: dùng Firebase Auth + custom claims admin.`;
+}
 
 // ===== UTILS =====
 function esc(s) {
@@ -4390,6 +4933,7 @@ function scrollChatToBottom() {
 async function sendChatMsg() {
   if (!me) { toast('Cần đăng nhập', 'err'); return; }
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
+  if (me.chatMuted) { toast('Bạn đã bị cấm chat', 'err'); return; }
   if (!checkRate('chat', 6, 60000)) { toast('⚠️ Nhắn quá nhanh, đợi 1 phút', 'err'); return; }
   const inp = document.getElementById('chatMsgInput');
   const text = (inp ? inp.value : '').trim();
