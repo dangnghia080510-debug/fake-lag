@@ -1260,7 +1260,15 @@ function getOrdersArr() {
   return arr;
 }
 function getSettings() {
-  return localSettings || { siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641', seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1, licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {} };
+  return localSettings || {
+    siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641',
+    seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1,
+    licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {},
+    guideText: '', maintenanceMode: false, maintenanceMsg: 'Hệ thống đang bảo trì, quay lại sau!',
+    hideTabRank: false, hideTabChat: false, hideTabHistory: false,
+    vuotnhanhKey: '5272e76d-4b9a-4ca9-aeba-0c6a28b93955',
+    enableLink1: true, enableLink2: true
+  };
 }
 function getLogsArr() {
   const arr = Object.values(localLogs || {});
@@ -1523,7 +1531,10 @@ const DEFAULT_SETTINGS = {
   hideTabRank: false, hideTabChat: false, hideTabHistory: false,
   soundEnabled: true, confettiEnabled: true, darkMode: true,
   maxAccPerDevice: 3, weeklyRewardText: 'Top 1 tuần: Key VIP',
-  pointsPerComplete: 10
+  pointsPerComplete: 10,
+  vuotnhanhKey: '5272e76d-4b9a-4ca9-aeba-0c6a28b93955',
+  enableLink1: true,
+  enableLink2: true
 };
 
 async function ensureDefaults() {
@@ -1663,7 +1674,15 @@ function startListeners() {
     const first = localSettings === null;
     localSettings = val || { ...DEFAULT_SETTINGS };
     if (!localSettings.rankExcluded) localSettings.rankExcluded = {};
+    // Gắn API Vượt Nhanh mặc định nếu chưa có trên server
+    if (!localSettings.vuotnhanhKey) localSettings.vuotnhanhKey = '5272e76d-4b9a-4ca9-aeba-0c6a28b93955';
     if (first) checkFirebaseReady();
+    // Realtime: bảo trì + ẩn tab + bật/tắt Link 1/2 áp dụng ngay
+    checkMaintenance();
+    applyTabVisibility();
+    if (document.getElementById('bypassModal')?.classList.contains('open') && currentItem) {
+      try { renderSteps(); } catch(e) {}
+    }
     if (document.getElementById('mainPage').classList.contains('active')) {
       updateContactBtn();
       updateUserGuide();
@@ -2658,22 +2677,29 @@ function restoreActiveBypassIfAny() {
 function renderSteps() {
   const item = currentItem;
   const rounds = item.rounds || 1;
+  const s = getSettings();
+  const hasL1 = !!(s.link4mKey || '').trim() && s.enableLink1 !== false;
+  const hasL2 = !!(s.vuotnhanhKey || '').trim() && s.enableLink2 !== false;
   let html = '';
   for (let i = 0; i < rounds; i++) {
     const done = !!verifiedSteps[i];
     const firstPending = verifiedSteps.indexOf(false);
     const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
     const cdLeft = getCooldownLeft(item.id, i);
+    const disabled = done || cdLeft > 0;
     html += `
       <div class="step-item">
         <div class="step-hd">
           <div class="step-num ${numClass}" id="snum_${i}">${done ? '✓' : (i + 1)}</div>
           <div class="step-label">Lượt ${i + 1}</div>
         </div>
-        <div class="step-body">
-          <button class="btn btn-cyan btn-sm" id="getLinkBtn_${i}" onclick="openLink(${i})" ${done || cdLeft > 0 ? 'disabled' : ''}>
-            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Lấy Link'}
-          </button>
+        <div class="step-body" style="flex-wrap:wrap">
+          ${hasL1 ? `<button class="btn btn-cyan btn-sm" id="getLinkBtn1_${i}" onclick="openLink(${i},'link4m')" ${disabled ? 'disabled' : ''} title="Link4M">
+            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Link 1'}
+          </button>` : ''}
+          ${hasL2 ? `<button class="btn btn-purple btn-sm" id="getLinkBtn2_${i}" onclick="openLink(${i},'vuotnhanh')" ${disabled ? 'disabled' : ''} title="Vượt Nhanh">
+            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Link 2'}
+          </button>` : ''}
           <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}" type="text" autocomplete="off" spellcheck="false"
             placeholder="Dán mã xác nhận..." value="${done ? '✅ Đã xác nhận' : ''}" ${done ? 'disabled' : ''}
             onkeydown="if(event.key==='Enter'){event.preventDefault();verifyCode(${i});}"
@@ -2681,6 +2707,7 @@ function renderSteps() {
           <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}" onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
         </div>
         ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s</div>` : ''}
+        ${!hasL1 && !hasL2 ? '<div class="cd-hint" style="color:var(--red)">⚠️ Admin đã tắt hết link vượt / chưa cấu hình API</div>' : ''}
       </div>`;
   }
   document.getElementById('bmSteps').innerHTML = html;
@@ -2692,15 +2719,21 @@ function startCooldownTimer(idx) {
   const timer = setInterval(() => {
     if (!currentItem) { clearInterval(timer); return; }
     const left = getCooldownLeft(currentItem.id, idx);
-    const btn = document.getElementById('getLinkBtn_' + idx);
+    const btn1 = document.getElementById('getLinkBtn1_' + idx);
+    const btn2 = document.getElementById('getLinkBtn2_' + idx);
     const hint = document.getElementById('cdHint_' + idx);
+    const s = getSettings();
+    const hasL1 = !!(s.link4mKey || '').trim() && s.enableLink1 !== false;
+    const hasL2 = !!(s.vuotnhanhKey || '').trim() && s.enableLink2 !== false;
     if (left <= 0) {
       clearInterval(timer);
-      if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Lấy Link'; }
+      if (btn1) { btn1.disabled = !hasL1; btn1.innerHTML = '🔗 Link 1'; }
+      if (btn2) { btn2.disabled = !hasL2; btn2.innerHTML = '🔗 Link 2'; }
       if (hint) hint.remove();
       return;
     }
-    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ' + left + 's'; }
+    if (btn1) { btn1.disabled = true; btn1.innerHTML = '⏳ ' + left + 's'; }
+    if (btn2) { btn2.disabled = true; btn2.innerHTML = '⏳ ' + left + 's'; }
     if (hint) hint.textContent = 'Chờ ' + left + 's';
   }, 1000);
 }
@@ -2739,18 +2772,25 @@ async function createServerKey(note) {
   }
 }
 
-async function openLink(idx) {
+async function openLink(idx, provider) {
+  provider = provider || 'link4m';
   const item = currentItem;
   if (!item || !me) return;
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
+  if (checkMaintenance()) return;
+  const sCheck = getSettings();
+  if (provider === 'link4m' && sCheck.enableLink1 === false) { toast('⚠️ Link 1 đang tắt', 'err'); return; }
+  if (provider === 'vuotnhanh' && sCheck.enableLink2 === false) { toast('⚠️ Link 2 đang tắt', 'err'); return; }
   if (!checkRate('openLink', 20, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
   const cd = getCooldownLeft(item.id, idx);
   if (cd > 0) { toast('⏳ Còn ' + cd + 's', 'err'); return; }
 
-  const btn = document.getElementById('getLinkBtn_' + idx);
-  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Tạo key...'; }
+  const btn1 = document.getElementById('getLinkBtn1_' + idx);
+  const btn2 = document.getElementById('getLinkBtn2_' + idx);
+  if (btn1) { btn1.disabled = true; btn1.innerHTML = '⏳ ...'; }
+  if (btn2) { btn2.disabled = true; btn2.innerHTML = '⏳ ...'; }
 
-  // Ưu tiên tạo key từ server license; fallback mã local nếu server lỗi / chưa cấu hình
+  // Ưu tiên tạo key từ server license; fallback mã local
   let code = await createServerKey('vlp|' + me.username + '|' + item.id + '|r' + idx);
   let fromServer = !!code;
   if (!code) code = genVerifyCode(8);
@@ -2761,7 +2801,8 @@ async function openLink(idx) {
     exp: Date.now() + 30 * 60 * 1000,
     fromServer,
     startedAt: Date.now(),
-    sid
+    sid,
+    provider
   }));
   try {
     localStorage.setItem('vlp_sid_' + item.id + '_' + idx, sid);
@@ -2778,13 +2819,25 @@ async function openLink(idx) {
     '&vlpuser=' + encodeURIComponent(me.username) +
     (fromServer ? '&vlpserver=1' : '');
   try {
-    window.open(buildLink4mUrl(revealUrl), '_blank');
-    toast(fromServer ? '🔑 Key server + Link4M đã mở (lượt ' + (idx + 1) + ')' : 'Đã mở link lượt ' + (idx + 1) + ' (mã local)');
+    let shortUrl = '';
+    if (provider === 'vuotnhanh') {
+      shortUrl = await getVuotNhanhShortUrl(revealUrl);
+    } else {
+      shortUrl = buildLink4mUrl(revealUrl);
+    }
+    window.open(shortUrl, '_blank');
+    const label = provider === 'vuotnhanh' ? 'Vượt Nhanh (Link 2)' : 'Link4M (Link 1)';
+    toast((fromServer ? '🔑 Key server + ' : '') + label + ' — lượt ' + (idx + 1), 'ok');
     renderSteps();
   } catch (e) {
     localStorage.removeItem(pendingCodeKey(item.id, idx));
-    toast('❌ ' + (e.message || 'Không tạo được link'), 'err');
-    if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Lấy Link'; }
+    try {
+      const data = lsGet(COOLDOWN_KEY, {});
+      const k = item.id + '_' + idx;
+      if (data[k]) { delete data[k]; lsSet(COOLDOWN_KEY, data); }
+    } catch(err) {}
+    toast('❌ ' + (e.message || 'Không tạo được link') + (provider === 'vuotnhanh' ? ' — thử Link 1' : ' — thử Link 2'), 'err');
+    renderSteps();
   }
 }
 
@@ -2830,7 +2883,7 @@ function verifyCode(idx) {
     if (!p) return;
     const ok = await hasVisitProofAsync(p.payload.sid);
     if (!ok) {
-      toast('❌ Chưa vượt Link4M hợp lệ. Phải mở link, vượt ads, copy mã từ trang đích!', 'err');
+      toast('❌ Chưa vượt link hợp lệ. Phải mở Link 1/2, vượt ads, copy mã từ trang đích!', 'err');
       return;
     }
     localStorage.removeItem(p.key);
@@ -3588,9 +3641,25 @@ function renderSettings(body) {
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('guideText','setGuide');updateUserGuide();">💾 Lưu hướng dẫn</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">🔑 API Key Link4M</div>
+      <div class="settings-label">🔑 API Key Link4M (Link 1)</div>
       <input class="inp" id="setKey" value="${esc(s.link4mKey||'')}"/>
-      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu</button>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu Link4M</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">🔑 API Key Vượt Nhanh (Link 2 — mặc định đã gắn)</div>
+      <input class="inp" id="setVuotNhanh" value="${esc(s.vuotnhanhKey||'5272e76d-4b9a-4ca9-aeba-0c6a28b93955')}" placeholder="UUID từ vuotnhanh.com"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('vuotnhanhKey','setVuotNhanh')">💾 Lưu Vượt Nhanh</button>
+      <p style="font-size:11px;color:var(--sub);margin-top:8px;line-height:1.4">User vượt sẽ thấy 2 nút: <b>Link 1</b> (Link4M) và <b>Link 2</b> (Vượt Nhanh). Một cái lỗi vẫn còn cái kia.</p>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">🎚️ Bật / Tắt link vượt (user online thấy ngay)</div>
+      <div class="toggle-row" style="margin:8px 0"><span style="font-size:13px">🔗 Link 1 (Link4M)</span>
+        <label class="toggle"><input type="checkbox" ${s.enableLink1!==false?'checked':''} onchange="saveSettings({...getSettings(),enableLink1:this.checked}).then(()=>{toast(this.checked?'✅ Bật Link 1':'⏸ Tắt Link 1','ok');if(document.getElementById('bypassModal')?.classList.contains('open'))renderSteps();})"/><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row" style="margin:8px 0"><span style="font-size:13px">🔗 Link 2 (Vượt Nhanh)</span>
+        <label class="toggle"><input type="checkbox" ${s.enableLink2!==false?'checked':''} onchange="saveSettings({...getSettings(),enableLink2:this.checked}).then(()=>{toast(this.checked?'✅ Bật Link 2':'⏸ Tắt Link 2','ok');if(document.getElementById('bypassModal')?.classList.contains('open'))renderSteps();})"/><span class="toggle-slider"></span></label>
+      </div>
+      <div class="sec-note">Tắt = nút biến mất ngay với user đang vượt. Cả 2 link đều có chống bypass (mã + visit proof + chống vượt quá nhanh).</div>
     </div>
     <div class="settings-row">
       <div class="settings-label">🖥️ License Server URL</div>
@@ -3626,8 +3695,8 @@ function renderSettings(body) {
     </div>
     <div class="settings-row">
       <div class="settings-label">🛠️ Bảo trì</div>
-      <div class="toggle-row"><span style="font-size:12px">Bật maintenance</span>
-        <label class="toggle"><input type="checkbox" id="setMaint" ${s.maintenanceMode?'checked':''} onchange="saveSettings({...getSettings(),maintenanceMode:this.checked}).then(()=>toast('Đã lưu','ok'))"/><span class="toggle-slider"></span></label>
+      <div class="toggle-row"><span style="font-size:12px">Bật maintenance (user online thấy ngay)</span>
+        <label class="toggle"><input type="checkbox" id="setMaint" ${s.maintenanceMode?'checked':''} onchange="saveSettings({...getSettings(),maintenanceMode:this.checked}).then(()=>{toast(this.checked?'🛠️ Đã bật bảo trì — user thấy ngay':'✅ Tắt bảo trì','ok');checkMaintenance();})"/><span class="toggle-slider"></span></label>
       </div>
       <input class="inp" id="setMaintMsg" value="${esc(s.maintenanceMsg||'')}" placeholder="Tin nhắn bảo trì" style="margin-top:8px"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('maintenanceMsg','setMaintMsg')">💾 Lưu tin bảo trì</button>
@@ -3824,6 +3893,29 @@ function buildLink4mUrl(destinationUrl) {
   if (!key) throw new Error('Chưa lưu API Key Link4M');
   return 'https://link4m.co/st?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(destinationUrl);
 }
+
+/** Gọi API Vượt Nhanh → trả short URL */
+async function getVuotNhanhShortUrl(destinationUrl) {
+  const key = (getSettings().vuotnhanhKey || '').trim();
+  if (!key) throw new Error('Chưa lưu API Key Vượt Nhanh');
+  const apiUrl = 'https://vuotnhanh.com/api?api=' + encodeURIComponent(key) +
+    '&url=' + encodeURIComponent(destinationUrl) + '&format=text';
+  const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
+  if (!res.ok) throw new Error('API Vượt Nhanh HTTP ' + res.status);
+  const text = (await res.text() || '').trim();
+  if (!text || !/^https?:\/\//i.test(text)) {
+    try {
+      const j = JSON.parse(text);
+      if (j && j.status === 'success' && j.shortenedUrl) return j.shortenedUrl;
+      if (j && j.message) throw new Error(j.message);
+    } catch (e) {
+      if (e.message && !String(e.message).includes('JSON')) throw e;
+    }
+    throw new Error('API Vượt Nhanh không trả link hợp lệ');
+  }
+  return text;
+}
+
 function genVerifyCode(len) {
   len = len || 8;
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -4294,10 +4386,16 @@ function checkMaintenance() {
   const s = getSettings();
   const ov = document.getElementById('maintOverlay');
   if (!ov) return false;
+  // Admin/MOD vẫn vào được; user + khách thấy overlay ngay
   if (s.maintenanceMode && !(me && isStaff(me))) {
     ov.style.display = 'flex';
     const m = document.getElementById('maintMsg');
-    if (m) m.textContent = s.maintenanceMsg || 'Đang bảo trì';
+    if (m) m.textContent = s.maintenanceMsg || 'Hệ thống đang bảo trì, quay lại sau!';
+    try {
+      document.getElementById('bypassModal')?.classList.remove('open');
+      document.getElementById('itemModal')?.classList.remove('open');
+      document.getElementById('notifPanel')?.classList.remove('open');
+    } catch(e) {}
     return true;
   }
   ov.style.display = 'none';
@@ -4311,6 +4409,19 @@ function applyTabVisibility() {
     const el = document.getElementById(id);
     if (el) el.style.display = map[id] ? 'none' : '';
   });
+  // Ẩn nút bottom-nav mobile tương ứng
+  const bn = document.getElementById('bottomNav');
+  if (bn) {
+    bn.querySelectorAll('button').forEach(btn => {
+      const oc = btn.getAttribute('onclick') || '';
+      if (oc.includes("'rank'")) btn.style.display = s.hideTabRank ? 'none' : '';
+      if (oc.includes("'chat'")) btn.style.display = s.hideTabChat ? 'none' : '';
+    });
+  }
+  // Đang đứng tab bị ẩn → về Nội dung
+  if (s.hideTabRank && currentUserTab === 'rank') switchUserTab('items');
+  if (s.hideTabChat && currentUserTab === 'chat') switchUserTab('items');
+  if (s.hideTabHistory && currentUserTab === 'history') switchUserTab('items');
 }
 
 function applyLightMode() {
