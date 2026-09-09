@@ -3895,25 +3895,61 @@ function buildLink4mUrl(destinationUrl) {
 }
 
 /** Gọi API Vượt Nhanh → trả short URL */
+function parseVuotNhanhResponse(text) {
+  text = (text || '').trim();
+  if (!text) return null;
+  // plain short URL
+  if (/^https?:\/\//i.test(text) && text.length < 500) return text;
+  // JSON
+  try {
+    const j = JSON.parse(text);
+    if (j && j.status === 'success' && j.shortenedUrl) return j.shortenedUrl;
+    if (j && j.shortenedUrl) return j.shortenedUrl;
+    if (j && j.status === 'error' && j.message) throw new Error(j.message);
+  } catch (e) {
+    if (e.message && !String(e.message).includes('JSON')) throw e;
+  }
+  // tìm URL trong body
+  const m = text.match(/https?:\/\/vuotnhanh\.com\/[A-Za-z0-9_-]+/);
+  if (m) return m[0];
+  return null;
+}
+
 async function getVuotNhanhShortUrl(destinationUrl) {
   const key = (getSettings().vuotnhanhKey || '').trim();
   if (!key) throw new Error('Chưa lưu API Key Vượt Nhanh');
   const apiUrl = 'https://vuotnhanh.com/api?api=' + encodeURIComponent(key) +
     '&url=' + encodeURIComponent(destinationUrl) + '&format=text';
-  const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
-  if (!res.ok) throw new Error('API Vượt Nhanh HTTP ' + res.status);
-  const text = (await res.text() || '').trim();
-  if (!text || !/^https?:\/\//i.test(text)) {
-    try {
-      const j = JSON.parse(text);
-      if (j && j.status === 'success' && j.shortenedUrl) return j.shortenedUrl;
-      if (j && j.message) throw new Error(j.message);
-    } catch (e) {
-      if (e.message && !String(e.message).includes('JSON')) throw e;
+
+  // 1) Gọi trực tiếp
+  try {
+    const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
+    if (res.ok) {
+      const short = parseVuotNhanhResponse(await res.text());
+      if (short) return short;
     }
-    throw new Error('API Vượt Nhanh không trả link hợp lệ');
+  } catch (e) {
+    // CORS / network → thử proxy
   }
-  return text;
+
+  // 2) CORS proxy (GitHub Pages bị chặn CORS từ vuotnhanh.com)
+  const proxies = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
+    'https://corsproxy.io/?' + encodeURIComponent(apiUrl)
+  ];
+  let lastErr = 'CORS / không kết nối được API';
+  for (const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl, { method: 'GET', cache: 'no-store' });
+      if (!res.ok) { lastErr = 'Proxy HTTP ' + res.status; continue; }
+      const short = parseVuotNhanhResponse(await res.text());
+      if (short) return short;
+      lastErr = 'API không trả link hợp lệ';
+    } catch (e) {
+      lastErr = e.message || 'proxy lỗi';
+    }
+  }
+  throw new Error('Link 2 lỗi: ' + lastErr);
 }
 
 function genVerifyCode(len) {
