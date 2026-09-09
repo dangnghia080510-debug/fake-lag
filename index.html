@@ -1091,13 +1091,16 @@ function flagUser(username, flag, detail) {
   return updateUser(username, updated);
 }
 
-/** Khóa 7 ngày ngay nếu vượt quá nhanh (anti copy nội dung) */
-const TOO_FAST_MS = 80000; // 1 phút 20 giây
+/** Tổng thời gian tối thiểu từ lúc bấm Lấy Link lần đầu → nhận nội dung (chống captcha xong là claim) */
+const TOO_FAST_MS = 150000; // 2 phút 30 giây
+/** Mỗi lượt: tối thiểu bao lâu sau khi bấm Lấy Link mới được dán mã */
+const MIN_PER_ROUND_MS = 45000; // 45 giây / lượt
+
 async function autoBanTooFast(username, seconds) {
   const u = (localUsers || {})[username];
   if (!u || u.role === 'admin') return;
   if (isUserBanned(u)) return;
-  const reason = 'Bot: vượt link quá nhanh (' + seconds + 's < 1p20s) — nghi sao chép/gian lận';
+  const reason = 'Bot: vượt link quá nhanh (' + seconds + 's < 2p30s) — nghi skip ads / gian lận';
   const banUntil = new Date(Date.now() + 7 * 86400000).toISOString();
   const flags = Array.isArray(u.flags) ? [...u.flags] : [];
   flags.unshift({ flag: 'too_fast_ban', detail: reason, at: new Date().toISOString() });
@@ -1117,6 +1120,29 @@ async function autoBanTooFast(username, seconds) {
     me = updated;
     showBanLive(reason + ' — Khóa 7 ngày');
   }
+}
+
+/** Cảnh báo / khóa tạm khi verify không có proof nhiều lần */
+async function flagNoVisitProof(username) {
+  const u = (localUsers || {})[username];
+  if (!u || u.role === 'admin') return;
+  const flags = Array.isArray(u.flags) ? [...u.flags] : [];
+  const recent = flags.filter(f => f.flag === 'no_visit_proof' && f.at && (Date.now() - new Date(f.at).getTime()) < 3600000);
+  flags.unshift({ flag: 'no_visit_proof', detail: 'Verify khi chưa mở trang đích / chưa vượt Link4M', at: new Date().toISOString() });
+  let updated = { ...u, flags: flags.slice(0, 30), suspicious: true, lastFlagAt: new Date().toISOString() };
+  // ≥3 lần trong 1 giờ → khóa 24h
+  if (recent.length >= 2) {
+    updated.banned = true;
+    updated.banReason = 'Nhiều lần xác nhận khi chưa vượt link hợp lệ';
+    updated.banUntil = new Date(Date.now() + 86400000).toISOString();
+    updated.banDuration = 86400;
+    addLog('ban_no_visit', username);
+    if (me && me.username === username) {
+      me = updated;
+      showBanLive(updated.banReason + ' — Khóa 24h');
+    }
+  }
+  await updateUser(username, updated);
 }
 
 /** Khóa VĨNH VIỄN vì bypass / không chứng minh vượt Link4M */
@@ -1148,15 +1174,36 @@ async function permanentBanFraud(username, reason) {
 function visitProofKey(sid) { return 'vlp_visit_' + sid; }
 function hasVisitProof(sid) {
   if (!sid) return false;
-  try { if (localStorage.getItem(visitProofKey(sid)) === '1') return true; } catch(e) {}
+  try {
+    const v = localStorage.getItem(visitProofKey(sid));
+    if (v === '1') return true;
+    if (v && v.charAt(0) === '{') {
+      const j = JSON.parse(v);
+      return !!(j && j.ok);
+    }
+  } catch(e) {}
   return false;
+}
+function getVisitProofAt(sid) {
+  if (!sid) return 0;
+  try {
+    const v = localStorage.getItem(visitProofKey(sid));
+    if (v && v.charAt(0) === '{') {
+      const j = JSON.parse(v);
+      return j.at || 0;
+    }
+  } catch(e) {}
+  return 0;
 }
 function setVisitProof(sid) {
   if (!sid) return;
-  try { localStorage.setItem(visitProofKey(sid), '1'); } catch(e) {}
+  const at = Date.now();
+  try { localStorage.setItem(visitProofKey(sid), JSON.stringify({ ok: true, at })); } catch(e) {
+    try { localStorage.setItem(visitProofKey(sid), '1'); } catch(e2) {}
+  }
   // Ghi Firebase để tab chính đọc được (cùng máy / multi-tab)
   try {
-    const writeProof = (tries) => db.collection(COL).doc('visit_' + sid).set({ ok: true, at: new Date().toISOString() })
+    const writeProof = (tries) => db.collection(COL).doc('visit_' + sid).set({ ok: true, at: new Date(at).toISOString(), ts: at })
       .catch(e => { if (tries > 1) setTimeout(() => writeProof(tries - 1), 900); });
     writeProof(4);
   } catch(e) {}
@@ -1167,7 +1214,9 @@ async function hasVisitProofAsync(sid) {
   try {
     const snap = await fsGetWithRetry(db.collection(COL).doc('visit_' + sid));
     if (snap.exists && snap.data() && snap.data().ok) {
-      setVisitProof(sid); // cache local
+      const d = snap.data();
+      const at = d.ts || (d.at ? new Date(d.at).getTime() : Date.now());
+      try { localStorage.setItem(visitProofKey(sid), JSON.stringify({ ok: true, at })); } catch(e) {}
       return true;
     }
   } catch(e) {}
@@ -1261,13 +1310,12 @@ function getOrdersArr() {
 }
 function getSettings() {
   return localSettings || {
-    siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641',
-    seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1,
+    siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 3, zaloAdmin: '0356228641',
+    seededDemo: false, cooldownSec: 40, hideCompleted: true, maxTimesDefault: 1,
     licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {},
     guideText: '', maintenanceMode: false, maintenanceMsg: 'Hệ thống đang bảo trì, quay lại sau!',
     hideTabRank: false, hideTabChat: false, hideTabHistory: false,
-    vuotnhanhKey: '5272e76d-4b9a-4ca9-aeba-0c6a28b93955',
-    enableLink1: true, enableLink2: true
+    minVerifySec: 45
   };
 }
 function getLogsArr() {
@@ -1523,8 +1571,8 @@ function checkFirebaseReady() {
 
 const APP_VERSION = '5.2.0';
 const DEFAULT_SETTINGS = {
-  siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 2, zaloAdmin: '0356228641',
-  seededDemo: false, cooldownSec: 25, hideCompleted: true, maxTimesDefault: 1,
+  siteName: 'VượtLink Pro', link4mKey: '6a41f075234afd17497b7953', roundsDefault: 3, zaloAdmin: '0356228641',
+  seededDemo: false, cooldownSec: 40, hideCompleted: true, maxTimesDefault: 1,
   licenseServer: 'https://game-license-server-2dhq.onrender.com', licenseAdminToken: '@ahnghia86', rankExcluded: {},
   guideText: '', maintenanceMode: false, maintenanceMsg: 'Hệ thống đang bảo trì, quay lại sau!',
   appVersion: APP_VERSION, discordWebhook: '',
@@ -1532,9 +1580,7 @@ const DEFAULT_SETTINGS = {
   soundEnabled: true, confettiEnabled: true, darkMode: true,
   maxAccPerDevice: 3, weeklyRewardText: 'Top 1 tuần: Key VIP',
   pointsPerComplete: 10,
-  vuotnhanhKey: '5272e76d-4b9a-4ca9-aeba-0c6a28b93955',
-  enableLink1: true,
-  enableLink2: true
+  minVerifySec: 45
 };
 
 async function ensureDefaults() {
@@ -1675,9 +1721,8 @@ function startListeners() {
     localSettings = val || { ...DEFAULT_SETTINGS };
     if (!localSettings.rankExcluded) localSettings.rankExcluded = {};
     // Gắn API Vượt Nhanh mặc định nếu chưa có trên server
-    if (!localSettings.vuotnhanhKey) localSettings.vuotnhanhKey = '5272e76d-4b9a-4ca9-aeba-0c6a28b93955';
     if (first) checkFirebaseReady();
-    // Realtime: bảo trì + ẩn tab + bật/tắt Link 1/2 áp dụng ngay
+    // Realtime: bảo trì + ẩn tab áp dụng ngay
     checkMaintenance();
     applyTabVisibility();
     if (document.getElementById('bypassModal')?.classList.contains('open') && currentItem) {
@@ -2678,15 +2723,14 @@ function renderSteps() {
   const item = currentItem;
   const rounds = item.rounds || 1;
   const s = getSettings();
-  const hasL1 = !!(s.link4mKey || '').trim() && s.enableLink1 !== false;
-  const hasL2 = !!(s.vuotnhanhKey || '').trim() && s.enableLink2 !== false;
+  const hasKey = !!(s.link4mKey || '').trim();
   let html = '';
   for (let i = 0; i < rounds; i++) {
     const done = !!verifiedSteps[i];
     const firstPending = verifiedSteps.indexOf(false);
     const numClass = done ? 'done' : (i === firstPending ? 'active' : '');
     const cdLeft = getCooldownLeft(item.id, i);
-    const disabled = done || cdLeft > 0;
+    const disabled = done || cdLeft > 0 || !hasKey;
     html += `
       <div class="step-item">
         <div class="step-hd">
@@ -2694,20 +2738,17 @@ function renderSteps() {
           <div class="step-label">Lượt ${i + 1}</div>
         </div>
         <div class="step-body" style="flex-wrap:wrap">
-          ${hasL1 ? `<button class="btn btn-cyan btn-sm" id="getLinkBtn1_${i}" onclick="openLink(${i},'link4m')" ${disabled ? 'disabled' : ''} title="Link4M">
-            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Link 1'}
-          </button>` : ''}
-          ${hasL2 ? `<button class="btn btn-purple btn-sm" id="getLinkBtn2_${i}" onclick="openLink(${i},'vuotnhanh')" ${disabled ? 'disabled' : ''} title="Vượt Nhanh">
-            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Link 2'}
-          </button>` : ''}
+          <button class="btn btn-cyan btn-sm" id="getLinkBtn_${i}" onclick="openLink(${i})" ${disabled ? 'disabled' : ''} title="Link4M">
+            ${cdLeft > 0 ? '⏳ ' + cdLeft + 's' : '🔗 Lấy Link'}
+          </button>
           <input class="code-inp ${done ? 'verified' : ''}" id="codeinp_${i}" type="text" autocomplete="off" spellcheck="false"
-            placeholder="Dán mã xác nhận..." value="${done ? '✅ Đã xác nhận' : ''}" ${done ? 'disabled' : ''}
+            placeholder="Dán mã sau khi vượt ads..." value="${done ? '✅ Đã xác nhận' : ''}" ${done ? 'disabled' : ''}
             onkeydown="if(event.key==='Enter'){event.preventDefault();verifyCode(${i});}"
             oninput="handleCodeInput(this, ${i})"/>
           <button class="btn btn-sm ${done ? 'btn-green' : 'btn-ghost'}" id="verifyBtn_${i}" onclick="verifyCode(${i})" ${done ? 'disabled' : ''}>✓</button>
         </div>
-        ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s</div>` : ''}
-        ${!hasL1 && !hasL2 ? '<div class="cd-hint" style="color:var(--red)">⚠️ Admin đã tắt hết link vượt / chưa cấu hình API</div>' : ''}
+        ${cdLeft > 0 && !done ? `<div class="cd-hint" id="cdHint_${i}">Chờ ${cdLeft}s rồi mới lấy link lại</div>` : ''}
+        ${!hasKey ? '<div class="cd-hint" style="color:var(--red)">⚠️ Admin chưa cấu hình API Key Link4M</div>' : ''}
       </div>`;
   }
   document.getElementById('bmSteps').innerHTML = html;
@@ -2719,22 +2760,17 @@ function startCooldownTimer(idx) {
   const timer = setInterval(() => {
     if (!currentItem) { clearInterval(timer); return; }
     const left = getCooldownLeft(currentItem.id, idx);
-    const btn1 = document.getElementById('getLinkBtn1_' + idx);
-    const btn2 = document.getElementById('getLinkBtn2_' + idx);
+    const btn = document.getElementById('getLinkBtn_' + idx);
     const hint = document.getElementById('cdHint_' + idx);
-    const s = getSettings();
-    const hasL1 = !!(s.link4mKey || '').trim() && s.enableLink1 !== false;
-    const hasL2 = !!(s.vuotnhanhKey || '').trim() && s.enableLink2 !== false;
+    const hasKey = !!(getSettings().link4mKey || '').trim();
     if (left <= 0) {
       clearInterval(timer);
-      if (btn1) { btn1.disabled = !hasL1; btn1.innerHTML = '🔗 Link 1'; }
-      if (btn2) { btn2.disabled = !hasL2; btn2.innerHTML = '🔗 Link 2'; }
+      if (btn) { btn.disabled = !hasKey; btn.innerHTML = '🔗 Lấy Link'; }
       if (hint) hint.remove();
       return;
     }
-    if (btn1) { btn1.disabled = true; btn1.innerHTML = '⏳ ' + left + 's'; }
-    if (btn2) { btn2.disabled = true; btn2.innerHTML = '⏳ ' + left + 's'; }
-    if (hint) hint.textContent = 'Chờ ' + left + 's';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ' + left + 's'; }
+    if (hint) hint.textContent = 'Chờ ' + left + 's rồi mới lấy link lại';
   }, 1000);
 }
 
@@ -2772,23 +2808,17 @@ async function createServerKey(note) {
   }
 }
 
-async function openLink(idx, provider) {
-  provider = provider || 'link4m';
+async function openLink(idx) {
   const item = currentItem;
   if (!item || !me) return;
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
   if (checkMaintenance()) return;
-  const sCheck = getSettings();
-  if (provider === 'link4m' && sCheck.enableLink1 === false) { toast('⚠️ Link 1 đang tắt', 'err'); return; }
-  if (provider === 'vuotnhanh' && sCheck.enableLink2 === false) { toast('⚠️ Link 2 đang tắt', 'err'); return; }
-  if (!checkRate('openLink', 20, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
+  if (!checkRate('openLink', 12, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
   const cd = getCooldownLeft(item.id, idx);
   if (cd > 0) { toast('⏳ Còn ' + cd + 's', 'err'); return; }
 
-  const btn1 = document.getElementById('getLinkBtn1_' + idx);
-  const btn2 = document.getElementById('getLinkBtn2_' + idx);
-  if (btn1) { btn1.disabled = true; btn1.innerHTML = '⏳ ...'; }
-  if (btn2) { btn2.disabled = true; btn2.innerHTML = '⏳ ...'; }
+  const btn = document.getElementById('getLinkBtn_' + idx);
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ...'; }
 
   // Ưu tiên tạo key từ server license; fallback mã local
   let code = await createServerKey('vlp|' + me.username + '|' + item.id + '|r' + idx);
@@ -2796,18 +2826,18 @@ async function openLink(idx, provider) {
   if (!code) code = genVerifyCode(8);
 
   const sid = 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const startedAt = Date.now();
   localStorage.setItem(pendingCodeKey(item.id, idx), JSON.stringify({
     code, user: me.username, itemId: item.id, round: idx,
-    exp: Date.now() + 30 * 60 * 1000,
+    exp: startedAt + 30 * 60 * 1000,
     fromServer,
-    startedAt: Date.now(),
-    sid,
-    provider
+    startedAt,
+    sid
   }));
   try {
     localStorage.setItem('vlp_sid_' + item.id + '_' + idx, sid);
     const stKey = 'vlp_start_' + item.id + '_' + me.username;
-    if (!localStorage.getItem(stKey)) localStorage.setItem(stKey, String(Date.now()));
+    if (!localStorage.getItem(stKey)) localStorage.setItem(stKey, String(startedAt));
   } catch(e) {}
   setCooldown(item.id, idx);
 
@@ -2819,15 +2849,10 @@ async function openLink(idx, provider) {
     '&vlpuser=' + encodeURIComponent(me.username) +
     (fromServer ? '&vlpserver=1' : '');
   try {
-    let shortUrl = '';
-    if (provider === 'vuotnhanh') {
-      shortUrl = await getVuotNhanhShortUrl(revealUrl);
-    } else {
-      shortUrl = buildLink4mUrl(revealUrl);
-    }
+    const shortUrl = buildLink4mUrl(revealUrl);
     window.open(shortUrl, '_blank');
-    const label = provider === 'vuotnhanh' ? 'Vượt Nhanh (Link 2)' : 'Link4M (Link 1)';
-    toast((fromServer ? '🔑 Key server + ' : '') + label + ' — lượt ' + (idx + 1), 'ok');
+    const minSec = Math.max(20, Number(getSettings().minVerifySec) || 45);
+    toast((fromServer ? '🔑 ' : '') + 'Đã mở Link4M — lượt ' + (idx + 1) + '. Vượt ads rồi quay lại (≥' + minSec + 's)', 'ok');
     renderSteps();
   } catch (e) {
     localStorage.removeItem(pendingCodeKey(item.id, idx));
@@ -2836,7 +2861,7 @@ async function openLink(idx, provider) {
       const k = item.id + '_' + idx;
       if (data[k]) { delete data[k]; lsSet(COOLDOWN_KEY, data); }
     } catch(err) {}
-    toast('❌ ' + (e.message || 'Không tạo được link') + (provider === 'vuotnhanh' ? ' — thử Link 1' : ' — thử Link 2'), 'err');
+    toast('❌ ' + (e.message || 'Không tạo được link'), 'err');
     renderSteps();
   }
 }
@@ -2852,6 +2877,8 @@ function verifyCode(idx) {
   const inp = document.getElementById('codeinp_' + idx);
   if (!inp || inp.disabled || !currentItem || !me) return;
   if (isUserBanned(me)) { toast('Tài khoản bị khóa', 'err'); return; }
+  if (checkMaintenance()) return;
+  if (!checkRate('verifyCode', 15, 60000)) { toast('⚠️ Thao tác quá nhanh', 'err'); return; }
   const val = (inp.value || '').trim().toUpperCase();
   if (!val) { toast('⚠️ Nhập mã xác nhận!', 'err'); return; }
   const key = pendingCodeKey(currentItem.id, idx);
@@ -2861,29 +2888,43 @@ function verifyCode(idx) {
     const raw = localStorage.getItem(key);
     if (!raw) { toast('⚠️ Cần bấm Lấy Link trước!', 'err'); return; }
     payload = JSON.parse(raw);
-    if (payload.exp && Date.now() > payload.exp) { localStorage.removeItem(key); toast('⚠️ Mã hết hạn', 'err'); return; }
+    if (payload.exp && Date.now() > payload.exp) { localStorage.removeItem(key); toast('⚠️ Mã hết hạn — bấm Lấy Link lại', 'err'); return; }
     if (payload.user !== me.username || payload.itemId !== currentItem.id || payload.round !== idx) { toast('❌ Mã không hợp lệ', 'err'); return; }
-    // Chống dán mã quá nhanh sau khi bấm Lấy Link (tối thiểu 12s/lượt)
-    if (payload.startedAt && (Date.now() - payload.startedAt) < 12000) {
-      toast('⏳ Đợi thêm vài giây rồi dán mã (chống bot)', 'err');
+    // Tối thiểu N giây sau khi bấm Lấy Link (chống captcha xong dán liền)
+    const minMs = Math.max(20000, (Number(getSettings().minVerifySec) || 45) * 1000);
+    if (payload.startedAt && (Date.now() - payload.startedAt) < minMs) {
+      const left = Math.ceil((minMs - (Date.now() - payload.startedAt)) / 1000);
+      toast('⏳ Còn ' + left + 's mới được xác nhận (chống skip ads)', 'err');
       return;
     }
     if (!payload.sid) {
       toast('❌ Mã phiên không hợp lệ — bấm Lấy Link lại', 'err'); return;
     }
     expected = (payload.code || '').toUpperCase();
-    // visit proof: sync trước, nếu thiếu sẽ check Firebase async bên dưới
-    window.__pendingVerify = { idx, val, expected, key, payload, itemId: currentItem.id };
+    window.__pendingVerify = { idx, val, expected, key, payload, itemId: currentItem.id, minMs };
   } catch (e) { toast('❌ Lỗi dữ liệu mã', 'err'); return; }
   if (val !== expected) { toast('❌ Mã không đúng!', 'err'); return; }
 
-  // Xác minh visit proof (local hoặc Firebase)
+  // Xác minh visit proof (local hoặc Firebase) + thời gian mở trang đích
   (async function() {
     const p = window.__pendingVerify;
     if (!p) return;
     const ok = await hasVisitProofAsync(p.payload.sid);
     if (!ok) {
-      toast('❌ Chưa vượt link hợp lệ. Phải mở Link 1/2, vượt ads, copy mã từ trang đích!', 'err');
+      toast('❌ Chưa vượt Link4M hợp lệ. Phải mở link, vượt ads, copy mã từ trang đích!', 'err');
+      try { await flagNoVisitProof(me.username); } catch(e) {}
+      return;
+    }
+    // Visit proof phải xảy ra SAU khi bấm Lấy Link (không dùng proof cũ)
+    const visitAt = getVisitProofAt(p.payload.sid);
+    if (visitAt && p.payload.startedAt && visitAt + 2000 < p.payload.startedAt) {
+      toast('❌ Phiên vượt không khớp — bấm Lấy Link lại và vượt mới', 'err');
+      try { await flagNoVisitProof(me.username); } catch(e) {}
+      return;
+    }
+    // Thời gian từ mở trang đích → verify không quá ngắn (chống auto paste)
+    if (visitAt && (Date.now() - visitAt) < 8000) {
+      toast('⏳ Đợi thêm vài giây sau khi lấy mã rồi xác nhận', 'err');
       return;
     }
     localStorage.removeItem(p.key);
@@ -2933,7 +2974,7 @@ function showResult() {
 
   if (tooFast) {
     const sec = Math.round(elapsed / 1000);
-    document.getElementById('bmResultContent').textContent = '🚫 Gian lận: hoàn thành trong ' + sec + 's (< 1p20s). Khóa 7 ngày.';
+    document.getElementById('bmResultContent').textContent = '🚫 Gian lận: hoàn thành trong ' + sec + 's (< 2p30s). Khóa 7 ngày.';
     toast('🚫 Vượt quá nhanh — khóa 7 ngày', 'err');
     autoBanTooFast(me.username, sec).then(() => {
       setTimeout(() => { try { closeBypass(); } catch(e) {} }, 1500);
@@ -3641,25 +3682,20 @@ function renderSettings(body) {
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('guideText','setGuide');updateUserGuide();">💾 Lưu hướng dẫn</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">🔑 API Key Link4M (Link 1)</div>
+      <div class="settings-label">🔑 API Key Link4M</div>
       <input class="inp" id="setKey" value="${esc(s.link4mKey||'')}"/>
       <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('link4mKey','setKey')">💾 Lưu Link4M</button>
     </div>
     <div class="settings-row">
-      <div class="settings-label">🔑 API Key Vượt Nhanh (Link 2 — mặc định đã gắn)</div>
-      <input class="inp" id="setVuotNhanh" value="${esc(s.vuotnhanhKey||'5272e76d-4b9a-4ca9-aeba-0c6a28b93955')}" placeholder="UUID từ vuotnhanh.com"/>
-      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('vuotnhanhKey','setVuotNhanh')">💾 Lưu Vượt Nhanh</button>
-      <p style="font-size:11px;color:var(--sub);margin-top:8px;line-height:1.4">User vượt sẽ thấy 2 nút: <b>Link 1</b> (Link4M) và <b>Link 2</b> (Vượt Nhanh). Một cái lỗi vẫn còn cái kia.</p>
-    </div>
-    <div class="settings-row">
-      <div class="settings-label">🎚️ Bật / Tắt link vượt (user online thấy ngay)</div>
-      <div class="toggle-row" style="margin:8px 0"><span style="font-size:13px">🔗 Link 1 (Link4M)</span>
-        <label class="toggle"><input type="checkbox" ${s.enableLink1!==false?'checked':''} onchange="saveSettings({...getSettings(),enableLink1:this.checked}).then(()=>{toast(this.checked?'✅ Bật Link 1':'⏸ Tắt Link 1','ok');if(document.getElementById('bypassModal')?.classList.contains('open'))renderSteps();})"/><span class="toggle-slider"></span></label>
+      <div class="settings-label">🛡️ Chống gian lận vượt link</div>
+      <div style="font-size:12px;color:var(--sub);margin:6px 0 8px;line-height:1.5">
+        • Tối thiểu <b>${s.minVerifySec||45}s</b> / lượt sau khi bấm Lấy Link mới dán mã được<br>
+        • Tổng ≥ <b>2p30s</b> mới nhận nội dung — dưới mức khóa 7 ngày<br>
+        • Bắt buộc mở trang đích (visit proof) — thiếu 3 lần/1h → khóa 24h
       </div>
-      <div class="toggle-row" style="margin:8px 0"><span style="font-size:13px">🔗 Link 2 (Vượt Nhanh)</span>
-        <label class="toggle"><input type="checkbox" ${s.enableLink2!==false?'checked':''} onchange="saveSettings({...getSettings(),enableLink2:this.checked}).then(()=>{toast(this.checked?'✅ Bật Link 2':'⏸ Tắt Link 2','ok');if(document.getElementById('bypassModal')?.classList.contains('open'))renderSteps();})"/><span class="toggle-slider"></span></label>
-      </div>
-      <div class="sec-note">Tắt = nút biến mất ngay với user đang vượt. Cả 2 link đều có chống bypass (mã + visit proof + chống vượt quá nhanh).</div>
+      <div class="settings-label" style="margin-top:8px">⏱ Tối thiểu mỗi lượt (giây)</div>
+      <input class="inp" id="setMinVerify" type="number" min="20" max="180" value="${s.minVerifySec||45}" style="width:100px"/>
+      <button class="btn btn-cyan btn-sm" style="margin-top:8px;width:100%" onclick="saveSetting('minVerifySec','setMinVerify',true)">💾 Lưu min / lượt</button>
     </div>
     <div class="settings-row">
       <div class="settings-label">🖥️ License Server URL</div>
@@ -3892,64 +3928,6 @@ function buildLink4mUrl(destinationUrl) {
   const key = (getSettings().link4mKey || '').trim();
   if (!key) throw new Error('Chưa lưu API Key Link4M');
   return 'https://link4m.co/st?api=' + encodeURIComponent(key) + '&url=' + encodeURIComponent(destinationUrl);
-}
-
-/** Gọi API Vượt Nhanh → trả short URL */
-function parseVuotNhanhResponse(text) {
-  text = (text || '').trim();
-  if (!text) return null;
-  // plain short URL
-  if (/^https?:\/\//i.test(text) && text.length < 500) return text;
-  // JSON
-  try {
-    const j = JSON.parse(text);
-    if (j && j.status === 'success' && j.shortenedUrl) return j.shortenedUrl;
-    if (j && j.shortenedUrl) return j.shortenedUrl;
-    if (j && j.status === 'error' && j.message) throw new Error(j.message);
-  } catch (e) {
-    if (e.message && !String(e.message).includes('JSON')) throw e;
-  }
-  // tìm URL trong body
-  const m = text.match(/https?:\/\/vuotnhanh\.com\/[A-Za-z0-9_-]+/);
-  if (m) return m[0];
-  return null;
-}
-
-async function getVuotNhanhShortUrl(destinationUrl) {
-  const key = (getSettings().vuotnhanhKey || '').trim();
-  if (!key) throw new Error('Chưa lưu API Key Vượt Nhanh');
-  const apiUrl = 'https://vuotnhanh.com/api?api=' + encodeURIComponent(key) +
-    '&url=' + encodeURIComponent(destinationUrl) + '&format=text';
-
-  // 1) Gọi trực tiếp
-  try {
-    const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
-    if (res.ok) {
-      const short = parseVuotNhanhResponse(await res.text());
-      if (short) return short;
-    }
-  } catch (e) {
-    // CORS / network → thử proxy
-  }
-
-  // 2) CORS proxy (GitHub Pages bị chặn CORS từ vuotnhanh.com)
-  const proxies = [
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
-    'https://corsproxy.io/?' + encodeURIComponent(apiUrl)
-  ];
-  let lastErr = 'CORS / không kết nối được API';
-  for (const proxyUrl of proxies) {
-    try {
-      const res = await fetch(proxyUrl, { method: 'GET', cache: 'no-store' });
-      if (!res.ok) { lastErr = 'Proxy HTTP ' + res.status; continue; }
-      const short = parseVuotNhanhResponse(await res.text());
-      if (short) return short;
-      lastErr = 'API không trả link hợp lệ';
-    } catch (e) {
-      lastErr = e.message || 'proxy lỗi';
-    }
-  }
-  throw new Error('Link 2 lỗi: ' + lastErr);
 }
 
 function genVerifyCode(len) {
